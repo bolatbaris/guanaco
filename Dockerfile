@@ -29,6 +29,7 @@ RUN export PATH=$PATH:$GOPATH/bin && \
     (cd build && mage release:xgo vikunja "${TARGETOS}/${TARGETARCH}/${TARGETVARIANT}")
 
 RUN mkdir -p /tmp && chmod 1777 /tmp
+RUN mkdir -p /tmp/vikunja-files && touch /tmp/vikunja-files/.gitkeep && chmod 755 /tmp/vikunja-files
 
 #  ┬─┐┬ ┐┌┐┐┌┐┐┬─┐┬─┐
 #  │┬┘│ │││││││├─ │┬┘
@@ -49,6 +50,7 @@ ENTRYPOINT [ "/app/vikunja/vikunja" ]
 EXPOSE 3456
 
 COPY --from=apibuilder --chown=1000:1000 --chmod=1777 /tmp /tmp
+COPY --from=apibuilder --chown=1000:1000 --chmod=755 /tmp/vikunja-files /app/vikunja/files
 
 USER 1000
 

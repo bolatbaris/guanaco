@@ -41,8 +41,7 @@
   },
   "demo": {
     "title": "This instance is in demo mode. Do not use this for real data!",
-    "everythingWillBeDeleted": "Everything will be deleted in regular intervals!",
-    "accountWillBeDeleted": "Your account will be deleted, including all projects, tasks and attachments you might create."
+    "everythingWillBeDeleted": "Everything will be deleted in regular intervals!"
   },
   "404": {
     "title": "Not found",
@@ -85,10 +84,7 @@
       "desktopWaitingForAuth": "Waiting for authentication…",
       "desktopOAuthError": "Authentication failed: {error}",
       "logout": "Logout",
-      "emailInvalid": "Please enter a valid email address.",
       "usernameRequired": "Please provide a username.",
-      "usernameMustNotContainSpace": "The username must not contain spaces.",
-      "usernameMustNotLookLikeUrl": "The username must not look like a URL.",
       "passwordRequired": "Please provide a password.",
       "passwordNotMin": "Password must have at least 8 characters.",
       "passwordNotMax": "Password must have at most 72 characters.",

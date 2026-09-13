@@ -67,15 +67,10 @@
       "emailPlaceholder": "e.g. frederic{'@'}vikunja.io",
       "password": "Password",
       "passwordPlaceholder": "Your password",
-      "forgotPassword": "Forgot your password?",
-      "resetPassword": "Reset your password",
-      "resetPasswordAction": "Send me a password reset link",
-      "resetPasswordSuccess": "Check your inbox! You should have an email with instructions on how to reset your password.",
       "confirmEmailSuccess": "You successfully confirmed your email! You can log in now.",
       "totpTitle": "Two Factor Authentication Code",
       "totpPlaceholder": "e.g. 123456",
       "login": "Login",
-      "createAccount": "Create account",
       "loginWith": "Log in with {provider}",
       "authenticating": "Authenticating…",
       "openIdStateError": "State does not match, refusing to continue!",
@@ -99,13 +94,7 @@
       "passwordNotMax": "Password must have at most 72 characters.",
       "showPassword": "Show the password",
       "hidePassword": "Hide the password",
-      "noAccountYet": "Don't have an account yet?",
-      "alreadyHaveAnAccount": "Already have an account?",
-      "remember": "Stay logged in",
-      "registrationDisabled": "Registration is disabled.",
-      "passwordResetTokenMissing": "Password reset token is missing.",
-      "registrationFailed": "An error occurred during registration. Please check your input and try again.",
-      "registrationConfirmEmail": "Your account was created successfully! Please check your inbox and click the link in the confirmation email before logging in."
+      "remember": "Stay logged in"
     },
     "settings": {
       "bots": {
@@ -122,11 +111,8 @@
         }
       },
       "title": "Settings",
-      "newPasswordTitle": "Update Your Password",
-      "newPassword": "New password",
       "currentPassword": "Current password",
       "currentPasswordPlaceholder": "Your current password",
-      "passwordUpdateSuccess": "The password was successfully updated.",
       "updateEmailTitle": "Update Your Email Address",
       "updateEmailNew": "New email address",
       "updateEmailSuccess": "Your email address was successfully updated.",
@@ -144,8 +130,8 @@
         "savedSuccess": "The settings were successfully updated.",
         "emailReminders": "Send me reminders for tasks via email",
         "overdueReminders": "Send me a summary of my undone overdue tasks every day",
-        "discoverableByName": "Allow other users to add me as a member to teams or projects when they search for my name",
-        "discoverableByEmail": "Allow other users to add me as a member to teams or projects when they search for my full email",
+		"discoverableByName": "Allow other users to add me as a member to projects when they search for my name",
+		"discoverableByEmail": "Allow other users to add me as a member to projects when they search for my full email",
         "playSoundWhenDone": "Play a sound when marking tasks as done",
         "allowIconChanges": "Show special logos during certain times",
         "alwaysShowBucketTaskCount": "Always show task count on Kanban buckets",
@@ -405,7 +391,7 @@
       "title": "Duplicate this project",
       "label": "Duplicate",
       "text": "Select a parent project which should hold the duplicated project:",
-      "shares": "Copy shares (users, teams and link shares) to the duplicate",
+			"shares": "Copy shares (users and link shares) to the duplicate",
       "success": "The project was successfully duplicated."
     },
     "edit": {
@@ -444,7 +430,6 @@
       },
       "userTeam": {
         "typeUser": "user | users",
-        "typeTeam": "team | teams",
         "shared": "Shared with these {type}",
         "you": "You",
         "notShared": "Not shared with any {type} yet.",
@@ -1262,56 +1247,6 @@
       "repeatsDescription": "To set a task as repeating in an interval, simply add '{suffix}' to the task text. The amount needs to be a number and can be omitted to use just the type (see examples)."
     }
   },
-  "team": {
-    "title": "Teams",
-    "noTeams": "You are currently not part of any teams.",
-    "create": {
-      "title": "Create a team",
-      "success": "The team was successfully created."
-    },
-    "edit": {
-      "title": "Edit Team \"{team}\"",
-      "members": "Team Members",
-      "search": "Type to search a user…",
-      "addUser": "Add to team",
-      "makeMember": "Make Member",
-      "makeAdmin": "Make Admin",
-      "success": "The team was successfully updated.",
-      "userAddedSuccess": "The team member was successfully added.",
-      "madeMember": "The team member was successfully made member.",
-      "madeAdmin": "The team member was successfully made admin.",
-      "mustSelectUser": "Please select a user.",
-      "delete": {
-        "header": "Delete the team",
-        "text1": "Are you sure you want to delete this team and all of its members?",
-        "text2": "All team members will lose access to projects shared with this team. This CANNOT BE UNDONE!",
-        "success": "The team was successfully deleted."
-      },
-      "deleteUser": {
-        "header": "Remove a user from the team",
-        "text1": "Are you sure you want to remove this user from the team?",
-        "text2": "They will lose access to all projects this team has access to. This CANNOT BE UNDONE!",
-        "success": "The user was successfully deleted from the team."
-      },
-      "leave": {
-        "title": "Leave team",
-        "text1": "Are you sure you want to leave this team?",
-        "text2": "You will lose access to all projects this team has access to. If you change your mind you'll need a team admin to add you again.",
-        "success": "You have successfully left the team."
-      }
-    },
-    "attributes": {
-      "name": "Team Name",
-      "namePlaceholder": "The team's name goes here…",
-      "nameRequired": "Please specify a name.",
-      "description": "Description",
-      "descriptionPlaceholder": "Describe the team here, hit '/' for more options…",
-      "admin": "Admin",
-      "member": "Member",
-      "isPublic": "Public Team",
-      "isPublicDescription": "Make the team publicly discoverable. When enabled, anyone can share projects with this team even when not being a direct member."
-    }
-  },
   "keyboardShortcuts": {
     "title": "Keyboard Shortcuts",
     "general": "General",
@@ -1355,7 +1290,6 @@
       "overview": "Navigate to overview",
       "upcoming": "Navigate to upcoming tasks",
       "labels": "Navigate to labels",
-      "teams": "Navigate to teams",
       "projects": "Navigate to projects"
     },
     "list": {
@@ -1420,14 +1354,12 @@
     "notLoggedIn": "Please log in to the main Vikunja window first.",
     "commands": "Commands",
     "placeholder": "Type a command or search…",
-    "hint": "You can use {project} to limit the search to a project. Combine {project} or {label} (labels) with a search query to search for a task with these labels or on that project. Use {assignee} to only search for teams.",
+    "hint": "You can use {project} to limit the search to a project. Combine {project} or {label} (labels) with a search query to search for a task with these labels or on that project. Use {assignee} to search for users.",
     "tasks": "Tasks",
     "projects": "Projects",
-    "teams": "Teams",
     "labels": "Labels",
     "newProject": "Enter the title of the new project…",
     "newTask": "Enter the title of the new task…",
-    "newTeam": "Enter the name of the new team…",
     "createTask": "Create a task in the current project ({title})",
     "createProject": "Create a project",
     "results": "No results | {count} result | {count} results",
@@ -1435,13 +1367,11 @@
       "command": "Command",
       "task": "Task",
       "project": "Project",
-      "team": "Team",
       "label": "Label"
     },
     "cmds": {
       "newTask": "New task",
-      "newProject": "New project",
-      "newTeam": "New team"
+      "newProject": "New project"
     }
   },
   "date": {
@@ -1463,13 +1393,10 @@
     "1004": "No username and password specified.",
     "1005": "The user does not exist.",
     "1006": "Could not get the user id.",
-    "1008": "No password reset token provided.",
-    "1009": "Invalid password reset token.",
     "1010": "Invalid email confirm token.",
     "1011": "Wrong username or password.",
     "1012": "Email address of the user not confirmed.",
     "1013": "New password is empty.",
-    "1014": "Old password is empty.",
     "1015": "TOTP is already enabled for this user.",
     "1016": "TOTP is not enabled for this user.",
     "1017": "The TOTP passcode is invalid.",
@@ -1519,14 +1446,6 @@
     "4023": "Cannot create a task relation cycle.",
     "4034": "The file does not exist.",
     "4035": "The uploaded file exceeds the maximum configured file size.",
-    "6001": "The team name cannot be empty.",
-    "6002": "The team does not exist.",
-    "6004": "The team already has access to that project.",
-    "6005": "The user is already a member of that team.",
-    "6006": "Cannot delete the last team member.",
-    "6007": "The team does not have access to the project to perform that action.",
-    "6008": "No team could be found for the given OIDC ID and issuer.",
-    "6009": "No Teams with property oidcId could be found for User.",
     "7002": "The user already has access to that project.",
     "7003": "You do not have access to that project.",
     "8001": "This label already exists on that task.",
@@ -1610,7 +1529,6 @@
     "overview": {
       "shares": "Shares",
       "linkSharesShort": "link",
-      "teamSharesShort": "team",
       "userSharesShort": "user",
       "version": "Version",
       "license": "License",
@@ -1637,18 +1555,8 @@
       "statusDisabled": "Disabled",
       "statusLocked": "Account locked",
       "isAdminLabel": "Administrator",
-      "addUser": "Add user",
-      "createTitle": "Create user",
       "nameLabel": "Name",
-      "skipEmailConfirm": "Skip email confirmation",
-      "createSubmit": "Create user",
       "saveButton": "Save changes",
-      "newPasswordLabel": "New password",
-      "setPassword": "Set password",
-      "setPasswordSuccess": "The password of {username} was updated.",
-      "sendResetEmail": "Send password-reset email",
-      "sendResetEmailSuccess": "A password-reset email was sent to {username}.",
-      "createdSuccess": "User {username} created.",
       "updatedSuccess": "User {username} updated.",
       "deletedSuccess": "User {username} deleted.",
       "deleteScheduledSuccess": "User {username} will receive a confirmation email to schedule the deletion.",

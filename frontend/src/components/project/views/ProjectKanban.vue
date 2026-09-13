@@ -97,7 +97,6 @@
 											</div>
 											<div class="control">
 												<XButton
-													v-cy="'setBucketLimit'"
 													:aria-label="$t('misc.save')"
 													:disabled="bucket.limit < 0"
 													:icon="['far', 'save']"

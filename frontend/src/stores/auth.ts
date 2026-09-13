@@ -2,7 +2,7 @@ import {computed, readonly, ref, watch} from 'vue'
 import {acceptHMRUpdate, defineStore} from 'pinia'
 
 import {AuthenticatedHTTPFactory, HTTPFactory} from '@/helpers/fetcher'
-import {getBrowserLanguage, i18n, setLanguage} from '@/i18n'
+import {i18n, setLanguage} from '@/i18n'
 import {objectToSnakeCase} from '@/helpers/case'
 import UserModel, {getDisplayName, invalidateAvatarCache} from '@/models/user'
 import AvatarService from '@/services/avatar'
@@ -226,39 +226,6 @@ export const useAuthStore = defineStore('auth', () => {
 				!credentials.totpPasscode
 			) {
 				setNeedsTotpPasscode(true)
-			}
-
-			throw e
-		} finally {
-			setIsLoading(false)
-		}
-	}
-
-	/**
-	 * Registers a new user and logs them in.
-	 * Not sure if this is the right place to put the logic in, maybe a separate js component would be better suited. 
-	 */
-	async function register(credentials, language: string|null = null) {
-		const HTTP = HTTPFactory()
-		setIsLoading(true)
-		
-		if (!language) {
-			language = i18n.global.locale.value ?? getBrowserLanguage()
-		}
-		
-		try {
-			await HTTP.post('register', {
-				...credentials,
-				language,
-			})
-			return await login(credentials)
-		} catch (e) {
-			if (e.response?.data?.code === 2002 && e.response?.data?.invalid_fields[0]?.startsWith('language:')) {
-				return register(credentials, 'en')
-			}
-
-			if (e.response?.data?.message) {
-				throw e.response.data
 			}
 
 			throw e
@@ -630,7 +597,6 @@ export const useAuthStore = defineStore('auth', () => {
 		updateLastUserRefresh,
 
 		login,
-		register,
 		openIdAuth,
 		handleDesktopOAuthTokens,
 		linkShareAuth,

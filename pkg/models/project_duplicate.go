@@ -35,7 +35,7 @@ type ProjectDuplicate struct {
 	// The target parent project
 	ParentProjectID int64 `json:"parent_project_id,omitempty" doc:"The id of the project under which the duplicate should be created. Omit or 0 to place the copy at the top level; you need write access to the parent."`
 	// Whether to copy the project's shares to the duplicate
-	DuplicateShares bool `json:"duplicate_shares,omitempty" doc:"Whether to copy the project's user, team and link shares to the duplicate. Defaults to false."`
+	DuplicateShares bool `json:"duplicate_shares,omitempty" doc:"Whether to copy the project's user and link shares to the duplicate. Defaults to false."`
 
 	// The copied project
 	Project *Project `json:"duplicated_project,omitempty" readOnly:"true" doc:"The newly created duplicate project, populated by the server in the response."`
@@ -65,7 +65,7 @@ func (pd *ProjectDuplicate) CanCreate(s *xorm.Session, a web.Auth) (canCreate bo
 
 // Create duplicates a project
 // @Summary Duplicate an existing project
-// @Description Copies the project, tasks, files, kanban data, assignees, comments, attachments, labels, relations and backgrounds from one project to a new one. User/team permissions and link shares are only copied when duplicate_shares is set to true. The user needs read access in the project and write access in the parent of the new project.
+// @Description Copies the project, tasks, files, kanban data, assignees, comments, attachments, labels, relations and backgrounds from one project to a new one. User permissions and link shares are only copied when duplicate_shares is set to true. The user needs read access in the project and write access in the parent of the new project.
 // @tags project
 // @Accept json
 // @Produce json
@@ -137,19 +137,6 @@ func (pd *ProjectDuplicate) Create(s *xorm.Session, doer web.Auth) (err error) {
 		}
 
 		log.Debugf("Duplicated user shares from project %d into %d", pd.ProjectID, pd.Project.ID)
-
-		teams := []*TeamProject{}
-		err = s.Where("project_id = ?", pd.ProjectID).Find(&teams)
-		if err != nil {
-			return
-		}
-		for _, t := range teams {
-			t.ID = 0
-			t.ProjectID = pd.Project.ID
-			if _, err := s.Insert(t); err != nil {
-				return err
-			}
-		}
 
 		// Generate new link shares if any are available
 		linkShares := []*LinkSharing{}

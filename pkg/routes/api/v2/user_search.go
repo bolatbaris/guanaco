@@ -37,7 +37,7 @@ func RegisterUserSearchRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "users-search",
 		Summary:     "Search users",
-		Description: "Searches users by username, name or full email. Matching by name or email requires the target user to have made themselves discoverable, unless both users share an external (OIDC/LDAP) team. Email addresses are never returned.",
+		Description: "Searches users by username, name or full email. Matching by name or email requires the target user to have made themselves discoverable. Email addresses are never returned.",
 		Method:      http.MethodGet,
 		Path:        "/users",
 		Tags:        []string{"user"},
@@ -46,7 +46,7 @@ func RegisterUserSearchRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "projects-users-search",
 		Summary:     "Search users with access to a project",
-		Description: "Returns the users who can access the project — through ownership, a direct share or a team — optionally filtered by a search string. Intended for share autocomplete. Requires read access to the project.",
+		Description: "Returns the users who can access the project — through ownership or a direct share — optionally filtered by a search string. Intended for share autocomplete. Requires read access to the project.",
 		Method:      http.MethodGet,
 		Path:        "/projects/{project}/users/search",
 		Tags:        []string{"sharing"},

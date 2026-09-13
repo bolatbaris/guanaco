@@ -19,8 +19,6 @@ package user
 import (
 	"strings"
 
-	"code.vikunja.io/api/pkg/config"
-
 	"code.vikunja.io/api/pkg/db"
 
 	"xorm.io/builder"
@@ -63,17 +61,6 @@ func ListUsers(s *xorm.Session, search string, currentUser *User, opts *ProjectU
 
 	conds := []builder.Cond{}
 
-	// Subquery: find user IDs that share an external team with the current user
-	externalTeamMemberIDs := builder.Select("tm2.user_id").
-		From("team_members tm1").
-		Join("INNER", "team_members tm2", "tm1.team_id = tm2.team_id").
-		Join("INNER", "teams t", "t.id = tm1.team_id").
-		Where(builder.And(
-			builder.Eq{"tm1.user_id": currentUser.ID},
-			builder.Neq{"t.external_id": ""},
-			builder.Neq{"tm2.user_id": currentUser.ID},
-		))
-
 	queryParts := strings.Split(search, ",")
 
 	if search != "" {
@@ -102,14 +89,6 @@ func ListUsers(s *xorm.Session, search string, currentUser *User, opts *ProjectU
 					db.ILIKE("name", queryPart),
 					builder.Eq{"discoverable_by_name": true},
 				),
-				// External team bypass: match by name or email without discoverability check
-				builder.And(
-					builder.In("id", externalTeamMemberIDs),
-					builder.Or(
-						db.ILIKE("name", queryPart),
-						builder.Eq{"email": queryPart},
-					),
-				),
 			)
 		}
 	}
@@ -130,35 +109,6 @@ func ListUsers(s *xorm.Session, search string, currentUser *User, opts *ProjectU
 			cond,
 			opts.AdditionalCond,
 		)
-	}
-
-	if config.ServiceEnableOpenIDTeamUserOnlySearch.GetBool() {
-		teamMemberCond := builder.In("id", builder.Select("user_id").
-			From("team_members").
-			Where(builder.In("team_id",
-				builder.Select("team_id").
-					From("team_members").
-					Where(builder.Eq{"team_members.user_id": currentUser.ID}),
-			)),
-		)
-
-		if !opts.MatchFuzzily {
-			cond = builder.And(
-				cond,
-				builder.Or(
-					teamMemberCond,
-					builder.And(
-						builder.In("email", queryParts),
-						builder.Eq{"discoverable_by_email": true},
-					),
-				),
-			)
-		} else {
-			cond = builder.And(
-				cond,
-				teamMemberCond,
-			)
-		}
 	}
 
 	notSomeoneElsesBot := builder.Or(

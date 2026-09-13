@@ -4,7 +4,6 @@ import UserModel, {getDisplayName} from '@/models/user'
 import TaskModel from '@/models/task'
 import TaskCommentModel from '@/models/taskComment'
 import ProjectModel from '@/models/project'
-import TeamModel from '@/models/team'
 
 import {NOTIFICATION_NAMES, type INotification} from '@/modelTypes/INotification'
 import type { IUser } from '@/modelTypes/IUser'
@@ -56,13 +55,6 @@ export default class NotificationModel extends AbstractModel<INotification> impl
 					project: new ProjectModel(this.notification.project),
 				}
 				break
-			case NOTIFICATION_NAMES.TEAM_MEMBER_ADDED:
-				this.notification = {
-					doer: new UserModel(this.notification.doer),
-					member: new UserModel(this.notification.member),
-					team: new TeamModel(this.notification.team),
-				}
-				break
 			case NOTIFICATION_NAMES.TASK_REMINDER:
 				this.notification = {
 					task: new TaskModel(this.notification.task),
@@ -101,14 +93,6 @@ export default class NotificationModel extends AbstractModel<INotification> impl
 				return `created ${this.notification.task.getTextIdentifier()}`
 			case NOTIFICATION_NAMES.PROJECT_CREATED:
 				return `created ${this.notification.project.title}`
-			case NOTIFICATION_NAMES.TEAM_MEMBER_ADDED:
-				who = `${getDisplayName(this.notification.member)}`
-
-				if (user !== null && user.id === this.notification.member.id) {
-					who = 'you'
-				}
-
-				return `added ${who} to the ${this.notification.team.name} team`
 			case NOTIFICATION_NAMES.TASK_REMINDER:
 				return `Reminder for ${this.notification.task.getTextIdentifier()} ${this.notification.task.title} (${this.notification.project.title})`
 			case NOTIFICATION_NAMES.TASK_MENTIONED:

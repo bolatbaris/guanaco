@@ -68,17 +68,6 @@ func RegisterUserSettingsRoutes(api huma.API) {
 	}, userShow)
 
 	Register(api, huma.Operation{
-		OperationID: "user-change-password",
-		Summary:     "Change the current user's password",
-		Description: "Changes the authenticated user's password after verifying the old one. All of the user's existing sessions are invalidated.",
-		Method:      http.MethodPost,
-		Path:        "/user/password",
-		// Changes a password, it creates nothing — keep 200 over the wrapper's POST→201.
-		DefaultStatus: http.StatusOK,
-		Tags:          tags,
-	}, userChangePassword)
-
-	Register(api, huma.Operation{
 		OperationID: "user-update-email",
 		Summary:     "Update the current user's email address",
 		Description: "Sets a new email address for the authenticated user after verifying their password. If the mailer is enabled the change is pending until the user confirms it via a link sent to the new address; otherwise it takes effect immediately.",
@@ -181,17 +170,6 @@ func userShow(ctx context.Context, _ *struct{}) (*singleBody[userInfoBody], erro
 	}
 
 	return &singleBody[userInfoBody]{Body: info}, nil
-}
-
-func userChangePassword(ctx context.Context, in *struct {
-	Body struct {
-		OldPassword string `json:"old_password" doc:"The current password, for confirmation."`
-		NewPassword string `json:"new_password" valid:"bcrypt_password" minLength:"8" maxLength:"72" doc:"The new password. Max 72 bytes (a bcrypt limit), which may be fewer than 72 characters."`
-	}
-}) (*singleBody[userActionMessageBody], error) {
-	return runUserAction(ctx, func(s *xorm.Session, u *user.User) error {
-		return models.ChangeUserPassword(ctx, s, u, in.Body.OldPassword, in.Body.NewPassword)
-	}, "The password was updated successfully.")
 }
 
 func userUpdateEmail(ctx context.Context, in *struct {

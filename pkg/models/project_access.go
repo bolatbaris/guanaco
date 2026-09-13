@@ -44,7 +44,7 @@ func (pa *projectAccess) permission(projectID int64) (Permission, bool) {
 // Joined against project_ancestors this yields one row per project and granting
 // ancestor-or-self, so MAX over a project's rows is the greatest of its own grant and
 // everything it inherits: a grant on a descendant can raise an inherited permission,
-// never lower it. Binds the user id three times.
+// never lower it. Binds the user id twice.
 const projectAccessCTE = `
 WITH grants (project_id, permission) AS (
     SELECT project_id, MAX(permission)
@@ -52,11 +52,6 @@ WITH grants (project_id, permission) AS (
         SELECT id AS project_id, 2 AS permission FROM projects WHERE owner_id = ?
         UNION ALL
         SELECT project_id, permission FROM users_projects WHERE user_id = ?
-        UNION ALL
-        SELECT tp.project_id, tp.permission
-        FROM team_projects tp
-        INNER JOIN team_members tm ON tm.team_id = tp.team_id
-        WHERE tm.user_id = ?
     ) direct_grants
     GROUP BY project_id
 )`
@@ -81,7 +76,7 @@ type projectAccessRow struct {
 func getProjectAccessForUser(s *xorm.Session, userID int64) (*projectAccess, error) {
 	return db.Remember(s, "project-access-"+strconv.FormatInt(userID, 10), func() (*projectAccess, error) {
 		rows := []*projectAccessRow{}
-		err := s.SQL(projectAccessQuery, userID, userID, userID).Find(&rows)
+		err := s.SQL(projectAccessQuery, userID, userID).Find(&rows)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +101,7 @@ func getProjectAccessForUser(s *xorm.Session, userID int64) (*projectAccess, err
 }
 
 // Above this many ids the inlined list bloats the statement and defeats server-side
-// plan caching, so the subquery form with its three bind parameters wins.
+// plan caching, so the subquery form with its two bind parameters wins.
 const maxInListSize = 1000
 
 func (pa *projectAccess) cond(column string) builder.Cond {
@@ -118,9 +113,9 @@ func (pa *projectAccess) cond(column string) builder.Cond {
 	return builder.In(column, pa.sortedIDs)
 }
 
-// Keeps the bind parameter count at three whatever the tree size.
+// Keeps the bind parameter count at two whatever the tree size.
 func (pa *projectAccess) condViaSubquery(column string) builder.Cond {
-	return builder.In(column, builder.Expr(projectAccessIDsQuery, pa.userID, pa.userID, pa.userID))
+	return builder.In(column, builder.Expr(projectAccessIDsQuery, pa.userID, pa.userID))
 }
 
 // Includes projects inherited through a shared parent.

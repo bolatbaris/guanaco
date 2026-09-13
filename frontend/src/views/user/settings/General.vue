@@ -140,7 +140,6 @@
 			>
 				<FormSelect
 					v-model.number="settings.weekStart"
-					v-cy="'weekStartSelect'"
 					:options="weekStartOptions"
 				/>
 			</FormField>
@@ -293,7 +292,6 @@
 		<CustomTransition name="fade">
 			<XButton
 				v-if="isDirty"
-				v-cy="'saveGeneralSettings'"
 				:loading="loading"
 				class="is-fullwidth"
 				@click="updateSettings()"

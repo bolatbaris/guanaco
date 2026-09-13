@@ -41,47 +41,49 @@ type Key string
 // These constants hold all config value keys
 const (
 	// #nosec
-	ServiceSecret                         Key = `service.secret`
-	ServiceJWTSecret                      Key = `service.JWTSecret` // #nosec G101 -- Deprecated config key alias, not a credential
-	ServiceJWTTTL                         Key = `service.jwtttl`
-	ServiceJWTTTLLong                     Key = `service.jwtttllong`
-	ServiceJWTTTLShort                    Key = `service.jwtttlshort`
-	ServiceInterface                      Key = `service.interface`
-	ServiceUnixSocket                     Key = `service.unixsocket`
-	ServiceUnixSocketMode                 Key = `service.unixsocketmode`
-	ServicePublicURL                      Key = `service.publicurl`
-	ServiceEnableCaldav                   Key = `service.enablecaldav`
-	ServiceRootpath                       Key = `service.rootpath`
-	ServiceMaxItemsPerPage                Key = `service.maxitemsperpage`
-	ServiceDemoMode                       Key = `service.demomode`
-	ServiceMotd                           Key = `service.motd`
-	ServiceEnableLinkSharing              Key = `service.enablelinksharing`
-	ServiceEnableRegistration             Key = `service.enableregistration`
-	ServiceEnableTaskAttachments          Key = `service.enabletaskattachments`
-	ServiceTimeZone                       Key = `service.timezone`
-	ServiceEnableTaskComments             Key = `service.enabletaskcomments`
-	ServiceEnableTotp                     Key = `service.enabletotp`
-	ServiceTestingtoken                   Key = `service.testingtoken`
-	ServiceEnableEmailReminders           Key = `service.enableemailreminders`
-	ServiceEnableUserDeletion             Key = `service.enableuserdeletion`
-	ServiceMaxAvatarSize                  Key = `service.maxavatarsize`
-	ServiceAllowIconChanges               Key = `service.allowiconchanges`
-	ServiceCustomLogoURL                  Key = `service.customlogourl`
-	ServiceCustomLogoURLDark              Key = `service.customlogourldark`
-	ServiceEnablePublicTeams              Key = `service.enablepublicteams`
-	ServiceBcryptRounds                   Key = `service.bcryptrounds`
-	ServiceEnableOpenIDTeamUserOnlySearch Key = `service.enableopenidteamusersearch`
-	ServiceIPExtractionMethod             Key = `service.ipextractionmethod`
-	ServiceTrustedProxies                 Key = `service.trustedproxies`
+	ServiceSecret                Key = `service.secret`
+	ServiceJWTSecret             Key = `service.JWTSecret` // #nosec G101 -- Deprecated config key alias, not a credential
+	ServiceJWTTTL                Key = `service.jwtttl`
+	ServiceJWTTTLLong            Key = `service.jwtttllong`
+	ServiceJWTTTLShort           Key = `service.jwtttlshort`
+	ServiceInterface             Key = `service.interface`
+	ServiceUnixSocket            Key = `service.unixsocket`
+	ServiceUnixSocketMode        Key = `service.unixsocketmode`
+	ServicePublicURL             Key = `service.publicurl`
+	ServiceEnableCaldav          Key = `service.enablecaldav`
+	ServiceRootpath              Key = `service.rootpath`
+	ServiceMaxItemsPerPage       Key = `service.maxitemsperpage`
+	ServiceDemoMode              Key = `service.demomode`
+	ServiceMotd                  Key = `service.motd`
+	ServiceEnableLinkSharing     Key = `service.enablelinksharing`
+	ServiceEnableTaskAttachments Key = `service.enabletaskattachments`
+	ServiceTimeZone              Key = `service.timezone`
+	ServiceEnableTaskComments    Key = `service.enabletaskcomments`
+	ServiceEnableTotp            Key = `service.enabletotp`
+	ServiceEnableEmailReminders  Key = `service.enableemailreminders`
+	ServiceEnableUserDeletion    Key = `service.enableuserdeletion`
+	ServiceMaxAvatarSize         Key = `service.maxavatarsize`
+	ServiceAllowIconChanges      Key = `service.allowiconchanges`
+	ServiceCustomLogoURL         Key = `service.customlogourl`
+	ServiceCustomLogoURLDark     Key = `service.customlogourldark`
+	ServiceBcryptRounds          Key = `service.bcryptrounds`
+	ServiceIPExtractionMethod    Key = `service.ipextractionmethod`
+	ServiceTrustedProxies        Key = `service.trustedproxies`
 
 	SentryEnabled         Key = `sentry.enabled`
 	SentryDsn             Key = `sentry.dsn`
 	SentryFrontendEnabled Key = `sentry.frontendenabled`
 	SentryFrontendDsn     Key = `sentry.frontenddsn`
 
-	AuthLocalEnabled    Key = `auth.local.enabled`
-	AuthOpenIDEnabled   Key = `auth.openid.enabled`
-	AuthOpenIDProviders Key = `auth.openid.providers`
+	AuthLocalEnabled       Key = `auth.local.enabled`
+	AuthOpenIDEnabled      Key = `auth.openid.enabled`
+	AuthOpenIDProviders    Key = `auth.openid.providers`
+	AuthSingleUserEnabled  Key = `auth.singleuser.enabled`
+	AuthSingleUserUsername Key = `auth.singleuser.username`
+	// #nosec G101 -- Plaintext input is only used to provision the bcrypt password.
+	AuthSingleUserPassword Key = `auth.singleuser.password`
+	AuthSingleUserEmail    Key = `auth.singleuser.email`
+	AuthSingleUserName     Key = `auth.singleuser.name`
 
 	AuthLdapEnabled    Key = `auth.ldap.enabled`
 	AuthLdapHost       Key = `auth.ldap.host`
@@ -92,15 +94,11 @@ const (
 	AuthLdapVerifyTLS  Key = `auth.ldap.verifytls`
 	AuthLdapBindDN     Key = `auth.ldap.binddn`
 	// #nosec G101
-	AuthLdapBindPassword               Key = `auth.ldap.bindpassword`
-	AuthLdapGroupSyncEnabled           Key = `auth.ldap.groupsyncenabled`
-	AuthLdapGroupSyncFilter            Key = `auth.ldap.groupsyncfilter`
-	AuthLdapGroupSyncUseServiceAccount Key = `auth.ldap.groupsyncuseserviceaccount`
-	AuthLdapAvatarSyncAttribute        Key = `auth.ldap.avatarsyncattribute`
-	AuthLdapAttributeUsername          Key = `auth.ldap.attribute.username`
-	AuthLdapAttributeEmail             Key = `auth.ldap.attribute.email`
-	AuthLdapAttributeDisplayname       Key = `auth.ldap.attribute.displayname`
-	AuthLdapAttributeMemberID          Key = `auth.ldap.attribute.memberid`
+	AuthLdapBindPassword         Key = `auth.ldap.bindpassword`
+	AuthLdapAvatarSyncAttribute  Key = `auth.ldap.avatarsyncattribute`
+	AuthLdapAttributeUsername    Key = `auth.ldap.attribute.username`
+	AuthLdapAttributeEmail       Key = `auth.ldap.attribute.email`
+	AuthLdapAttributeDisplayname Key = `auth.ldap.attribute.displayname`
 
 	LegalImprintURL Key = `legal.imprinturl`
 	LegalPrivacyURL Key = `legal.privacyurl`
@@ -363,14 +361,6 @@ func InitDefaultConfig() {
 	generateServiceSecretIfEmpty()
 }
 
-// ResetForTests drops every value a test set and re-applies the defaults, so a later
-// InitConfig sees what it would in a fresh process. Restoring a saved value with Set
-// instead leaves it at viper's override level, where it outranks anything InitConfig loads.
-func ResetForTests() {
-	viper.Reset()
-	InitDefaultConfig()
-}
-
 func initDefaultConfig() {
 	// Service
 	ServiceJWTTTL.setDefault(259200)      // 72 hours
@@ -385,7 +375,6 @@ func initDefaultConfig() {
 	ServiceMaxItemsPerPage.setDefault(50)
 	ServiceMotd.setDefault("")
 	ServiceEnableLinkSharing.setDefault(true)
-	ServiceEnableRegistration.setDefault(true)
 	ServiceEnableTaskAttachments.setDefault(true)
 	ServiceTimeZone.setDefault("GMT")
 	ServiceEnableTaskComments.setDefault(true)
@@ -394,9 +383,7 @@ func initDefaultConfig() {
 	ServiceEnableUserDeletion.setDefault(true)
 	ServiceMaxAvatarSize.setDefault(1024)
 	ServiceDemoMode.setDefault(false)
-	ServiceEnablePublicTeams.setDefault(false)
 	ServiceBcryptRounds.setDefault(11)
-	ServiceEnableOpenIDTeamUserOnlySearch.setDefault(false)
 	ServiceIPExtractionMethod.setDefault("direct")
 	ServiceTrustedProxies.setDefault("")
 
@@ -407,19 +394,20 @@ func initDefaultConfig() {
 	// Auth
 	AuthLocalEnabled.setDefault(true)
 	AuthOpenIDEnabled.setDefault(false)
+	AuthSingleUserEnabled.setDefault(false)
+	AuthSingleUserUsername.setDefault("")
+	AuthSingleUserPassword.setDefault("")
+	AuthSingleUserEmail.setDefault("")
+	AuthSingleUserName.setDefault("")
 
 	AuthLdapEnabled.setDefault(false)
 	AuthLdapHost.setDefault("localhost")
 	AuthLdapPort.setDefault(389)
 	AuthLdapUseTLS.setDefault(true)
 	AuthLdapVerifyTLS.setDefault(true)
-	AuthLdapGroupSyncEnabled.setDefault(false)
-	AuthLdapGroupSyncFilter.setDefault("(&(objectclass=*)(|(objectclass=group)(objectclass=groupOfNames)))")
-	AuthLdapGroupSyncUseServiceAccount.setDefault(false)
 	AuthLdapAttributeUsername.setDefault("uid")
 	AuthLdapAttributeEmail.setDefault("mail")
 	AuthLdapAttributeDisplayname.setDefault("displayName")
-	AuthLdapAttributeMemberID.setDefault("member")
 
 	// Database
 	DatabaseType.setDefault("sqlite")

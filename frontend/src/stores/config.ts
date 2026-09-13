@@ -30,10 +30,9 @@ export interface ConfigState {
 	taskCommentsEnabled: boolean,
 	demoModeEnabled: boolean,
 	webhooksEnabled: boolean,
-	auth: {
+	 auth: {
 		local: {
 			enabled: boolean,
-			registrationEnabled: boolean,
 		},
 		ldap: {
 			enabled: boolean,
@@ -44,7 +43,6 @@ export interface ConfigState {
 			providers: IProvider[],
 		},
 	},
-	publicTeamsEnabled: boolean,
 	allowIconChanges: boolean,
 	enabledProFeatures: string[],
 	concurrentWrites: boolean,
@@ -75,7 +73,6 @@ export const useConfigStore = defineStore('config', () => {
 		auth: {
 			local: {
 				enabled: true,
-				registrationEnabled: true,
 			},
 			ldap: {
 				enabled: false,
@@ -86,7 +83,6 @@ export const useConfigStore = defineStore('config', () => {
 				providers: [],
 			},
 		},
-		publicTeamsEnabled: false,
 		allowIconChanges: true,
 		enabledProFeatures: [],
 		concurrentWrites: false,

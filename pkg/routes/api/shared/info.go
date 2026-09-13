@@ -52,7 +52,6 @@ type VikunjaInfos struct {
 	TaskCommentsEnabled        bool              `json:"task_comments_enabled" doc:"Whether task comments are enabled."`
 	DemoModeEnabled            bool              `json:"demo_mode_enabled" doc:"Whether this instance runs in demo mode (data is periodically reset)."`
 	WebhooksEnabled            bool              `json:"webhooks_enabled" doc:"Whether webhooks are enabled."`
-	PublicTeamsEnabled         bool              `json:"public_teams_enabled" doc:"Whether public teams are enabled."`
 	AllowIconChanges           bool              `json:"allow_icon_changes" doc:"Whether users may change project icons."`
 	EnabledProFeatures         []license.Feature `json:"enabled_pro_features" doc:"The licensed pro features enabled on this instance."`
 	// ConcurrentWrites reports whether the configured database can handle concurrent writes. It is false on SQLite, where overlapping write transactions deadlock, so clients should serialize batched writes instead of firing them in parallel.
@@ -68,8 +67,7 @@ type AuthInfo struct {
 
 // LocalAuthInfo describes the local (username/password) authentication method.
 type LocalAuthInfo struct {
-	Enabled             bool `json:"enabled"`
-	RegistrationEnabled bool `json:"registration_enabled"`
+	Enabled bool `json:"enabled"`
 }
 
 // LdapAuthInfo describes the LDAP authentication method.
@@ -107,7 +105,6 @@ func BuildInfo() VikunjaInfos {
 		TaskCommentsEnabled:    config.ServiceEnableTaskComments.GetBool(),
 		DemoModeEnabled:        config.ServiceDemoMode.GetBool(),
 		WebhooksEnabled:        config.WebhooksEnabled.GetBool(),
-		PublicTeamsEnabled:     config.ServiceEnablePublicTeams.GetBool(),
 		AllowIconChanges:       config.ServiceAllowIconChanges.GetBool(),
 		ConcurrentWrites:       config.DatabaseType.GetString() != "sqlite",
 		EnabledProFeatures:     license.EnabledProFeatures(),
@@ -124,8 +121,7 @@ func BuildInfo() VikunjaInfos {
 		},
 		AuthInfo: AuthInfo{
 			Local: LocalAuthInfo{
-				Enabled:             config.AuthLocalEnabled.GetBool(),
-				RegistrationEnabled: config.AuthLocalEnabled.GetBool() && config.ServiceEnableRegistration.GetBool(),
+				Enabled: config.AuthLocalEnabled.GetBool(),
 			},
 			Ldap: LdapAuthInfo{
 				Enabled: config.AuthLdapEnabled.GetBool(),

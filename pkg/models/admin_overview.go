@@ -24,7 +24,6 @@ import (
 
 type ShareCounts struct {
 	LinkShares int64 `json:"link_shares" readOnly:"true" doc:"Number of link shares across all projects."`
-	TeamShares int64 `json:"team_shares" readOnly:"true" doc:"Number of team-project shares."`
 	UserShares int64 `json:"user_shares" readOnly:"true" doc:"Number of user-project shares."`
 }
 
@@ -32,7 +31,6 @@ type Overview struct {
 	Users    int64        `json:"users" readOnly:"true" doc:"Total number of user accounts."`
 	Projects int64        `json:"projects" readOnly:"true" doc:"Total number of projects."`
 	Tasks    int64        `json:"tasks" readOnly:"true" doc:"Total number of tasks."`
-	Teams    int64        `json:"teams" readOnly:"true" doc:"Total number of teams."`
 	Shares   ShareCounts  `json:"shares" readOnly:"true" doc:"Aggregate share counts."`
 	License  license.Info `json:"license" readOnly:"true" doc:"Snapshot of the instance license state."`
 }
@@ -51,15 +49,7 @@ func BuildOverview(s *xorm.Session) (*Overview, error) {
 	if err != nil {
 		return nil, err
 	}
-	teams, err := s.Table("teams").Count()
-	if err != nil {
-		return nil, err
-	}
 	linkShares, err := s.Table("link_shares").Count()
-	if err != nil {
-		return nil, err
-	}
-	teamShares, err := s.Table("team_projects").Count()
 	if err != nil {
 		return nil, err
 	}
@@ -72,10 +62,8 @@ func BuildOverview(s *xorm.Session) (*Overview, error) {
 		Users:    users,
 		Projects: projects,
 		Tasks:    tasks,
-		Teams:    teams,
 		Shares: ShareCounts{
 			LinkShares: linkShares,
-			TeamShares: teamShares,
 			UserShares: userShares,
 		},
 		License: license.CurrentInfo(),

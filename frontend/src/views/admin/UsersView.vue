@@ -8,12 +8,6 @@
 					:placeholder="$t('admin.searchUsersPlaceholder')"
 					@input="onSearch"
 				/>
-				<XButton
-					variant="primary"
-					@click="openCreate"
-				>
-					{{ $t('admin.users.addUser') }}
-				</XButton>
 			</div>
 
 			<p v-if="loading">
@@ -119,37 +113,6 @@
 						</template>
 					</FormField>
 
-					<template v-if="!detailTarget.authProvider">
-						<FormField :label="$t('admin.users.newPasswordLabel')">
-							<template #default="{id}">
-								<FormInput
-									:id="id"
-									v-model="newPassword"
-									type="password"
-									autocomplete="new-password"
-								/>
-							</template>
-						</FormField>
-						<div class="admin-users__password-actions">
-							<XButton
-								variant="secondary"
-								:disabled="!newPassword || settingPassword"
-								:loading="settingPassword"
-								@click="setPassword"
-							>
-								{{ $t('admin.users.setPassword') }}
-							</XButton>
-							<XButton
-								variant="secondary"
-								:disabled="sendingResetEmail"
-								:loading="sendingResetEmail"
-								@click="sendResetEmail"
-							>
-								{{ $t('admin.users.sendResetEmail') }}
-							</XButton>
-						</div>
-					</template>
-
 					<template #footer>
 						<XButton
 							variant="tertiary"
@@ -172,92 +135,6 @@
 							@click="saveChanges"
 						>
 							{{ $t('admin.users.saveButton') }}
-						</XButton>
-					</template>
-				</Card>
-			</Modal>
-
-			<Modal
-				v-if="createOpen"
-				variant="hint-modal"
-				@close="closeCreate"
-			>
-				<Card
-					class="has-no-shadow"
-					:title="$t('admin.users.createTitle')"
-				>
-					<FormField :label="$t('user.auth.username')">
-						<template #default="{id}">
-							<FormInput
-								:id="id"
-								v-model="createForm.username"
-								type="text"
-								required
-							/>
-						</template>
-					</FormField>
-					<FormField :label="$t('user.auth.email')">
-						<template #default="{id}">
-							<FormInput
-								:id="id"
-								v-model="createForm.email"
-								type="email"
-								required
-							/>
-						</template>
-					</FormField>
-					<FormField :label="$t('admin.users.nameLabel')">
-						<template #default="{id}">
-							<FormInput
-								:id="id"
-								v-model="createForm.name"
-								type="text"
-							/>
-						</template>
-					</FormField>
-					<FormField :label="$t('user.auth.password')">
-						<template #default="{id}">
-							<FormInput
-								:id="id"
-								v-model="createForm.password"
-								type="password"
-								autocomplete="new-password"
-								required
-							/>
-						</template>
-					</FormField>
-					<FormField :label="$t('user.settings.general.language')">
-						<template #default="{id}">
-							<FormInput
-								:id="id"
-								v-model="createForm.language"
-								type="text"
-							/>
-						</template>
-					</FormField>
-					<FormCheckbox
-						v-model="createForm.isAdmin"
-						:label="$t('admin.users.isAdminLabel')"
-					/>
-					<FormCheckbox
-						v-model="createForm.skipEmailConfirm"
-						:label="$t('admin.users.skipEmailConfirm')"
-					/>
-
-					<template #footer>
-						<XButton
-							variant="tertiary"
-							@click="closeCreate"
-						>
-							{{ $t('misc.cancel') }}
-						</XButton>
-						<XButton
-							variant="primary"
-							:disabled="creating || !createForm.username || !createForm.email || !createForm.password"
-							:loading="creating"
-							@click="submitCreate"
-						>
-							{{ $t('admin.users.createSubmit') }}
 						</XButton>
 					</template>
 				</Card>
@@ -312,7 +189,7 @@ import {ref, computed, onMounted, reactive, watch} from 'vue'
 import {useDebounceFn} from '@vueuse/core'
 import {useI18n} from 'vue-i18n'
 import {useAuthStore} from '@/stores/auth'
-import AdminUserService, {type CreateAdminUserBody, type DeleteUserMode} from '@/services/admin/userService'
+import AdminUserService, {type DeleteUserMode} from '@/services/admin/userService'
 import AdminUserModel from '@/models/adminUser'
 import type {IAdminUser} from '@/modelTypes/IAdminUser'
 import {error, success} from '@/message'
@@ -342,26 +219,7 @@ const pendingDelete = ref<IAdminUser | null>(null)
 const saving = ref(false)
 const deleting = ref(false)
 const deleteMode = ref<DeleteUserMode | null>(null)
-const createOpen = ref(false)
-const creating = ref(false)
 const editable = reactive({isAdmin: false, status: 0})
-const newPassword = ref('')
-const settingPassword = ref(false)
-const sendingResetEmail = ref(false)
-
-function emptyCreateForm(): Required<Pick<CreateAdminUserBody, 'username' | 'email'>> & CreateAdminUserBody {
-	return {
-		username: '',
-		email: '',
-		name: '',
-		password: '',
-		language: '',
-		isAdmin: false,
-		skipEmailConfirm: false,
-	}
-}
-
-const createForm = reactive(emptyCreateForm())
 
 const hasChanges = computed(() => {
 	if (!detailTarget.value) return false
@@ -370,7 +228,6 @@ const hasChanges = computed(() => {
 })
 
 watch(detailTarget, (u) => {
-	newPassword.value = ''
 	if (!u) return
 	editable.isAdmin = !!u.isAdmin
 	editable.status = u.status
@@ -425,38 +282,6 @@ function closeDetail() {
 	detailTarget.value = null
 }
 
-function openCreate() {
-	Object.assign(createForm, emptyCreateForm())
-	createOpen.value = true
-}
-
-function closeCreate() {
-	createOpen.value = false
-}
-
-async function submitCreate() {
-	creating.value = true
-	try {
-		const body: CreateAdminUserBody = {
-			username: createForm.username,
-			email: createForm.email,
-			password: createForm.password,
-		}
-		if (createForm.name) body.name = createForm.name
-		if (createForm.language) body.language = createForm.language
-		if (createForm.isAdmin) body.isAdmin = true
-		if (createForm.skipEmailConfirm) body.skipEmailConfirm = true
-		const created = await adminUserService.createUser(body)
-		users.value = [created, ...users.value]
-		success({message: t('admin.users.createdSuccess', {username: created.username})})
-		createOpen.value = false
-	} catch (e) {
-		error(e)
-	} finally {
-		creating.value = false
-	}
-}
-
 function replaceUser(updated: IAdminUser) {
 	const idx = users.value.findIndex(x => x.id === updated.id)
 	if (idx !== -1) users.value[idx] = updated
@@ -481,35 +306,6 @@ async function saveChanges() {
 		error(e)
 	} finally {
 		saving.value = false
-	}
-}
-
-async function setPassword() {
-	if (!detailTarget.value || !newPassword.value) return
-	settingPassword.value = true
-	try {
-		const latest = await adminUserService.setPassword(detailTarget.value.id, newPassword.value)
-		replaceUser(latest)
-		success({message: t('admin.users.setPasswordSuccess', {username: latest.username})})
-		newPassword.value = ''
-	} catch (e) {
-		error(e)
-	} finally {
-		settingPassword.value = false
-	}
-}
-
-async function sendResetEmail() {
-	if (!detailTarget.value) return
-	const target = detailTarget.value
-	sendingResetEmail.value = true
-	try {
-		await adminUserService.sendPasswordResetEmail(target.id)
-		success({message: t('admin.users.sendResetEmailSuccess', {username: target.username})})
-	} catch (e) {
-		error(e)
-	} finally {
-		sendingResetEmail.value = false
 	}
 }
 
@@ -567,12 +363,6 @@ onMounted(load)
 	dd {
 		margin: 0;
 	}
-}
-
-.admin-users__password-actions {
-	display: flex;
-	gap: 0.5rem;
-	margin-block-end: 1rem;
 }
 
 .admin-users__issuer-url {

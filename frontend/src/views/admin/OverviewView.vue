@@ -34,14 +34,6 @@
 				</div>
 				<div class="admin-overview__card">
 					<h2 class="admin-overview__card-title">
-						{{ $t('team.title') }}
-					</h2>
-					<p class="admin-overview__card-value">
-						{{ data.teams }}
-					</p>
-				</div>
-				<div class="admin-overview__card">
-					<h2 class="admin-overview__card-title">
 						{{ $t('admin.overview.shares') }}
 					</h2>
 					<p class="admin-overview__card-value">
@@ -49,8 +41,6 @@
 					</p>
 					<p class="admin-overview__hint admin-overview__shares-breakdown">
 						{{ data.shares.linkShares }} {{ $t('admin.overview.linkSharesShort') }}
-						<span aria-hidden="true">·</span>
-						{{ data.shares.teamShares }} {{ $t('admin.overview.teamSharesShort') }}
 						<span aria-hidden="true">·</span>
 						{{ data.shares.userShares }} {{ $t('admin.overview.userSharesShort') }}
 					</p>
@@ -146,7 +136,7 @@ const expiresInDays = computed<number | null>(() => {
 const totalShares = computed<number>(() => {
 	const shares = data.value?.shares
 	if (!shares) return 0
-	return shares.linkShares + shares.teamShares + shares.userShares
+	return shares.linkShares + shares.userShares
 })
 
 onMounted(async () => {

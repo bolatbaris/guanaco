@@ -22,7 +22,7 @@ import (
 	"strconv"
 )
 
-// Permission defines the permissions users/teams can have for projects
+// Permission defines the permissions users can have for projects
 type Permission int
 
 // define unknown permission

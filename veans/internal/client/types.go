@@ -205,12 +205,11 @@ var FarFuture = time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
 
 // Info is the parsed shape of `GET /info`.
 type Info struct {
-	Version             string `json:"version"`
-	FrontendURL         string `json:"frontend_url"`
-	MOTD                string `json:"motd,omitempty"`
-	LinkSharingEnabled  bool   `json:"link_sharing_enabled"`
-	RegistrationEnabled bool   `json:"registration_enabled"`
-	Auth                struct {
+	Version            string `json:"version"`
+	FrontendURL        string `json:"frontend_url"`
+	MOTD               string `json:"motd,omitempty"`
+	LinkSharingEnabled bool   `json:"link_sharing_enabled"`
+	Auth               struct {
 		Local struct {
 			Enabled bool `json:"enabled"`
 		} `json:"local"`

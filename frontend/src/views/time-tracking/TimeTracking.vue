@@ -6,7 +6,6 @@
 			</span>
 			<div class="time-tracking__buttons">
 				<XButton
-					v-cy="'addTimeEntry'"
 					variant="secondary"
 					icon="plus"
 					:class="{'is-active': showForm}"
@@ -15,7 +14,6 @@
 					{{ $t('timeTracking.logTime') }}
 				</XButton>
 				<XButton
-					v-cy="'openTimeTrackingFilters'"
 					variant="secondary"
 					icon="filter"
 					:class="{'has-filters': hasFilters}"

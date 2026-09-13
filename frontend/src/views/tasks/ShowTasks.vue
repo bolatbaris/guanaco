@@ -1,6 +1,5 @@
 <template>
 	<div
-		v-cy="'showTasks'"
 		class="is-max-width-desktop has-text-start"
 	>
 		<h2 class="mbe-2 title">

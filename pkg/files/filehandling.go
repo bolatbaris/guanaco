@@ -24,7 +24,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"testing"
 	"time"
 
 	"code.vikunja.io/api/pkg/config"
@@ -37,7 +36,6 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/stretchr/testify/require"
 )
 
 // This file handles storing and retrieving a file for different backends
@@ -150,22 +148,6 @@ func InitFileHandler(ctx context.Context) error {
 func InitTestFileHandler() {
 	setDefaultLocalConfig()
 	storage = newMemStorage()
-}
-
-func initFixtures(t *testing.T) {
-	// DB fixtures
-	db.LoadAndAssertFixtures(t)
-	// File fixtures
-	InitTestFileFixtures(t)
-	err := config.SetMaxFileSizeMBytesFromString("20MB")
-	require.NoError(t, err)
-}
-
-// InitTestFileFixtures initializes file fixtures
-func InitTestFileFixtures(t *testing.T) {
-	testfile := &File{ID: 1}
-	err := storage.Write(testfile.fileID(), bytes.NewReader([]byte("testfile1")), 9)
-	require.NoError(t, err)
 }
 
 // InitTests handles the actual bootstrapping of the test env

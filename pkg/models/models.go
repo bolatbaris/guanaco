@@ -17,8 +17,6 @@
 package models
 
 import (
-	"time"
-
 	"code.vikunja.io/api/pkg/config"
 	"code.vikunja.io/api/pkg/db"
 	"code.vikunja.io/api/pkg/log"
@@ -31,9 +29,6 @@ import (
 
 var (
 	x *xorm.Engine
-
-	testCreatedTime time.Time
-	testUpdatedTime time.Time
 )
 
 func init() {
@@ -46,9 +41,6 @@ func GetTables() []interface{} {
 		&Project{},
 		&ProjectAncestor{},
 		&Task{},
-		&Team{},
-		&TeamMember{},
-		&TeamProject{},
 		&ProjectUser{},
 		&TaskAssginee{},
 		&Label{},

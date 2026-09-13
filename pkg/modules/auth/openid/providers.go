@@ -39,7 +39,7 @@ type ErrDuplicateOIDCIssuer struct {
 
 func (e *ErrDuplicateOIDCIssuer) Error() string {
 	return fmt.Sprintf(
-		"duplicate OpenID Connect issuer %q: providers %q and %q resolve to the same issuer, which will cause team sync conflicts",
+		"duplicate OpenID Connect issuer %q: providers %q and %q resolve to the same issuer, which will cause identity conflicts",
 		e.Issuer, e.Provider1, e.Provider2,
 	)
 }

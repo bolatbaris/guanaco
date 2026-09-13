@@ -39,45 +39,49 @@ devenv shell
 Or install manually:
 - Go (see go.mod for version)
 - Node.js >= 24
-- pnpm 10.x
+- pnpm 11.26.0 (use Corepack to match `packageManager`)
 - [Mage](https://magefile.org/) (Go build tool)
 - golangci-lint
+
+On macOS with Homebrew, install the global Go tools with:
+
+```bash
+brew install mage golangci-lint
+```
 
 ### Running Locally
 
 ```bash
 # Backend
+cp .env.example .env
+# Edit the single-user credentials and service secret in .env first.
+set -a && source .env && set +a
 mage build
-
-# Frontend
-cd frontend
-pnpm install
-pnpm dev
+./vikunja
 ```
 
-The frontend dev server runs on port 4173. You can point it at any backend (including the demo instance) by creating `frontend/.env.local`:
-
-```
-VITE_API_URL=http://localhost:3456/api/v1
-```
-
-### Running Tests
+In a second terminal, start the frontend:
 
 ```bash
-# Backend tests
-mage test:feature            # feature tests
-mage test:web                # web/API tests
-mage test:filter "TestName"  # specific test
-
-# Frontend tests
 cd frontend
-pnpm test:unit
-
-# E2E tests (builds everything automatically)
-mage test:e2e ""
+cp .env.local.example .env.local
+corepack pnpm install
+corepack pnpm dev
 ```
 
-**Important:** Always use `mage test:*` commands for backend and E2E tests - plain `go test` won't work due to required test infrastructure.
+The frontend dev server runs on port 4173. The provided `.env.local` proxies
+API requests to the local backend on port 3456. Change `DEV_PROXY` there when
+using another backend.
+
+### Validation
+
+Automated test suites are intentionally not part of this development setup.
+Use manual verification for feature work and run the critical API smoke check
+when needed:
+
+```bash
+mage test:smoke
+```
 
 ## Submitting Changes
 
@@ -123,4 +127,3 @@ Only edit the English source file (`en.json`):
 Actual translations happen through our translation platform, not via PRs.
 
 To learn more about translations, see https://vikunja.io/docs/translations/
-

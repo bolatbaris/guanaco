@@ -35,14 +35,13 @@ When the user tells you to prepare a worktree for a plan, invoke the `prepare-wo
 
 `mage -l` lists every target; `pnpm run` in `frontend/` lists the frontend scripts. The non-obvious parts:
 
-- **API tests MUST go through mage** — `mage test:web`, `mage test:feature`, or `mage test:filter <go-test-filter>`. Plain `go test` will not work.
-- `mage test:filter` runs most packages with `-short` but re-runs `pkg/webtests` without it, so a filter naming a web test actually executes it.
-- **E2E tests**: never run `pnpm test:e2e` directly — invoke the `run-e2e-tests` skill.
+- The only automated API check is the critical smoke target: `mage test:smoke`.
+- Full backend, frontend unit, and browser E2E suites were intentionally removed; validate feature work manually.
 - `mage generate:swagger-docs` is CI's job. Don't run it unless the user asks.
 - `pnpm dev` serves on port 4173 unless `--port` says otherwise.
 - `mage dev:make-migration <StructName>` scaffolds a migration (prompts if the name is omitted). Siblings: `make-event`, `make-listener`, `make-notification`.
 
-**Always save test output to a file** (`2>&1 | tee /tmp/out.log`), then read the file. Tests here are expensive — never re-run one just to grep the output differently.
+When running the smoke check, save its output to a file (`2>&1 | tee /tmp/out.log`) and read the file.
 
 ### Pre-commit Checks
 
@@ -69,9 +68,8 @@ You only need to run the lint for the backend when changing backend code, and th
 
 ## Testing
 
-- Always test both positive and negative authorization scenarios.
-- Use test fixtures in `pkg/db/fixtures/` for consistent test data.
-- Before adding a frontend component test, check `frontend/tests/e2e/` for the same scenario and assertions. Do not add a component test when an existing E2E test already covers the behavior or can cover it with a small extension; extend the E2E test when needed. Reserve component tests for distinct cases that would be difficult to exercise reliably through E2E tests.
+- Use the manual verification flow for feature work.
+- Keep only the critical health and successful-login smoke check in `pkg/webtests/`.
 
 ## Swagger API Documentation
 

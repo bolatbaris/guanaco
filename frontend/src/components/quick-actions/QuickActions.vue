@@ -125,9 +125,7 @@ import {useI18n} from 'vue-i18n'
 import {useRouter} from 'vue-router'
 
 import TaskService from '@/services/task'
-import TeamService from '@/services/team'
 
-import TeamModel from '@/models/team'
 import ProjectModel from '@/models/project'
 
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -145,7 +143,6 @@ import {getHistory} from '@/modules/projectHistory'
 import {parseTaskText, PREFIXES, PrefixMode} from '@/modules/quickAddMagic'
 import {success} from '@/message'
 
-import type {ITeam} from '@/modelTypes/ITeam'
 import type {ITask} from '@/modelTypes/ITask'
 import type {IProject} from '@/modelTypes/IProject'
 import type {IAbstract} from '@/modelTypes/IAbstract'
@@ -169,21 +166,18 @@ enum ACTION_TYPE {
 	CMD = 'cmd',
 	TASK = 'task',
 	PROJECT = 'project',
-	TEAM = 'team',
 	LABELS = 'labels',
 }
 
 enum COMMAND_TYPE {
 	NEW_TASK = 'newTask',
 	NEW_PROJECT = 'newProject',
-	NEW_TEAM = 'newTeam',
 }
 
 enum SEARCH_MODE {
 	ALL = 'all',
 	TASKS = 'tasks',
 	PROJECTS = 'projects',
-	TEAMS = 'teams',
 }
 
 const query = ref('')
@@ -191,9 +185,6 @@ const selectedCmd = ref<Command | null>(null)
 
 const foundTasks = ref<DoAction<ITask>[]>([])
 const taskService = shallowReactive(new TaskService())
-
-const foundTeams = ref<ITeam[]>([])
-const teamService = shallowReactive(new TeamService())
 
 const active = computed(() => baseStore.quickActionsActive)
 
@@ -317,12 +308,6 @@ const results = computed<Result[]>(() => {
 			typeLabel: t('quickActions.resultTypes.label'),
 			items: foundLabels.value,
 		},
-		{
-			type: ACTION_TYPE.TEAM,
-			title: t('quickActions.teams'),
-			typeLabel: t('quickActions.resultTypes.team'),
-			items: foundTeams.value,
-		},
 	].filter((i) => i.items.length > 0)
 })
 
@@ -333,8 +318,7 @@ function isDone(item: unknown): boolean {
 
 const loading = computed(() =>
 	taskService.loading ||
-	projectStore.isLoading ||
-	teamService.loading,
+	projectStore.isLoading,
 )
 
 interface Command {
@@ -356,12 +340,6 @@ const commands = computed<{ [key in COMMAND_TYPE]: Command }>(() => ({
 		title: t('quickActions.cmds.newProject'),
 		placeholder: t('quickActions.newProject'),
 		action: newProject,
-	},
-	newTeam: {
-		type: COMMAND_TYPE.NEW_TEAM,
-		title: t('quickActions.cmds.newTeam'),
-		placeholder: t('quickActions.newTeam'),
-		action: newTeam,
 	},
 }))
 
@@ -396,7 +374,6 @@ const availableCmds = computed(() => {
 	return [
 		commands.value.newTask,
 		commands.value.newProject,
-		commands.value.newTeam,
 	]
 })
 
@@ -419,15 +396,6 @@ const searchMode = computed(() => {
 		labels.length === 0
 	) {
 		return SEARCH_MODE.PROJECTS
-	}
-
-	if (
-		assignees.length > 0 &&
-		project === null &&
-		text === '' &&
-		labels.length === 0
-	) {
-		return SEARCH_MODE.TEAMS
 	}
 
 	return SEARCH_MODE.ALL
@@ -497,39 +465,8 @@ function searchTasks() {
 	}, 150)
 }
 
-const teamSearchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
-
-function searchTeams() {
-	if (
-		searchMode.value !== SEARCH_MODE.ALL &&
-		searchMode.value !== SEARCH_MODE.TEAMS
-	) {
-		foundTeams.value = []
-		return
-	}
-	if (query.value === '' || selectedCmd.value !== null) {
-		return
-	}
-	if (teamSearchTimeout.value !== null) {
-		clearTimeout(teamSearchTimeout.value)
-		teamSearchTimeout.value = null
-	}
-	const {assignees} = parsedQuery.value
-	teamSearchTimeout.value = setTimeout(async () => {
-		const teamSearchPromises = assignees.map((t) =>
-			teamService.getAll({}, {s: t}),
-		)
-		const teamsResult = await Promise.all(teamSearchPromises)
-		foundTeams.value = teamsResult.flat().map((team) => {
-			team.title = team.name
-			return team
-		})
-	}, 150)
-}
-
 function search() {
 	searchTasks()
-	searchTeams()
 }
 
 const searchInput = ref<HTMLElement | null>(null)
@@ -584,15 +521,6 @@ async function doAction(type: ACTION_TYPE, item: DoAction) {
 				})
 			}
 			closeQuickActions()
-			break
-		case ACTION_TYPE.TEAM:
-			closeQuickActions()
-			if (!isQuickAddMode) {
-				await router.push({
-					name: 'teams.edit',
-					params: {id: (item as DoAction<ITeam>).id},
-				})
-			}
 			break
 		case ACTION_TYPE.CMD:
 			query.value = ''
@@ -673,16 +601,6 @@ async function newProject() {
 		parentProjectId: Math.max(parentProjectId, 0),
 	}))
 	success({message: t('project.create.createdSuccess')})
-}
-
-async function newTeam() {
-	const newTeam = new TeamModel({name: query.value})
-	const team = await teamService.create(newTeam)
-	await router.push({
-		name: 'teams.edit',
-		params: {id: team.id},
-	})
-	success({message: t('team.create.success')})
 }
 
 type BaseButtonInstance = InstanceType<typeof BaseButton>

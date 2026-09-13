@@ -31,11 +31,10 @@ import (
 type TokenKind int
 
 const (
-	TokenUnknown TokenKind = iota
-	TokenPasswordReset
-	TokenEmailConfirm
-	TokenAccountDeletion
-	TokenCaldavAuth
+	TokenUnknown         TokenKind = 0
+	TokenEmailConfirm    TokenKind = 2
+	TokenAccountDeletion TokenKind = 3
+	TokenCaldavAuth      TokenKind = 4
 
 	tokenSize = 64
 )
@@ -126,15 +125,15 @@ func removeTokenByID(s *xorm.Session, u *User, kind TokenKind, id int64) (err er
 	return
 }
 
-// CleanupOldTokens removes all password reset, account deletion and email change tokens older than 24 hours.
-// Email confirm tokens are only swept for users with a pending email change, registration confirm links never expire.
+// CleanupOldTokens removes account deletion and pending email-change tokens older than 24 hours.
+// Registration-era token kinds remain reserved so existing database values keep their meaning.
 func CleanupOldTokens(s *xorm.Session) (deleted int64, err error) {
 	cutoff := time.Now().Add(time.Hour * 24 * -1)
 	deleted, err = s.
 		Where(builder.And(
 			builder.Lt{"created": cutoff},
 			builder.Or(
-				builder.In("kind", TokenPasswordReset, TokenAccountDeletion),
+				builder.Eq{"kind": TokenAccountDeletion},
 				builder.And(
 					builder.Eq{"kind": TokenEmailConfirm},
 					builder.In("user_id",
@@ -157,11 +156,11 @@ func RegisterTokenCleanupCron() {
 
 		deleted, err := CleanupOldTokens(s)
 		if err != nil {
-			log.Errorf(logPrefix+"Error removing old password reset tokens: %s", err)
+			log.Errorf(logPrefix+"Error removing old user tokens: %s", err)
 			return
 		}
 		if deleted > 0 {
-			log.Debugf(logPrefix+"Deleted %d old password reset tokens", deleted)
+			log.Debugf(logPrefix+"Deleted %d old user tokens", deleted)
 		}
 
 		if err := s.Commit(); err != nil {

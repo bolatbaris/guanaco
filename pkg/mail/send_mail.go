@@ -18,7 +18,6 @@ package mail
 
 import (
 	"embed"
-	"fmt"
 	"io"
 
 	"code.vikunja.io/api/pkg/config"
@@ -47,7 +46,7 @@ type Opts struct {
 // ContentType represents mail content types
 type ContentType int
 
-// Enumerate all the team permissions
+// Content types supported by the mail helper.
 const (
 	ContentTypePlain ContentType = iota
 	ContentTypeHTML
@@ -57,23 +56,6 @@ const (
 type header struct {
 	Field   mail.Header
 	Content string
-}
-
-// SendTestMail sends a test mail to a recipient.
-// It works without a queue.
-func SendTestMail(opts *Opts) error {
-	if config.MailerHost.GetString() == "" {
-		return fmt.Errorf("mailer is not configured! Please see the config docs for more details")
-	}
-
-	c, err := getClient()
-	if err != nil {
-		return err
-	}
-
-	m := getMessage(opts)
-
-	return c.DialAndSend(m)
 }
 
 func getMessage(opts *Opts) *mail.Msg {
@@ -131,7 +113,6 @@ func getMessage(opts *Opts) *mail.Msg {
 // SendMail puts a mail in the queue
 func SendMail(opts *Opts) {
 	if isUnderTest {
-		sentMails = append(sentMails, opts)
 		return
 	}
 

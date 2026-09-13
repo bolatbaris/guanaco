@@ -29,7 +29,6 @@
 				/>
 
 				<XButton
-					v-cy="'closeDatepicker'"
 					class="datepicker__close-button"
 					:shadow="false"
 					@click="close"

@@ -40,7 +40,7 @@ func RegisterProjectUserRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "project-users-list",
 		Summary:     "List the users a project is shared with",
-		Description: "Returns the users that have direct access to the project, with their permission. Requires read access to the project; team shares are not included. Pass q to filter by username.",
+		Description: "Returns the users that have direct access to the project, with their permission. Requires read access to the project. Pass q to filter by username.",
 		Method:      http.MethodGet,
 		Path:        "/projects/{project}/users",
 		Tags:        tags,

@@ -38,19 +38,6 @@ import (
 
 var pubsub *gochannel.GoChannel
 
-// activeHandlers tracks in-flight event handler goroutines so the test
-// endpoint can wait for them to finish before truncating tables.
-var activeHandlers sync.WaitGroup
-
-// WaitForPendingHandlers blocks until all currently in-flight event handler
-// goroutines have completed (including retries). This is intended for the
-// testing endpoint to avoid connection starvation: async handlers from the
-// previous test can hold SQLite connections, starving the next test's seed
-// request.
-func WaitForPendingHandlers() {
-	activeHandlers.Wait()
-}
-
 // Event represents the event interface used by all events
 type Event interface {
 	Name() string
@@ -124,19 +111,7 @@ func InitEvents() (err error) {
 		return nil
 	})
 
-	// handlerTracker is a middleware that tracks in-flight handlers via the
-	// activeHandlers WaitGroup. It wraps the entire processing chain
-	// (including retries) so WaitForPendingHandlers() can drain all work.
-	handlerTracker := func(h message.HandlerFunc) message.HandlerFunc {
-		return func(msg *message.Message) ([]*message.Message, error) {
-			activeHandlers.Add(1)
-			defer activeHandlers.Done()
-			return h(msg)
-		}
-	}
-
 	router.AddMiddleware(
-		handlerTracker,
 		poison,
 		middleware.Retry{
 			MaxRetries:          5,
@@ -159,66 +134,6 @@ func InitEvents() (err error) {
 	return router.Run(context.Background())
 }
 
-// InitEventsForTesting sets up the event system like InitEvents but accepts a
-// context so the watermill router can be shut down cleanly in tests.
-// It starts the router in a background goroutine and returns a channel that is
-// closed once the router is ready to accept messages.
-func InitEventsForTesting(ctx context.Context) (<-chan struct{}, error) {
-	logger := log.NewWatermillLogger(config.LogEnabled.GetBool(), config.LogEvents.GetString(), config.LogEventsLevel.GetString(), config.LogFormat.GetString())
-
-	router, err := message.NewRouter(
-		message.RouterConfig{},
-		logger,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	pubsub = gochannel.NewGoChannel(
-		gochannel.Config{
-			OutputChannelBuffer: 1024,
-		},
-		logger,
-	)
-
-	// No prometheus metrics in tests — avoids duplicate registration panics
-	// No poison queue — keep test output clean, let errors surface directly
-
-	handlerTracker := func(h message.HandlerFunc) message.HandlerFunc {
-		return func(msg *message.Message) ([]*message.Message, error) {
-			activeHandlers.Add(1)
-			defer activeHandlers.Done()
-			return h(msg)
-		}
-	}
-
-	router.AddMiddleware(
-		handlerTracker,
-		middleware.Retry{
-			MaxRetries:      3,
-			InitialInterval: time.Millisecond * 50,
-			MaxInterval:     time.Second,
-			Multiplier:      2,
-			Logger:          logger,
-		}.Middleware,
-		middleware.Recoverer,
-	)
-
-	for topic, funcs := range listeners {
-		for _, handler := range funcs {
-			router.AddConsumerHandler(topic+"."+handler.Name(), topic, pubsub, handler.Handle)
-		}
-	}
-
-	ready := router.Running()
-	go func() {
-		if err := router.Run(ctx); err != nil {
-			log.Errorf("Event system error: %s", err)
-		}
-	}()
-	return ready, nil
-}
-
 // Dispatch dispatches an event
 func Dispatch(event Event) error {
 	return DispatchWithContext(context.Background(), event)
@@ -229,12 +144,11 @@ func Dispatch(event Event) error {
 // attribute the event to the originating HTTP request.
 func DispatchWithContext(ctx context.Context, event Event) error {
 	if isUnderTest {
-		dispatchedTestEvents = append(dispatchedTestEvents, event)
 		return nil
 	}
 
 	if pubsub == nil {
-		return fmt.Errorf("event system not initialized: call InitEvents or InitEventsForTesting before dispatching")
+		return fmt.Errorf("event system not initialized: call InitEvents before dispatching")
 	}
 
 	content, err := json.Marshal(event)

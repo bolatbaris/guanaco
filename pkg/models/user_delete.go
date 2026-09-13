@@ -109,14 +109,6 @@ func getProjectsToDelete(s *xorm.Session, u *user.User) (projectsToDelete []*Pro
 		if hadUsers {
 			continue
 		}
-		hadTeams, err := ensureProjectAdminTeam(s, l)
-		if err != nil {
-			return nil, err
-		}
-
-		if hadTeams {
-			continue
-		}
 
 		projectsToDelete = append(projectsToDelete, l)
 	}
@@ -164,7 +156,6 @@ func DeleteUser(s *xorm.Session, u *user.User) (err error) {
 	}{
 		{"user_id", &TaskAssginee{}},
 		{"user_id", &Subscription{}},
-		{"user_id", &TeamMember{}},
 		{"owner_id", &SavedFilter{}},
 		{"user_id", &Reaction{}},
 		{"user_id", &Favorite{}},
@@ -235,41 +226,5 @@ func ensureProjectAdminUser(s *xorm.Session, l *Project) (hadUsers bool, err err
 		return true, err
 	}
 
-	return true, err
-}
-
-func ensureProjectAdminTeam(s *xorm.Session, l *Project) (hadTeams bool, err error) {
-	projectTeams := []*TeamProject{}
-	err = s.Where("project_id = ?", l.ID).Find(&projectTeams)
-	if err != nil {
-		return
-	}
-
-	if len(projectTeams) == 0 {
-		return false, nil
-	}
-
-	for _, lu := range projectTeams {
-		if lu.Permission == PermissionAdmin {
-			// Project already has more than one admin, no need to do anything
-			return true, nil
-		}
-	}
-
-	for _, lu := range projectTeams {
-		if lu.Permission == PermissionWrite {
-			lu.Permission = PermissionAdmin
-			_, err = s.Where("id = ?", lu.ID).
-				Cols("permission").
-				Update(lu)
-			return true, err
-		}
-	}
-
-	firstTeam := projectTeams[0]
-	firstTeam.Permission = PermissionAdmin
-	_, err = s.Where("id = ?", firstTeam.ID).
-		Cols("permission").
-		Update(firstTeam)
 	return true, err
 }

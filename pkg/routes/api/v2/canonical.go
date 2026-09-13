@@ -18,8 +18,6 @@ package apiv2
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"code.vikunja.io/api/pkg/config"
 
@@ -31,7 +29,6 @@ func NewCanonicalAPI() (huma.API, error) {
 	config.InitDefaultConfig()
 	config.AuthLocalEnabled.Set(true)
 	config.AuthOpenIDEnabled.Set(true)
-	config.ServiceEnableRegistration.Set(true)
 	config.ServiceEnableLinkSharing.Set(true)
 	config.ServiceEnableTotp.Set(true)
 	config.ServiceEnableTaskAttachments.Set(true)
@@ -43,7 +40,6 @@ func NewCanonicalAPI() (huma.API, error) {
 	config.MigrationTodoistEnable.Set(true)
 	config.MigrationTrelloEnable.Set(true)
 	config.MigrationMicrosoftTodoEnable.Set(true)
-	config.ServiceTestingtoken.Set("")
 	config.ServicePublicURL.Set("")
 
 	e := echo.New()
@@ -56,11 +52,5 @@ func NewCanonicalAPI() (huma.API, error) {
 	if callback == nil || callback.Post == nil {
 		return nil, errors.New("canonical API is missing POST /auth/openid/{provider}/callback")
 	}
-	for path := range document.Paths {
-		if strings.HasPrefix(path, "/test/") {
-			return nil, fmt.Errorf("canonical API unexpectedly contains %s", path)
-		}
-	}
-
 	return api, nil
 }

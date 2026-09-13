@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // @title Vikunja API
-// @description This is the documentation for the [Vikunja](https://vikunja.io) API. Vikunja is a cross-platform To-do-application with a lot of features, such as sharing projects with users or teams. <!-- ReDoc-Inject: <security-definitions> -->
+// @description This is the documentation for the [Vikunja](https://vikunja.io) API. Vikunja is a cross-platform To-do-application with a lot of features, such as sharing projects with users. <!-- ReDoc-Inject: <security-definitions> -->
 
 // @description # Pagination
 // @description Every endpoint capable of pagination will return two headers:
@@ -299,14 +299,10 @@ func RegisterRoutes(e *echo.Echo) {
 
 // unauthenticatedAPIPaths contains paths that don't require JWT authentication
 var unauthenticatedAPIPaths = map[string]bool{
-	"/api/v1/register":                       true,
-	"/api/v1/user/password/token":            true,
-	"/api/v1/user/password/reset":            true,
 	"/api/v1/user/confirm":                   true,
 	"/api/v1/login":                          true,
 	auth.RefreshTokenPathV1:                  true,
 	"/api/v1/auth/openid/:provider/callback": true,
-	"/api/v1/test/:table":                    true,
 	"/api/v1/info":                           true,
 	"/api/v1/shares/:share/auth":             true,
 	"/api/v1/docs.json":                      true,
@@ -324,20 +320,12 @@ var unauthenticatedAPIPaths = map[string]bool{
 	"/api/v2/schemas/:schema":           true,
 	"/api/v2/info":                      true,
 
-	"/api/v2/register":                       true,
-	"/api/v2/user/password/token":            true,
-	"/api/v2/user/password/reset":            true,
 	"/api/v2/user/confirm":                   true,
 	"/api/v2/shares/:share/auth":             true,
 	"/api/v2/oauth/token":                    true,
 	"/api/v2/login":                          true,
 	auth.RefreshTokenPathV2:                  true,
 	"/api/v2/auth/openid/:provider/callback": true,
-
-	// Testing endpoints authenticate with the testing token via a custom
-	// Authorization header, not a JWT; mounted only when that token is set.
-	"/api/v2/test/all":    true,
-	"/api/v2/test/:table": true,
 
 	// Public infra healthcheck (a Huma op that opts out of the global auth).
 	"/api/v2/health": true,
@@ -371,8 +359,8 @@ func collectRoutesForAPITokens(e *echo.Echo) {
 
 // noStoreCacheControl returns middleware that sets `Cache-Control: no-store`
 // on all responses. Without this, browsers may heuristically cache JSON
-// responses which causes stale data (e.g. newly team-shared projects not
-// appearing until a hard refresh). Applied to both /api/v1 and /api/v2.
+// responses, so changes made through the API might not appear until a hard
+// refresh. Applied to both /api/v1 and /api/v2.
 func noStoreCacheControl() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
@@ -417,9 +405,6 @@ func unauthenticatedPathSet(paths ...string) pathSet {
 // The v2 counterparts of v1's unauthenticated route group - credential
 // endpoints only, never the docs/info/health ones.
 var v2CredentialPaths = unauthenticatedPathSet(
-	"/api/v2/register",
-	"/api/v2/user/password/token",
-	"/api/v2/user/password/reset",
 	"/api/v2/user/confirm",
 	"/api/v2/login",
 	"/api/v2/auth/openid/:provider/callback",
@@ -480,9 +465,8 @@ func registerAPIRoutesV2(e *echo.Echo, a *echo.Group, noAuthRateLimit, refreshRa
 func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.MiddlewareFunc) {
 
 	// Prevent browsers from caching API responses. Without an explicit
-	// Cache-Control header browsers may heuristically cache JSON responses
-	// which causes stale data (e.g. newly team-shared projects not appearing
-	// until a hard refresh).
+	// Cache-Control header browsers may heuristically cache JSON responses, so
+	// changes made through the API might not appear until a hard refresh.
 	a.Use(noStoreCacheControl())
 
 	// This is the group with no auth
@@ -506,9 +490,6 @@ func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.Mid
 	ur.Use(noAuthRateLimit)
 
 	if config.AuthLocalEnabled.GetBool() {
-		ur.POST("/register", apiv1.RegisterUser)
-		ur.POST("/user/password/token", apiv1.UserRequestResetPasswordToken)
-		ur.POST("/user/password/reset", apiv1.UserResetPassword)
 		ur.POST("/user/confirm", apiv1.UserConfirmEmail)
 	}
 
@@ -531,12 +512,6 @@ func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.Mid
 	// credentials (authorization code or refresh token) itself.
 	tr.POST("/oauth/token", oauth2server.HandleToken)
 
-	// Testing
-	if config.ServiceTestingtoken.GetString() != "" {
-		n.DELETE("/test/all", apiv1.HandleTestingTruncateAll)
-		n.PATCH("/test/:table", apiv1.HandleTesting)
-	}
-
 	// Info endpoint
 	n.GET("/info", apiv1.Info)
 
@@ -554,8 +529,6 @@ func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.Mid
 	// Middleware to collect metrics
 	setupMetricsMiddleware(a)
 
-	a.GET("/token/test", apiv1.TestToken)
-	a.POST("/token/test", apiv1.CheckToken)
 	a.GET("/routes", models.GetAvailableAPIRoutesForToken)
 
 	// OAuth 2.0 authorize endpoint — requires authentication.
@@ -568,7 +541,6 @@ func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.Mid
 	u := a.Group("/user")
 
 	u.GET("", apiv1.UserShow)
-	u.POST("/password", apiv1.UserChangePassword)
 	u.GET("s", apiv1.UserList)
 	u.POST("/token", apiv1.RenewToken)
 	u.POST("/logout", apiv1.Logout)
@@ -795,16 +767,6 @@ func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.Mid
 	a.DELETE("/labels/:label", labelHandler.DeleteWeb)
 	a.POST("/labels/:label", labelHandler.UpdateWeb)
 
-	projectTeamHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TeamProject{}
-		},
-	}
-	a.GET("/projects/:project/teams", projectTeamHandler.ReadAllWeb)
-	a.PUT("/projects/:project/teams", projectTeamHandler.CreateWeb)
-	a.DELETE("/projects/:project/teams/:team", projectTeamHandler.DeleteWeb)
-	a.POST("/projects/:project/teams/:team", projectTeamHandler.UpdateWeb)
-
 	projectUserHandler := &handler.WebHandler{
 		EmptyStruct: func() handler.CObject {
 			return &models.ProjectUser{}
@@ -824,26 +786,6 @@ func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.Mid
 	a.PUT("/filters", savedFiltersHandler.CreateWeb)
 	a.DELETE("/filters/:filter", savedFiltersHandler.DeleteWeb)
 	a.POST("/filters/:filter", savedFiltersHandler.UpdateWeb)
-
-	teamHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.Team{}
-		},
-	}
-	a.GET("/teams", teamHandler.ReadAllWeb)
-	a.GET("/teams/:team", teamHandler.ReadOneWeb)
-	a.PUT("/teams", teamHandler.CreateWeb)
-	a.POST("/teams/:team", teamHandler.UpdateWeb)
-	a.DELETE("/teams/:team", teamHandler.DeleteWeb)
-
-	teamMemberHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TeamMember{}
-		},
-	}
-	a.PUT("/teams/:team/members", teamMemberHandler.CreateWeb)
-	a.DELETE("/teams/:team/members/:user", teamMemberHandler.DeleteWeb)
-	a.POST("/teams/:team/members/:user/admin", teamMemberHandler.UpdateWeb)
 
 	// Subscriptions
 	subscriptionHandler := &handler.WebHandler{
@@ -964,7 +906,6 @@ func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.Mid
 	}
 	admin.GET("/overview", adminapi.GetOverview)
 	admin.GET("/users", adminUserListHandler.ReadAllWeb)
-	admin.POST("/users", adminapi.CreateUser)
 	admin.PATCH("/users/:id/admin", adminapi.PatchAdmin)
 	admin.PATCH("/users/:id/status", adminapi.PatchStatus)
 	admin.DELETE("/users/:id", adminapi.DeleteUser)

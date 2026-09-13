@@ -510,7 +510,6 @@
 
 						<XButton
 							v-shortcut="SHORTCUTS.taskDetail.assignees"
-							v-cy="'taskDetail.assign'"
 							variant="secondary"
 							icon="users"
 							@click="setFieldActive('assignees')"
@@ -553,7 +552,6 @@
 
 						<XButton
 							v-if="timeTrackingEnabled"
-							v-cy="'taskTrackTimeAction'"
 							variant="secondary"
 							:icon="['far', 'clock']"
 							@click="setFieldActive('timeTracking')"

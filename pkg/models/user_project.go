@@ -17,7 +17,6 @@
 package models
 
 import (
-	"code.vikunja.io/api/pkg/config"
 	"code.vikunja.io/api/pkg/user"
 	"code.vikunja.io/api/pkg/web"
 	"xorm.io/builder"
@@ -43,21 +42,14 @@ func SearchUsersForProject(s *xorm.Session, project *Project, a web.Auth, curren
 	return users, true, nil
 }
 
-// ProjectUIDs hold all kinds of user IDs from accounts who have access to a project
+// ProjectUIDs holds a user ID from an account with direct access to a project.
 type ProjectUIDs struct {
-	ProjectUserID     int64 `xorm:"ulID"`
-	TeamProjectUserID int64 `xorm:"tlUID"`
-	// Carries the source team so filtering joined rows preserves direct shares.
-	TeamProjectTeamID int64 `xorm:"tlTID"`
+	ProjectUserID int64 `xorm:"ulID"`
 }
 
 // getUserIDsWithProjectAccess returns the ids of all users who can access the project
-// through ownership (of the project or any parent), a direct share or a team share.
+// through ownership (of the project or any parent) or a direct share.
 func getUserIDsWithProjectAccess(s *xorm.Session, projectID int64) (uids []int64, err error) {
-	return getUserIDsWithProjectAccessFiltered(s, projectID, nil)
-}
-
-func getUserIDsWithProjectAccessFiltered(s *xorm.Session, projectID int64, teamFilter func(teamID int64) (bool, error)) (uids []int64, err error) {
 	userids := []*ProjectUIDs{}
 
 	currentProject, err := GetProjectSimpleByID(s, projectID)
@@ -73,27 +65,15 @@ func getUserIDsWithProjectAccessFiltered(s *xorm.Session, projectID int64, teamF
 
 		currentUserIDs := []*ProjectUIDs{}
 		err = s.
-			Select(`ul.user_id as ulID,
-			tm2.user_id as tlUID,
-			tl.team_id as tlTID`).
+			Select("ul.user_id as ulID").
 			Table("projects").
 			Alias("l").
-			// User stuff
 			Join("LEFT", []string{"users_projects", "ul"}, "ul.project_id = l.id").
-			// Team stuff
-			Join("LEFT", []string{"team_projects", "tl"}, "l.id = tl.project_id").
-			Join("LEFT", []string{"team_members", "tm2"}, "tm2.team_id = tl.team_id").
-			// The actual condition
 			Where(
 				builder.Or(
-					builder.Or(builder.Eq{"ul.permission": PermissionRead}),
-					builder.Or(builder.Eq{"tl.permission": PermissionRead}),
-
-					builder.Or(builder.Eq{"ul.permission": PermissionWrite}),
-					builder.Or(builder.Eq{"tl.permission": PermissionWrite}),
-
-					builder.Or(builder.Eq{"ul.permission": PermissionAdmin}),
-					builder.Or(builder.Eq{"tl.permission": PermissionAdmin}),
+					builder.Eq{"ul.permission": PermissionRead},
+					builder.Eq{"ul.permission": PermissionWrite},
+					builder.Eq{"ul.permission": PermissionAdmin},
 				),
 				builder.Eq{"l.id": currentProject.ID},
 			).
@@ -129,35 +109,8 @@ func getUserIDsWithProjectAccessFiltered(s *xorm.Session, projectID int64, teamF
 	for _, id := range ownerIDs {
 		addUID(id)
 	}
-	// Joined rows repeat teams, so cache each team-read check.
-	readableTeams := make(map[int64]bool)
-	teamIsReadable := func(teamID int64) (bool, error) {
-		if teamID <= 0 {
-			return false, nil
-		}
-		if readable, has := readableTeams[teamID]; has {
-			return readable, nil
-		}
-		readable, err := teamFilter(teamID)
-		if err != nil {
-			return false, err
-		}
-		readableTeams[teamID] = readable
-		return readable, nil
-	}
 	for _, u := range userids {
 		addUID(u.ProjectUserID)
-		if teamFilter == nil {
-			addUID(u.TeamProjectUserID)
-			continue
-		}
-		readable, err := teamIsReadable(u.TeamProjectTeamID)
-		if err != nil {
-			return nil, err
-		}
-		if readable {
-			addUID(u.TeamProjectUserID)
-		}
 	}
 
 	uids = make([]int64, 0, len(uidmap))
@@ -196,24 +149,7 @@ func getProjectAccessForTasks(s *xorm.Session, tasks []*Task) (accessByProject m
 
 // ListUsersFromProject returns a list with all users who have access to a project, regardless of the method which gave them access
 func ListUsersFromProject(s *xorm.Session, l *Project, currentUser *user.User, search string) (users []*user.User, err error) {
-	isAdmin, err := (&Project{ID: l.ID}).IsAdmin(s, currentUser)
-	if err != nil {
-		return nil, err
-	}
-
-	var uids []int64
-	if isAdmin {
-		uids, err = getUserIDsWithProjectAccess(s, l.ID)
-	} else {
-		uids, err = getUserIDsWithProjectAccessFiltered(s, l.ID, func(teamID int64) (bool, error) {
-			t := &Team{ID: teamID}
-			canRead, _, err := t.CanRead(s, currentUser)
-			if err != nil || canRead || !config.ServiceEnablePublicTeams.GetBool() {
-				return canRead, err
-			}
-			return s.Where(builder.Eq{"id": teamID, "is_public": true}).Exist(&Team{})
-		})
-	}
+	uids, err := getUserIDsWithProjectAccess(s, l.ID)
 	if err != nil {
 		return nil, err
 	}

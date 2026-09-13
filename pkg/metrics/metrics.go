@@ -32,7 +32,6 @@ const (
 	ProjectCountKey     = `project_count`
 	UserCountKey        = `user_count`
 	TaskCountKey        = `task_count`
-	TeamCountKey        = `team_count`
 	FilesCountKey       = `files_count`
 	AttachmentsCountKey = `attachments_count`
 )
@@ -48,7 +47,6 @@ var countTables = map[string]string{
 	ProjectCountKey:     "projects",
 	UserCountKey:        "users",
 	TaskCountKey:        "tasks",
-	TeamCountKey:        "teams",
 	FilesCountKey:       "files",
 	AttachmentsCountKey: "task_attachments",
 }
@@ -88,7 +86,6 @@ func InitMetrics() {
 	registerPromMetric(ProjectCountKey, "The total number of projects on this instance")
 	registerPromMetric(UserCountKey, "The total number of users on this instance")
 	registerPromMetric(TaskCountKey, "The total number of tasks on this instance")
-	registerPromMetric(TeamCountKey, "The total number of teams on this instance")
 	registerPromMetric(FilesCountKey, "The total number of files on this instance")
 	registerPromMetric(AttachmentsCountKey, "The total number of attachments on this instance")
 

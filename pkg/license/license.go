@@ -200,21 +200,6 @@ func Init() {
 	go backgroundLoop(key)
 }
 
-// SetForTests enables the given features. Pair with ResetForTests to avoid bleeding state between tests.
-func SetForTests(features []Feature) {
-	feats := make([]Feature, 0, len(features))
-	feats = append(feats, features...)
-	applyResponse(&Response{
-		Valid:     true,
-		Features:  feats,
-		ExpiresAt: time.Now().Add(365 * 24 * time.Hour),
-	})
-}
-
-func ResetForTests() {
-	degradeToFree("reset for tests")
-}
-
 // ReloadFromCache applies the cached license_status row; empty or missing cache degrades to free mode.
 func ReloadFromCache() error {
 	cached, err := loadCachedStatus()

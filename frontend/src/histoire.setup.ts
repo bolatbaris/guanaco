@@ -7,8 +7,6 @@ import './styles/global.scss'
 
 import {createPinia} from 'pinia'
 
-import testid from '@/directives/testid'
-
 import FontAwesomeIcon from '@/components/misc/Icon'
 import XButton from '@/components/input/button.vue'
 import Modal from '@/components/misc/Modal.vue'
@@ -19,8 +17,6 @@ export const setupVue3 = defineSetupVue3(({ app }) => {
 	const pinia = createPinia()
 	app.use(pinia)
 	app.use(i18n)
-
-	app.directive('cy', testid)
 
 	app.component('Icon', FontAwesomeIcon)
 	app.component('XButton', XButton)

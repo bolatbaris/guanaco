@@ -1,6 +1,5 @@
 <template>
 	<div
-		v-cy="'checkbox'"
 		class="base-checkbox"
 	>
 		<label

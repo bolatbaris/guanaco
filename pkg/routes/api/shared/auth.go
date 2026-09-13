@@ -23,7 +23,6 @@ import (
 	"code.vikunja.io/api/pkg/db"
 	"code.vikunja.io/api/pkg/events"
 	"code.vikunja.io/api/pkg/log"
-	"code.vikunja.io/api/pkg/metrics"
 	"code.vikunja.io/api/pkg/models"
 	"code.vikunja.io/api/pkg/modules/auth"
 	"code.vikunja.io/api/pkg/modules/auth/ldap"
@@ -33,55 +32,6 @@ import (
 
 	"xorm.io/xorm"
 )
-
-// UserRegister carries the fields accepted by the public registration endpoint:
-// username, password and email (from APIUserPassword) plus the new user's
-// preferred language.
-type UserRegister struct {
-	// The language of the new user. Must be a valid IETF BCP 47 language code and exist in Vikunja.
-	Language string `json:"language" valid:"language" doc:"The language of the new user as an IETF BCP 47 code (e.g. en, de-DE)."`
-	user.APIUserPassword
-}
-
-// RegisterUser creates a new local user account from the registration input and
-// busts the cached user-count metric so the registration shows up immediately.
-// The caller is responsible for the registration-enabled gate and input
-// validation; both v1 and v2 share this body.
-func RegisterUser(ctx context.Context, in *UserRegister) (*user.User, error) {
-	s := db.NewSession()
-	defer s.Close()
-	// Discards events queued during a rolled-back transaction; a no-op once
-	// DispatchPending has run.
-	defer events.CleanupPending(s)
-
-	newUser, err := models.RegisterUser(s, &user.User{
-		Username: in.Username,
-		Password: in.Password,
-		Email:    in.Email,
-		Language: in.Language,
-	})
-	if err != nil {
-		_ = s.Rollback()
-		return nil, err
-	}
-
-	if err := s.Commit(); err != nil {
-		_ = s.Rollback()
-		return nil, err
-	}
-
-	events.DispatchPending(ctx, s)
-
-	// Bust the cached user count so the new registration shows up in metrics
-	// immediately instead of after the regular cache expiry.
-	if config.MetricsEnabled.GetBool() {
-		if err := metrics.InvalidateCount(metrics.UserCountKey); err != nil {
-			log.Errorf("Could not invalidate user count metric: %s", err)
-		}
-	}
-
-	return newUser, nil
-}
 
 // AuthenticateUserCredentials verifies a login against local (and, if configured,
 // LDAP) credentials and enforces the account-status and TOTP gates, returning the
@@ -132,13 +82,16 @@ func AuthenticateUserCredentials(ctx context.Context, login *user.Login) (*user.
 	return u, nil
 }
 
-// resolveLoginUser authenticates the credentials against LDAP (when enabled) and
-// then against local accounts, mirroring v1's order so local users keep working
-// alongside LDAP. Bots are rejected before bcrypt runs because they have no
-// password hash.
+// resolveLoginUser authenticates the configured local account in single-user
+// mode. Otherwise it keeps the existing LDAP/local login order. Bots are
+// rejected before bcrypt runs because they have no password hash.
 func resolveLoginUser(ctx context.Context, s *xorm.Session, login *user.Login) (*user.User, error) {
+	if config.AuthSingleUserEnabled.GetBool() {
+		return user.CheckUserCredentials(ctx, s, login)
+	}
+
 	if config.AuthLdapEnabled.GetBool() {
-		u, err := ldap.AuthenticateUserInLDAP(s, login.Username, login.Password, config.AuthLdapGroupSyncEnabled.GetBool(), config.AuthLdapAvatarSyncAttribute.GetString())
+		u, err := ldap.AuthenticateUserInLDAP(s, login.Username, login.Password, config.AuthLdapAvatarSyncAttribute.GetString())
 		if err != nil && !user.IsErrWrongUsernameOrPassword(err) {
 			return nil, err
 		}
@@ -242,43 +195,8 @@ func LogoutSession(sid string) (endSessionURL string, err error) {
 	return endSessionURL, nil
 }
 
-// ResetPassword resets a user's password from a previously issued reset token
-// and invalidates all of that user's sessions, so a leaked password cannot be
-// used after a reset. Shared by v1 and v2.
-func ResetPassword(reset *user.PasswordReset) error {
-	s := db.NewSession()
-	defer s.Close()
-
-	userID, err := user.ResetPassword(s, reset)
-	if err != nil {
-		_ = s.Rollback()
-		return err
-	}
-
-	if err := models.DeleteAllUserSessions(s, userID); err != nil {
-		_ = s.Rollback()
-		return err
-	}
-
-	return s.Commit()
-}
-
-// RequestPasswordResetToken issues a password-reset token for the account with
-// the given email and sends it via email. Shared by v1 and v2.
-func RequestPasswordResetToken(req *user.PasswordTokenRequest) error {
-	s := db.NewSession()
-	defer s.Close()
-
-	if err := user.RequestUserPasswordResetTokenByEmail(s, req); err != nil {
-		_ = s.Rollback()
-		return err
-	}
-
-	return s.Commit()
-}
-
-// ConfirmEmail confirms a newly registered user's email from the token sent to
-// them. Shared by v1 and v2.
+// ConfirmEmail confirms an account's email from the token sent to it. Shared by
+// v1 and v2.
 func ConfirmEmail(confirm *user.EmailConfirm) error {
 	s := db.NewSession()
 	defer s.Close()

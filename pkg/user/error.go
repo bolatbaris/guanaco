@@ -140,52 +140,6 @@ func (err ErrCouldNotGetUserID) HTTPError() web.HTTPError {
 	return web.HTTPError{HTTPCode: http.StatusBadRequest, Code: ErrCodeCouldNotGetUserID, Message: "Could not get user id."}
 }
 
-// ErrNoPasswordResetToken represents an error where no password reset token exists for that user
-type ErrNoPasswordResetToken struct {
-	UserID int64
-}
-
-func (err ErrNoPasswordResetToken) Error() string {
-	return fmt.Sprintf("No token to reset a password [ID: %d]", err.UserID)
-}
-
-// ErrCodeNoPasswordResetToken holds the unique world-error code of this error
-const ErrCodeNoPasswordResetToken = 1008
-
-// HTTPError holds the http error description
-func (err ErrNoPasswordResetToken) HTTPError() web.HTTPError {
-	return web.HTTPError{HTTPCode: http.StatusPreconditionFailed, Code: ErrCodeNoPasswordResetToken, Message: "No token to reset a user's password provided."}
-}
-
-// IsErrNoPasswordResetToken checks if an error is ErrNoPasswordResetToken
-func IsErrNoPasswordResetToken(err error) bool {
-	_, ok := err.(ErrNoPasswordResetToken)
-	return ok
-}
-
-// ErrInvalidPasswordResetToken is an error where the password reset token is invalid
-type ErrInvalidPasswordResetToken struct {
-	Token string
-}
-
-func (err ErrInvalidPasswordResetToken) Error() string {
-	return fmt.Sprintf("Invalid token to reset a password [Token: %s]", err.Token)
-}
-
-// ErrCodeInvalidPasswordResetToken holds the unique world-error code of this error
-const ErrCodeInvalidPasswordResetToken = 1009
-
-// HTTPError holds the http error description
-func (err ErrInvalidPasswordResetToken) HTTPError() web.HTTPError {
-	return web.HTTPError{HTTPCode: http.StatusPreconditionFailed, Code: ErrCodeInvalidPasswordResetToken, Message: "Invalid token to reset a user's password."}
-}
-
-// IsErrInvalidPasswordResetToken checks if an error is a ErrInvalidPasswordResetToken.
-func IsErrInvalidPasswordResetToken(err error) bool {
-	_, ok := err.(ErrInvalidPasswordResetToken)
-	return ok
-}
-
 // ErrInvalidEmailConfirmToken is an error where the email confirm token is invalid
 type ErrInvalidEmailConfirmToken struct {
 	Token string
@@ -273,27 +227,6 @@ const ErrCodeEmptyNewPassword = 1013
 // HTTPError holds the http error description
 func (err ErrEmptyNewPassword) HTTPError() web.HTTPError {
 	return web.HTTPError{HTTPCode: http.StatusPreconditionFailed, Code: ErrCodeEmptyNewPassword, Message: "Please specify new password."}
-}
-
-// ErrEmptyOldPassword represents a "EmptyOldPassword" kind of error.
-type ErrEmptyOldPassword struct{}
-
-// IsErrEmptyOldPassword checks if an error is a ErrEmptyOldPassword.
-func IsErrEmptyOldPassword(err error) bool {
-	_, ok := err.(ErrEmptyOldPassword)
-	return ok
-}
-
-func (err ErrEmptyOldPassword) Error() string {
-	return "Old password is empty"
-}
-
-// ErrCodeEmptyOldPassword holds the unique world-error code of this error
-const ErrCodeEmptyOldPassword = 1014
-
-// HTTPError holds the http error description
-func (err ErrEmptyOldPassword) HTTPError() web.HTTPError {
-	return web.HTTPError{HTTPCode: http.StatusPreconditionFailed, Code: ErrCodeEmptyOldPassword, Message: "Please specify old password."}
 }
 
 // ErrTOTPAlreadyEnabled represents a "TOTPAlreadyEnabled" kind of error.
@@ -547,7 +480,7 @@ func (err *ErrAccountLocked) HTTPError() web.HTTPError {
 	return web.HTTPError{
 		HTTPCode: http.StatusPreconditionFailed,
 		Code:     ErrCodeAccountLocked,
-		Message:  "This account is locked due to too many failed login attempts. You can reset your password to unlock it.",
+		Message:  "This account is locked due to too many failed login attempts. Restart the service with the configured credentials to unlock it.",
 	}
 }
 

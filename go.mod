@@ -36,7 +36,6 @@ require (
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
 	github.com/coder/websocket v1.8.15
 	github.com/coreos/go-oidc/v3 v3.21.0
-	github.com/d4l3k/messagediff v1.2.1
 	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/disintegration/imaging v1.6.2
 	github.com/dustinkirkland/golang-petname v0.0.0-20240422154211-76c06c4bde6b
@@ -56,7 +55,6 @@ require (
 	github.com/huandu/go-clone/generic v1.7.3
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/jaswdr/faker/v2 v2.9.1
 	github.com/jinzhu/copier v0.4.0
 	github.com/jszwedko/go-datemath v0.1.1-0.20230526204004-640a500621d6
 	github.com/labstack/echo-jwt/v5 v5.0.2
@@ -90,7 +88,6 @@ require (
 	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.46.0
 	golang.org/x/text v0.42.0
-	gopkg.in/d4l3k/messagediff.v1 v1.2.1
 	mvdan.cc/xurls/v2 v2.6.0
 	src.techknowlogick.com/xormigrate v1.7.1
 	xorm.io/builder v0.3.13

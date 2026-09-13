@@ -26,13 +26,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-// tokenTestBody is the response for the token-check endpoints.
-type tokenTestBody struct {
-	Body struct {
-		Message string `json:"message" readOnly:"true" doc:"A static confirmation message."`
-	}
-}
-
 // apiRoutesBody is the response for the token-routes endpoint: the available
 // API routes grouped by permission, for building API-token scopes.
 type apiRoutesBody struct {
@@ -56,28 +49,6 @@ func init() { AddRouteRegistrar(RegisterTokenMetaRoutes) }
 func RegisterTokenMetaRoutes(api huma.API) {
 	tags := []string{"auth"}
 
-	// v1 served GET as a 200 "ok" and POST as a 418 teapot easter egg; v2 makes
-	// both a plain 200 so a token check is an ordinary success.
-	Register(api, huma.Operation{
-		OperationID:   "token-test",
-		Summary:       "Test a token",
-		Description:   "Returns 200 if the bearer token (JWT or API token) is valid. Used to check authentication.",
-		Method:        http.MethodGet,
-		Path:          "/token/test",
-		DefaultStatus: http.StatusOK,
-		Tags:          tags,
-	}, tokenTest)
-
-	Register(api, huma.Operation{
-		OperationID:   "token-check",
-		Summary:       "Check a token",
-		Description:   "Returns 200 if the bearer token (JWT or API token) is valid. Used to check authentication.",
-		Method:        http.MethodPost,
-		Path:          "/token/test",
-		DefaultStatus: http.StatusOK,
-		Tags:          tags,
-	}, tokenCheck)
-
 	Register(api, huma.Operation{
 		OperationID: "token-routes",
 		Summary:     "List API token routes",
@@ -96,18 +67,6 @@ func RegisterTokenMetaRoutes(api huma.API) {
 		DefaultStatus: http.StatusOK,
 		Tags:          tags,
 	}, tokenRenew)
-}
-
-func tokenTest(_ context.Context, _ *struct{}) (*tokenTestBody, error) {
-	out := &tokenTestBody{}
-	out.Body.Message = "ok"
-	return out, nil
-}
-
-func tokenCheck(_ context.Context, _ *struct{}) (*tokenTestBody, error) {
-	out := &tokenTestBody{}
-	out.Body.Message = "ok"
-	return out, nil
 }
 
 func tokenRoutes(_ context.Context, _ *struct{}) (*apiRoutesBody, error) {

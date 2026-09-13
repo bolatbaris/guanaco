@@ -2,7 +2,6 @@ import type {IAbstract} from './IAbstract'
 import type {IUser} from './IUser'
 import type {ITask} from './ITask'
 import type {ITaskComment} from './ITaskComment'
-import type {ITeam} from './ITeam'
 import type { IProject } from './IProject'
 
 export const NOTIFICATION_NAMES = {
@@ -12,7 +11,6 @@ export const NOTIFICATION_NAMES = {
 	'TASK_CREATED': 'task.created',
 	'TASK_REMINDER': 'task.reminder',
 	'PROJECT_CREATED': 'project.created',
-	'TEAM_MEMBER_ADDED': 'team.member.added',
 	'TASK_MENTIONED': 'task.mentioned',
 } as const
 
@@ -44,15 +42,10 @@ interface NotificationTaskReminder extends Notification {
 	project: IProject
 }
 
-interface NotificationMemberAdded extends Notification {
-	member: IUser
-	team: ITeam
-}
-
 export interface INotification extends IAbstract {
 	id: number
 	name: string
-	notification: NotificationTaskComment | NotificationTask | NotificationAssigned | NotificationCreated | NotificationMemberAdded | NotificationTaskReminder
+	notification: NotificationTaskComment | NotificationTask | NotificationAssigned | NotificationCreated | NotificationTaskReminder
 	read: boolean
 	readAt: Date | null
 

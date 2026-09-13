@@ -46,6 +46,14 @@ devenv.local.nix
 # direnv
 .direnv
 
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Local scratch files
+temp.txt
+
 # pre-commit
 .pre-commit-config.yaml
 

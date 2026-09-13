@@ -12,18 +12,6 @@
             "requested": "Someone requested to change the email address of your account to %[1]s. Your current address stays active until the new one is confirmed.",
             "warning": "If this wasn't you, change your password immediately and cancel the pending change in your account settings."
         },
-        "password": {
-            "changed": {
-                "subject": "Your Password on Vikunja was changed",
-                "success": "Your account password was successfully changed.",
-                "warning": "If this wasn't you, it could mean someone compromised your account. In this case contact your server's administrator."
-            },
-            "reset": {
-                "subject": "Reset your password on Vikunja",
-                "instructions": "To reset your password, click the link below:",
-                "valid_duration": "This link will be valid for 24 hours."
-            }
-        },
         "totp": {
             "invalid": {
                 "subject": "Someone just tried to login to your Vikunja account, but failed",
@@ -33,8 +21,7 @@
             "account_locked": {
                 "subject": "We've disabled your account on Vikunja",
                 "message": "Someone tried to log in with your credentials but failed to provide a valid TOTP passcode.",
-                "disabled": "After 10 failed attempts, we've disabled your account and reset your password. To set a new one, follow the instructions in the reset email we just sent you.",
-                "reset_instructions": "If you did not receive an email with reset instructions, you can always request a new one at [%[1]s](%[2]s)."
+                "disabled": "After 10 failed attempts, we've disabled your account. Restart the service with the configured credentials to unlock it."
             }
         },
         "login": {
@@ -52,7 +39,7 @@
                     "request": "You have requested the deletion of your account. To confirm this, please click the link below:",
                     "valid_duration": "This link will be valid for 24 hours.",
                     "schedule_info": "Once you confirm the deletion we will schedule the deletion of your account in three days and send you another email until then.",
-                    "consequences": "If you proceed with the deletion of your account, we will remove all of your projects and tasks you created. Everything you shared with another user or team will transfer ownership to them.",
+                    "consequences": "If you proceed with the deletion of your account, we will remove all of your projects and tasks you created. Everything you shared with another user will transfer ownership to them.",
                     "changed_mind": "If you did not requested the deletion or changed your mind, you can simply ignore this email."
                 },
                 "scheduled": {
@@ -112,12 +99,6 @@
         "project": {
             "created": "%[1]s created the project \"%[2]s\""
         },
-        "team": {
-            "member_added": {
-                "subject": "%[1]s added you to the \"%[2]s\" team in Vikunja",
-                "message": "%[1]s has just added you to the %[2]s team in Vikunja."
-            }
-        },
         "data_export": {
             "ready": {
                 "subject": "Your Vikunja Data Export is ready",
@@ -160,9 +141,7 @@
                 "open_task": "Open Task in Vikunja",
                 "open_vikunja": "Open Vikunja",
                 "open_project": "Open Project",
-                "open_team": "Open Team",
                 "download": "Download",
-                "reset_password": "Reset your password",
                 "go_to_settings": "Go to settings",
                 "confirm_email": "Confirm your email address",
                 "abort_deletion": "Abort the deletion",

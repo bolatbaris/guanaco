@@ -34,7 +34,6 @@
 					<tr
 						v-for="row in rows"
 						:key="row.entry.id"
-						v-cy="'timeEntry'"
 					>
 						<td v-if="!hideLabelColumn">
 							<template
@@ -71,7 +70,6 @@
 							<template v-if="row.entry.userId === currentUserId">
 								<BaseButton
 									v-tooltip="$t('menu.edit')"
-									v-cy="'editTimeEntry'"
 									class="entry-action"
 									:aria-label="$t('menu.edit')"
 									@click="emit('edit', row.entry)"
@@ -80,7 +78,6 @@
 								</BaseButton>
 								<BaseButton
 									v-tooltip="$t('misc.delete')"
-									v-cy="'deleteTimeEntry'"
 									class="entry-action entry-delete"
 									:aria-label="$t('misc.delete')"
 									@click="emit('delete', row.entry.id)"

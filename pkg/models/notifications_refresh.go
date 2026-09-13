@@ -84,8 +84,6 @@ func notificationUsers(n notifications.Notification) []*user.User {
 		return []*user.User{n.Doer}
 	case *ProjectCreatedNotification:
 		return []*user.User{n.Doer}
-	case *TeamMemberAddedNotification:
-		return []*user.User{n.Doer, n.Member}
 	case *UserMentionedInTaskNotification:
 		return []*user.User{n.Doer}
 	default:

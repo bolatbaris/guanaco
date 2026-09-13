@@ -171,8 +171,8 @@ func ensureAPITokenRoutesGroup(target map[string]APITokenRoute, group string) {
 // 2. HTTP method: GET, PUT, POST, DELETE matching CRUD semantics
 //
 // Standard CRUD routes have paths like:
-// - /projects, /tasks, /teams, /labels, /notifications, /webhooks, /filters, etc.
-// - /projects/:project, /tasks/:task, /teams/:team, etc.
+// - /projects, /tasks, /labels, /notifications, /webhooks, /filters, etc.
+// - /projects/:project, /tasks/:task, etc.
 //
 // Non-CRUD routes have paths with additional segments or special paths like:
 // - /user/settings/email, /projects/:project/background, /backgrounds/unsplash/search
@@ -181,7 +181,6 @@ func isStandardCRUDRoute(routeGroupName string, routeParts []string, _ string) b
 	crudResources := map[string]bool{
 		"projects":             true,
 		"tasks":                true,
-		"teams":                true,
 		"labels":               true,
 		"filters":              true,
 		"notifications":        true,
@@ -196,7 +195,6 @@ func isStandardCRUDRoute(routeGroupName string, routeParts []string, _ string) b
 		"attachments":          true,
 		"time_entries":         true,
 		"projects_views":       true,
-		"projects_teams":       true,
 		"projects_users":       true,
 		"projects_shares":      true,
 		"projects_webhooks":    true,
@@ -206,7 +204,6 @@ func isStandardCRUDRoute(routeGroupName string, routeParts []string, _ string) b
 		"tasks_labels":         true,
 		"tasks_comments":       true,
 		"tasks_relations":      true,
-		"teams_members":        true,
 		"projects_views_tasks": true,
 	}
 

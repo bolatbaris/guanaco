@@ -1,7 +1,6 @@
 <template>
 	<form
 		ref="formEl"
-		v-cy="'timeEntryForm'"
 		class="time-entry-form"
 		@submit.prevent="saveEntry"
 	>
@@ -35,7 +34,6 @@
 			<label class="label">{{ $t('task.comment.comment') }}</label>
 			<input
 				v-model="comment"
-				v-cy="'timeEntryComment'"
 				class="input"
 				type="text"
 				:placeholder="$t('timeTracking.form.commentPlaceholder')"
@@ -61,7 +59,6 @@
 			<div class="control">
 				<BaseButton
 					v-tooltip="$t('timeTracking.form.smartFill')"
-					v-cy="'smartFill'"
 					class="smart-fill"
 					:aria-label="$t('timeTracking.form.smartFill')"
 					@click="smartFill"
@@ -74,7 +71,6 @@
 		<div class="field form-actions">
 			<template v-if="isEditing">
 				<XButton
-					v-cy="'updateTimeEntry'"
 					:disabled="!canSubmit"
 					:loading="isSaving"
 					@click="saveEntry"
@@ -91,7 +87,6 @@
 			</template>
 			<template v-else>
 				<XButton
-					v-cy="'saveTimeEntry'"
 					:disabled="!canSubmit"
 					:loading="isSaving"
 					@click="saveEntry"
@@ -99,7 +94,6 @@
 					{{ $t('timeTracking.form.save') }}
 				</XButton>
 				<XButton
-					v-cy="'startTimer'"
 					variant="secondary"
 					:disabled="!canSubmit"
 					:loading="isSaving"

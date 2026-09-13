@@ -63,17 +63,6 @@ export type AdminOwnerPatchBody = {
     owner_id?: number;
 };
 
-export type AdminSetPasswordBody = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * The new password. Max 72 bytes (a bcrypt limit), which may be fewer than 72 characters.
-     */
-    new_password?: string;
-};
-
 export type AdminStatusPatchBody = {
     /**
      * A URL to the JSON Schema for this object.
@@ -408,32 +397,6 @@ export type ColumnMapping = {
      * The header name of the CSV column, for display.
      */
     column_name?: string;
-};
-
-export type CreateUserBody = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    email?: string;
-    /**
-     * Mark the new user as an instance admin.
-     */
-    is_admin?: boolean;
-    /**
-     * IETF BCP 47 language code; must exist in Vikunja.
-     */
-    language?: string;
-    /**
-     * The full name of the new user. Optional.
-     */
-    name?: string;
-    password?: string;
-    /**
-     * Activate the new user immediately, skipping email confirmation.
-     */
-    skip_email_confirm?: boolean;
-    username?: string;
 };
 
 export type DatabaseNotification = {
@@ -906,7 +869,6 @@ export type LinkSharing = {
 
 export type LocalAuthInfo = {
     enabled?: boolean;
-    registration_enabled?: boolean;
 };
 
 export type Login = {
@@ -1039,10 +1001,6 @@ export type Overview = {
      * Total number of tasks.
      */
     readonly tasks?: number;
-    /**
-     * Total number of teams.
-     */
-    readonly teams?: number;
     /**
      * Total number of user accounts.
      */
@@ -1217,30 +1175,6 @@ export type PaginatedTaskComment = {
     total_pages?: number;
 };
 
-export type PaginatedTeam = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    items?: Array<Team> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
-export type PaginatedTeamWithPermission = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    items?: Array<TeamWithPermission> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
 export type PaginatedTimeEntry = {
     /**
      * A URL to the JSON Schema for this object.
@@ -1299,23 +1233,6 @@ export type PaginatedWebhook = {
     per_page?: number;
     total?: number;
     total_pages?: number;
-};
-
-export type PasswordReset = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    new_password?: string;
-    token?: string;
-};
-
-export type PasswordTokenRequest = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    email?: string;
 };
 
 export type PreviewResult = {
@@ -1426,7 +1343,7 @@ export type ProjectDuplicate = {
      */
     readonly $schema?: string;
     /**
-     * Whether to copy the project's user, team and link shares to the duplicate. Defaults to false.
+     * Whether to copy the project's user and link shares to the duplicate. Defaults to false.
      */
     duplicate_shares?: boolean;
     /**
@@ -1838,10 +1755,6 @@ export type ShareCounts = {
      * Number of link shares across all projects.
      */
     readonly link_shares?: number;
-    /**
-     * Number of team-project shares.
-     */
-    readonly team_shares?: number;
     /**
      * Number of user-project shares.
      */
@@ -2417,212 +2330,6 @@ export type TaskReminder = {
     reminder?: string;
 };
 
-export type Team = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A timestamp when this team was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The user who created this team. Set by the server.
-     */
-    readonly created_by?: User;
-    description?: string;
-    /**
-     * The team's external id, set by the openid or ldap provider that created it. Read-only for clients.
-     */
-    readonly external_id?: string;
-    /**
-     * The unique, numeric id of this team.
-     */
-    readonly id?: number;
-    /**
-     * Whether the team should be publicly discoverable when sharing a project. Only effective if public teams are enabled on the instance.
-     */
-    is_public?: boolean;
-    /**
-     * All members of this team. Managed through the team members endpoints, not by writing to this field.
-     */
-    readonly members?: Array<TeamUser> | null;
-    /**
-     * The name of this team.
-     */
-    name?: string;
-    /**
-     * A timestamp when this team was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-};
-
-export type TeamMember = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * Whether the member is an admin of the team. Team admins can add and remove members and toggle other members' admin status.
-     */
-    admin?: boolean;
-    /**
-     * A timestamp when this member was added to the team. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The unique, numeric id of this team member relation. Set by the server.
-     */
-    readonly id?: number;
-    /**
-     * The username of the member.
-     */
-    username?: string;
-};
-
-export type TeamProject = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A timestamp when this relation was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The unique, numeric id of this project <-> team relation.
-     */
-    readonly id?: number;
-    /**
-     * The permission this team has on the project: 0 = Read only, 1 = Read & Write, 2 = Admin.
-     */
-    permission?: number;
-    /**
-     * The id of the team that gets access to the project.
-     */
-    team_id?: number;
-    /**
-     * A timestamp when this relation was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-};
-
-export type TeamReadBody = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A timestamp when this team was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The user who created this team. Set by the server.
-     */
-    readonly created_by?: User;
-    description?: string;
-    /**
-     * The team's external id, set by the openid or ldap provider that created it. Read-only for clients.
-     */
-    readonly external_id?: string;
-    /**
-     * The unique, numeric id of this team.
-     */
-    readonly id?: number;
-    /**
-     * Whether the team should be publicly discoverable when sharing a project. Only effective if public teams are enabled on the instance.
-     */
-    is_public?: boolean;
-    /**
-     * The maximum permission the requesting user has on this team (0=read, 2=admin). Teams have no write tier.
-     */
-    readonly max_permission?: number;
-    /**
-     * All members of this team. Managed through the team members endpoints, not by writing to this field.
-     */
-    readonly members?: Array<TeamUser> | null;
-    /**
-     * The name of this team.
-     */
-    name?: string;
-    /**
-     * A timestamp when this team was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-};
-
-export type TeamUser = {
-    admin?: boolean;
-    /**
-     * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
-     */
-    readonly bot_owner_id?: number;
-    /**
-     * A timestamp when this user was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The user's email address. Always empty for bot users.
-     */
-    email?: string;
-    /**
-     * The unique, numeric id of this user.
-     */
-    readonly id?: number;
-    /**
-     * The full name of the user.
-     */
-    name?: string;
-    /**
-     * A timestamp when this user was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-    /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
-     */
-    username?: string;
-};
-
-export type TeamWithPermission = {
-    /**
-     * A timestamp when this team was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The user who created this team. Set by the server.
-     */
-    readonly created_by?: User;
-    description?: string;
-    /**
-     * The team's external id, set by the openid or ldap provider that created it. Read-only for clients.
-     */
-    readonly external_id?: string;
-    /**
-     * The unique, numeric id of this team.
-     */
-    readonly id?: number;
-    /**
-     * Whether the team should be publicly discoverable when sharing a project. Only effective if public teams are enabled on the instance.
-     */
-    is_public?: boolean;
-    /**
-     * All members of this team. Managed through the team members endpoints, not by writing to this field.
-     */
-    readonly members?: Array<TeamUser> | null;
-    /**
-     * The name of this team.
-     */
-    name?: string;
-    /**
-     * The permission this team has on the project: 0 = Read only, 1 = Read & Write, 2 = Admin.
-     */
-    readonly permission?: number;
-    /**
-     * A timestamp when this team was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-};
-
 export type TimeEntry = {
     /**
      * A URL to the JSON Schema for this object.
@@ -2756,17 +2463,6 @@ export type TokenResponse = {
     token_type?: string;
 };
 
-export type TokenTestBodyBody = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A static confirmation message.
-     */
-    readonly message?: string;
-};
-
 export type TotpDisableBodyBody = {
     /**
      * A URL to the JSON Schema for this object.
@@ -2790,10 +2486,6 @@ export type TotpEnableBodyBody = {
 };
 
 export type User = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
     /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
      */
@@ -2822,21 +2514,6 @@ export type User = {
      * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
      */
     username?: string;
-};
-
-export type UserChangePasswordRequest = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * The new password. Max 72 bytes (a bcrypt limit), which may be fewer than 72 characters.
-     */
-    new_password?: string;
-    /**
-     * The current password, for confirmation.
-     */
-    old_password?: string;
 };
 
 export type UserUpdateEmailRequest = {
@@ -3048,20 +2725,6 @@ export type UserInfoBody = {
     username?: string;
 };
 
-export type UserRegister = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    email?: string;
-    /**
-     * The language of the new user as an IETF BCP 47 code (e.g. en, de-DE).
-     */
-    language?: string;
-    password?: string;
-    username?: string;
-};
-
 export type UserWithPermission = {
     /**
      * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
@@ -3204,10 +2867,6 @@ export type VikunjaInfos = {
      */
     motd?: string;
     /**
-     * Whether public teams are enabled.
-     */
-    public_teams_enabled?: boolean;
-    /**
      * Whether task attachments are enabled.
      */
     task_attachments_enabled?: boolean;
@@ -3305,13 +2964,6 @@ export type AdminOwnerPatchBodyWritable = {
      * The numeric ID of the user who should become the project's owner.
      */
     owner_id?: number;
-};
-
-export type AdminSetPasswordBodyWritable = {
-    /**
-     * The new password. Max 72 bytes (a bcrypt limit), which may be fewer than 72 characters.
-     */
-    new_password?: string;
 };
 
 export type AdminStatusPatchBodyWritable = {
@@ -3462,28 +3114,6 @@ export type CallbackWritable = {
     redirect_url?: string;
     scope?: string;
     totp_passcode?: string;
-};
-
-export type CreateUserBodyWritable = {
-    email?: string;
-    /**
-     * Mark the new user as an instance admin.
-     */
-    is_admin?: boolean;
-    /**
-     * IETF BCP 47 language code; must exist in Vikunja.
-     */
-    language?: string;
-    /**
-     * The full name of the new user. Optional.
-     */
-    name?: string;
-    password?: string;
-    /**
-     * Activate the new user immediately, skipping email confirmation.
-     */
-    skip_email_confirm?: boolean;
-    username?: string;
 };
 
 export type DatabaseNotificationsWritable = {
@@ -3812,22 +3442,6 @@ export type PaginatedTaskCommentWritable = {
     total_pages?: number;
 };
 
-export type PaginatedTeamWritable = {
-    items?: Array<TeamWritable> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
-export type PaginatedTeamWithPermissionWritable = {
-    items?: Array<TeamWithPermissionWritable> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
 export type PaginatedTimeEntryWritable = {
     items?: Array<TimeEntryWritable> | null;
     page?: number;
@@ -3866,15 +3480,6 @@ export type PaginatedWebhookWritable = {
     per_page?: number;
     total?: number;
     total_pages?: number;
-};
-
-export type PasswordResetWritable = {
-    new_password?: string;
-    token?: string;
-};
-
-export type PasswordTokenRequestWritable = {
-    email?: string;
 };
 
 export type PreviewResultWritable = {
@@ -3925,7 +3530,7 @@ export type ProjectWritable = {
 
 export type ProjectDuplicateWritable = {
     /**
-     * Whether to copy the project's user, team and link shares to the duplicate. Defaults to false.
+     * Whether to copy the project's user and link shares to the duplicate. Defaults to false.
      */
     duplicate_shares?: boolean;
     /**
@@ -4253,80 +3858,6 @@ export type TaskRelationWritable = {
     relation_kind?: 'subtask' | 'parenttask' | 'related' | 'duplicateof' | 'duplicates' | 'blocking' | 'blocked' | 'precedes' | 'follows' | 'copiedfrom' | 'copiedto';
 };
 
-export type TeamWritable = {
-    description?: string;
-    /**
-     * Whether the team should be publicly discoverable when sharing a project. Only effective if public teams are enabled on the instance.
-     */
-    is_public?: boolean;
-    /**
-     * The name of this team.
-     */
-    name?: string;
-};
-
-export type TeamMemberWritable = {
-    /**
-     * Whether the member is an admin of the team. Team admins can add and remove members and toggle other members' admin status.
-     */
-    admin?: boolean;
-    /**
-     * The username of the member.
-     */
-    username?: string;
-};
-
-export type TeamProjectWritable = {
-    /**
-     * The permission this team has on the project: 0 = Read only, 1 = Read & Write, 2 = Admin.
-     */
-    permission?: number;
-    /**
-     * The id of the team that gets access to the project.
-     */
-    team_id?: number;
-};
-
-export type TeamReadBodyWritable = {
-    description?: string;
-    /**
-     * Whether the team should be publicly discoverable when sharing a project. Only effective if public teams are enabled on the instance.
-     */
-    is_public?: boolean;
-    /**
-     * The name of this team.
-     */
-    name?: string;
-};
-
-export type TeamUserWritable = {
-    admin?: boolean;
-    /**
-     * The user's email address. Always empty for bot users.
-     */
-    email?: string;
-    /**
-     * The full name of the user.
-     */
-    name?: string;
-    /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
-     */
-    username?: string;
-};
-
-export type TeamWithPermissionWritable = {
-    description?: string;
-    /**
-     * Whether the team should be publicly discoverable when sharing a project. Only effective if public teams are enabled on the instance.
-     */
-    is_public?: boolean;
-    /**
-     * The name of this team.
-     */
-    name?: string;
-};
-
 export type TimeEntryWritable = {
     /**
      * An optional comment describing the logged time.
@@ -4416,17 +3947,6 @@ export type UserWritable = {
      * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
      */
     username?: string;
-};
-
-export type UserChangePasswordRequestWritable = {
-    /**
-     * The new password. Max 72 bytes (a bcrypt limit), which may be fewer than 72 characters.
-     */
-    new_password?: string;
-    /**
-     * The current password, for confirmation.
-     */
-    old_password?: string;
 };
 
 export type UserUpdateEmailRequestWritable = {
@@ -4527,16 +4047,6 @@ export type UserInfoBodyWritable = {
     /**
      * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
      */
-    username?: string;
-};
-
-export type UserRegisterWritable = {
-    email?: string;
-    /**
-     * The language of the new user as an IETF BCP 47 code (e.g. en, de-DE).
-     */
-    language?: string;
-    password?: string;
     username?: string;
 };
 
@@ -4643,10 +4153,6 @@ export type VikunjaInfosWritable = {
      * The message of the day, shown to all users.
      */
     motd?: string;
-    /**
-     * Whether public teams are enabled.
-     */
-    public_teams_enabled?: boolean;
     /**
      * Whether task attachments are enabled.
      */
@@ -4827,31 +4333,6 @@ export type AdminUsersListResponses = {
 
 export type AdminUsersListResponse = AdminUsersListResponses[keyof AdminUsersListResponses];
 
-export type AdminUsersCreateData = {
-    body: CreateUserBodyWritable;
-    path?: never;
-    query?: never;
-    url: '/admin/users';
-};
-
-export type AdminUsersCreateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type AdminUsersCreateError = AdminUsersCreateErrors[keyof AdminUsersCreateErrors];
-
-export type AdminUsersCreateResponses = {
-    /**
-     * Created
-     */
-    201: AdminUser;
-};
-
-export type AdminUsersCreateResponse = AdminUsersCreateResponses[keyof AdminUsersCreateResponses];
-
 export type AdminUsersDeleteData = {
     body?: never;
     path: {
@@ -4916,66 +4397,6 @@ export type AdminUsersPatchAdminResponses = {
 };
 
 export type AdminUsersPatchAdminResponse = AdminUsersPatchAdminResponses[keyof AdminUsersPatchAdminResponses];
-
-export type AdminUsersSetPasswordData = {
-    body: AdminSetPasswordBodyWritable;
-    path: {
-        /**
-         * The numeric ID of the user.
-         */
-        id: number;
-    };
-    query?: never;
-    url: '/admin/users/{id}/password';
-};
-
-export type AdminUsersSetPasswordErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type AdminUsersSetPasswordError = AdminUsersSetPasswordErrors[keyof AdminUsersSetPasswordErrors];
-
-export type AdminUsersSetPasswordResponses = {
-    /**
-     * OK
-     */
-    200: AdminUser;
-};
-
-export type AdminUsersSetPasswordResponse = AdminUsersSetPasswordResponses[keyof AdminUsersSetPasswordResponses];
-
-export type AdminUsersPasswordResetEmailData = {
-    body?: never;
-    path: {
-        /**
-         * The numeric ID of the user.
-         */
-        id: number;
-    };
-    query?: never;
-    url: '/admin/users/{id}/password-reset-email';
-};
-
-export type AdminUsersPasswordResetEmailErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type AdminUsersPasswordResetEmailError = AdminUsersPasswordResetEmailErrors[keyof AdminUsersPasswordResetEmailErrors];
-
-export type AdminUsersPasswordResetEmailResponses = {
-    /**
-     * OK
-     */
-    200: MessageBodyBody;
-};
-
-export type AdminUsersPasswordResetEmailResponse = AdminUsersPasswordResetEmailResponses[keyof AdminUsersPasswordResetEmailResponses];
 
 export type AdminUsersPatchStatusData = {
     body: AdminStatusPatchBodyWritable;
@@ -7126,129 +6547,6 @@ export type TasksReadByIndexResponses = {
 
 export type TasksReadByIndexResponse = TasksReadByIndexResponses[keyof TasksReadByIndexResponses];
 
-export type ProjectTeamsListData = {
-    body?: never;
-    path: {
-        project: number;
-    };
-    query?: {
-        /**
-         * 1-based page number.
-         */
-        page?: number;
-        /**
-         * Items per page (max 1000).
-         */
-        per_page?: number;
-        /**
-         * Search query; filters the list to items matching this string.
-         */
-        q?: string;
-    };
-    url: '/projects/{project}/teams';
-};
-
-export type ProjectTeamsListErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectTeamsListError = ProjectTeamsListErrors[keyof ProjectTeamsListErrors];
-
-export type ProjectTeamsListResponses = {
-    /**
-     * OK
-     */
-    200: PaginatedTeamWithPermission;
-};
-
-export type ProjectTeamsListResponse = ProjectTeamsListResponses[keyof ProjectTeamsListResponses];
-
-export type ProjectTeamsCreateData = {
-    body: TeamProjectWritable;
-    path: {
-        project: number;
-    };
-    query?: never;
-    url: '/projects/{project}/teams';
-};
-
-export type ProjectTeamsCreateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectTeamsCreateError = ProjectTeamsCreateErrors[keyof ProjectTeamsCreateErrors];
-
-export type ProjectTeamsCreateResponses = {
-    /**
-     * Created
-     */
-    201: TeamProject;
-};
-
-export type ProjectTeamsCreateResponse = ProjectTeamsCreateResponses[keyof ProjectTeamsCreateResponses];
-
-export type ProjectTeamsDeleteData = {
-    body?: never;
-    path: {
-        project: number;
-        team: number;
-    };
-    query?: never;
-    url: '/projects/{project}/teams/{team}';
-};
-
-export type ProjectTeamsDeleteErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectTeamsDeleteError = ProjectTeamsDeleteErrors[keyof ProjectTeamsDeleteErrors];
-
-export type ProjectTeamsDeleteResponses = {
-    /**
-     * No Content
-     */
-    204: void;
-};
-
-export type ProjectTeamsDeleteResponse = ProjectTeamsDeleteResponses[keyof ProjectTeamsDeleteResponses];
-
-export type ProjectTeamsUpdateData = {
-    body: TeamProjectWritable;
-    path: {
-        project: number;
-        team: number;
-    };
-    query?: never;
-    url: '/projects/{project}/teams/{team}';
-};
-
-export type ProjectTeamsUpdateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectTeamsUpdateError = ProjectTeamsUpdateErrors[keyof ProjectTeamsUpdateErrors];
-
-export type ProjectTeamsUpdateResponses = {
-    /**
-     * OK
-     */
-    200: TeamProject;
-};
-
-export type ProjectTeamsUpdateResponse = ProjectTeamsUpdateResponses[keyof ProjectTeamsUpdateResponses];
-
 export type ProjectUsersListData = {
     body?: never;
     path: {
@@ -8029,31 +7327,6 @@ export type WebhooksUpdateResponses = {
 };
 
 export type WebhooksUpdateResponse = WebhooksUpdateResponses[keyof WebhooksUpdateResponses];
-
-export type AuthRegisterData = {
-    body: UserRegisterWritable;
-    path?: never;
-    query?: never;
-    url: '/register';
-};
-
-export type AuthRegisterErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type AuthRegisterError = AuthRegisterErrors[keyof AuthRegisterErrors];
-
-export type AuthRegisterResponses = {
-    /**
-     * Created
-     */
-    201: User;
-};
-
-export type AuthRegisterResponse = AuthRegisterResponses[keyof AuthRegisterResponses];
 
 export type TokenRoutesData = {
     body?: never;
@@ -9234,307 +8507,6 @@ export type TasksRelationsDeleteResponses = {
 
 export type TasksRelationsDeleteResponse = TasksRelationsDeleteResponses[keyof TasksRelationsDeleteResponses];
 
-export type TeamsListData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * 1-based page number.
-         */
-        page?: number;
-        /**
-         * Items per page (max 1000).
-         */
-        per_page?: number;
-        /**
-         * Search query; filters the list to items matching this string.
-         */
-        q?: string;
-        /**
-         * Also include public teams the user is not a member of. Only honored when public teams are enabled on the instance.
-         */
-        include_public?: boolean;
-        /**
-         * How rich-text fields are exchanged. See the API description.
-         */
-        format?: 'html' | 'markdown';
-    };
-    url: '/teams';
-};
-
-export type TeamsListErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TeamsListError = TeamsListErrors[keyof TeamsListErrors];
-
-export type TeamsListResponses = {
-    /**
-     * OK
-     */
-    200: PaginatedTeam;
-};
-
-export type TeamsListResponse = TeamsListResponses[keyof TeamsListResponses];
-
-export type TeamsCreateData = {
-    body: TeamWritable;
-    path?: never;
-    query?: {
-        /**
-         * How rich-text fields are exchanged. See the API description.
-         */
-        format?: 'html' | 'markdown';
-    };
-    url: '/teams';
-};
-
-export type TeamsCreateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TeamsCreateError = TeamsCreateErrors[keyof TeamsCreateErrors];
-
-export type TeamsCreateResponses = {
-    /**
-     * Created
-     */
-    201: Team;
-};
-
-export type TeamsCreateResponse = TeamsCreateResponses[keyof TeamsCreateResponses];
-
-export type TeamsDeleteData = {
-    body?: never;
-    path: {
-        id: number;
-    };
-    query?: never;
-    url: '/teams/{id}';
-};
-
-export type TeamsDeleteErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TeamsDeleteError = TeamsDeleteErrors[keyof TeamsDeleteErrors];
-
-export type TeamsDeleteResponses = {
-    /**
-     * No Content
-     */
-    204: void;
-};
-
-export type TeamsDeleteResponse = TeamsDeleteResponses[keyof TeamsDeleteResponses];
-
-export type TeamsReadData = {
-    body?: never;
-    headers?: {
-        /**
-         * Succeeds if the server's resource matches one of the passed values.
-         */
-        'If-Match'?: Array<string> | null;
-        /**
-         * Succeeds if the server's resource matches none of the passed values. On writes, the special value * may be used to match any existing value.
-         */
-        'If-None-Match'?: Array<string> | null;
-        /**
-         * Succeeds if the server's resource date is more recent than the passed date.
-         */
-        'If-Modified-Since'?: string;
-        /**
-         * Succeeds if the server's resource date is older or the same as the passed date.
-         */
-        'If-Unmodified-Since'?: string;
-    };
-    path: {
-        id: number;
-    };
-    query?: {
-        /**
-         * How rich-text fields are exchanged. See the API description.
-         */
-        format?: 'html' | 'markdown';
-    };
-    url: '/teams/{id}';
-};
-
-export type TeamsReadErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TeamsReadError = TeamsReadErrors[keyof TeamsReadErrors];
-
-export type TeamsReadResponses = {
-    /**
-     * OK
-     */
-    200: TeamReadBody;
-};
-
-export type TeamsReadResponse = TeamsReadResponses[keyof TeamsReadResponses];
-
-export type PatchTeamsReadData = {
-    body: Array<JsonPatchOp> | null;
-    path: {
-        id: number;
-    };
-    query?: never;
-    url: '/teams/{id}';
-};
-
-export type PatchTeamsReadErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type PatchTeamsReadError = PatchTeamsReadErrors[keyof PatchTeamsReadErrors];
-
-export type PatchTeamsReadResponses = {
-    /**
-     * OK
-     */
-    200: Team;
-};
-
-export type PatchTeamsReadResponse = PatchTeamsReadResponses[keyof PatchTeamsReadResponses];
-
-export type TeamsUpdateData = {
-    body: TeamReadBodyWritable;
-    path: {
-        id: number;
-    };
-    query?: {
-        /**
-         * How rich-text fields are exchanged. See the API description.
-         */
-        format?: 'html' | 'markdown';
-    };
-    url: '/teams/{id}';
-};
-
-export type TeamsUpdateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TeamsUpdateError = TeamsUpdateErrors[keyof TeamsUpdateErrors];
-
-export type TeamsUpdateResponses = {
-    /**
-     * OK
-     */
-    200: Team;
-};
-
-export type TeamsUpdateResponse = TeamsUpdateResponses[keyof TeamsUpdateResponses];
-
-export type TeamsMembersAddData = {
-    body: TeamMemberWritable;
-    path: {
-        team: number;
-    };
-    query?: never;
-    url: '/teams/{team}/members';
-};
-
-export type TeamsMembersAddErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TeamsMembersAddError = TeamsMembersAddErrors[keyof TeamsMembersAddErrors];
-
-export type TeamsMembersAddResponses = {
-    /**
-     * Created
-     */
-    201: TeamMember;
-};
-
-export type TeamsMembersAddResponse = TeamsMembersAddResponses[keyof TeamsMembersAddResponses];
-
-export type TeamsMembersRemoveData = {
-    body?: never;
-    path: {
-        team: number;
-        /**
-         * The username of the member to remove.
-         */
-        user: string;
-    };
-    query?: never;
-    url: '/teams/{team}/members/{user}';
-};
-
-export type TeamsMembersRemoveErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TeamsMembersRemoveError = TeamsMembersRemoveErrors[keyof TeamsMembersRemoveErrors];
-
-export type TeamsMembersRemoveResponses = {
-    /**
-     * No Content
-     */
-    204: void;
-};
-
-export type TeamsMembersRemoveResponse = TeamsMembersRemoveResponses[keyof TeamsMembersRemoveResponses];
-
-export type TeamsMembersToggleAdminData = {
-    body?: never;
-    path: {
-        team: number;
-        /**
-         * The username of the member whose admin status to toggle.
-         */
-        user: string;
-    };
-    query?: never;
-    url: '/teams/{team}/members/{user}/admin';
-};
-
-export type TeamsMembersToggleAdminErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TeamsMembersToggleAdminError = TeamsMembersToggleAdminErrors[keyof TeamsMembersToggleAdminErrors];
-
-export type TeamsMembersToggleAdminResponses = {
-    /**
-     * OK
-     */
-    200: TeamMember;
-};
-
-export type TeamsMembersToggleAdminResponse = TeamsMembersToggleAdminResponses[keyof TeamsMembersToggleAdminResponses];
-
 export type TimeEntriesListData = {
     body?: never;
     path?: never;
@@ -9756,56 +8728,6 @@ export type TimeEntriesUpdateResponses = {
 };
 
 export type TimeEntriesUpdateResponse = TimeEntriesUpdateResponses[keyof TimeEntriesUpdateResponses];
-
-export type TokenTestData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/token/test';
-};
-
-export type TokenTestErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TokenTestError = TokenTestErrors[keyof TokenTestErrors];
-
-export type TokenTestResponses = {
-    /**
-     * OK
-     */
-    200: TokenTestBodyBody;
-};
-
-export type TokenTestResponse = TokenTestResponses[keyof TokenTestResponses];
-
-export type TokenCheckData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/token/test';
-};
-
-export type TokenCheckErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TokenCheckError = TokenCheckErrors[keyof TokenCheckErrors];
-
-export type TokenCheckResponses = {
-    /**
-     * OK
-     */
-    200: TokenTestBodyBody;
-};
-
-export type TokenCheckResponse = TokenCheckResponses[keyof TokenCheckResponses];
 
 export type TokensListData = {
     body?: never;
@@ -10289,81 +9211,6 @@ export type UserExportRequestResponses = {
 };
 
 export type UserExportRequestResponse = UserExportRequestResponses[keyof UserExportRequestResponses];
-
-export type UserChangePasswordData = {
-    body: UserChangePasswordRequestWritable;
-    path?: never;
-    query?: never;
-    url: '/user/password';
-};
-
-export type UserChangePasswordErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type UserChangePasswordError = UserChangePasswordErrors[keyof UserChangePasswordErrors];
-
-export type UserChangePasswordResponses = {
-    /**
-     * OK
-     */
-    200: UserActionMessageBody;
-};
-
-export type UserChangePasswordResponse = UserChangePasswordResponses[keyof UserChangePasswordResponses];
-
-export type AuthPasswordResetData = {
-    body: PasswordResetWritable;
-    path?: never;
-    query?: never;
-    url: '/user/password/reset';
-};
-
-export type AuthPasswordResetErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type AuthPasswordResetError = AuthPasswordResetErrors[keyof AuthPasswordResetErrors];
-
-export type AuthPasswordResetResponses = {
-    /**
-     * OK
-     */
-    200: MessageBodyBody;
-};
-
-export type AuthPasswordResetResponse = AuthPasswordResetResponses[keyof AuthPasswordResetResponses];
-
-export type AuthPasswordTokenData = {
-    body: PasswordTokenRequestWritable;
-    path?: never;
-    query?: never;
-    url: '/user/password/token';
-};
-
-export type AuthPasswordTokenErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type AuthPasswordTokenError = AuthPasswordTokenErrors[keyof AuthPasswordTokenErrors];
-
-export type AuthPasswordTokenResponses = {
-    /**
-     * OK
-     */
-    200: MessageBodyBody;
-};
-
-export type AuthPasswordTokenResponse = AuthPasswordTokenResponses[keyof AuthPasswordTokenResponses];
 
 export type SessionsListData = {
     body?: never;

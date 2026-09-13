@@ -41,17 +41,16 @@ import (
 )
 
 var (
-	userFlagUsername              string
-	userFlagEmail                 string
-	userFlagPassword              string
-	userFlagAvatar                = "default"
-	userFlagResetPasswordDirectly bool
-	userFlagEnableUser            bool
-	userFlagDisableUser           bool
-	userFlagDeleteNow             bool
-	userFlagDeleteConfirm         bool
-	userFlagMakeAdmin             bool
-	userFlagRemoveAdmin           bool
+	userFlagUsername      string
+	userFlagEmail         string
+	userFlagPassword      string
+	userFlagAvatar        = "default"
+	userFlagEnableUser    bool
+	userFlagDisableUser   bool
+	userFlagDeleteNow     bool
+	userFlagDeleteConfirm bool
+	userFlagMakeAdmin     bool
+	userFlagRemoveAdmin   bool
 )
 
 func init() {
@@ -71,10 +70,6 @@ func init() {
 	userUpdateCmd.Flags().StringVarP(&userFlagEmail, "email", "e", "", "The new email address of the user.")
 	userUpdateCmd.Flags().StringVarP(&userFlagAvatar, "avatar-provider", "a", "", "The new avatar provider of the new user.")
 
-	// Reset PW flags
-	userResetPasswordCmd.Flags().BoolVarP(&userFlagResetPasswordDirectly, "direct", "d", false, "If provided, reset the password directly instead of sending the user a reset mail.")
-	userResetPasswordCmd.Flags().StringVarP(&userFlagPassword, "password", "p", "", "The new password of the user. Only used in combination with --direct. You will be asked to enter it if not provided through the flag.")
-
 	// Change status flags
 	userChangeStatusCmd.Flags().BoolVarP(&userFlagDisableUser, "disable", "d", false, "Disable the user.")
 	userChangeStatusCmd.Flags().BoolVarP(&userFlagEnableUser, "enable", "e", false, "Enable the user.")
@@ -90,7 +85,7 @@ func init() {
 	userSetAdminCmd.MarkFlagsMutuallyExclusive("admin", "no-admin")
 	userSetAdminCmd.MarkFlagsOneRequired("admin", "no-admin")
 
-	userCmd.AddCommand(userListCmd, userCreateCmd, userUpdateCmd, userResetPasswordCmd, userChangeStatusCmd, userDeleteCmd, userSetAdminCmd)
+	userCmd.AddCommand(userListCmd, userCreateCmd, userUpdateCmd, userChangeStatusCmd, userDeleteCmd, userSetAdminCmd)
 	rootCmd.AddCommand(userCmd)
 }
 
@@ -190,8 +185,8 @@ var userCmd = &cobra.Command{
 	Use:   "user",
 	Short: "Manage users locally through the cli.",
 	// Mail sending is async via the queue; without draining it the process would
-	// exit before notification mails (password reset, deletion request, email
-	// confirmation) reach the SMTP server.
+	// exit before notification mails (deletion request, email confirmation) reach
+	// the SMTP server.
 	PersistentPostRun: func(_ *cobra.Command, _ []string) {
 		mail.StopMailDaemon()
 	},
@@ -333,42 +328,6 @@ var userUpdateCmd = &cobra.Command{
 		}
 
 		fmt.Println("User updated successfully.")
-	},
-}
-
-var userResetPasswordCmd = &cobra.Command{
-	Use:   "reset-password [user id]",
-	Short: "Reset a users password, either through mailing them a reset link or directly.",
-	PreRun: func(_ *cobra.Command, _ []string) {
-		initialize.FullInit()
-	},
-	Args: cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		s := db.NewSession()
-		defer s.Close()
-
-		u := getUserFromArg(s, args[0])
-
-		// By default we reset as usual, only with specific flag directly.
-		if userFlagResetPasswordDirectly {
-			err := user.UpdateUserPassword(s, u, getPasswordFromFlagOrInput())
-			if err != nil {
-				_ = s.Rollback()
-				log.Fatalf("Could not update user password: %s", err)
-			}
-			fmt.Println("Password updated successfully.")
-		} else {
-			err := user.RequestUserPasswordResetToken(s, u)
-			if err != nil {
-				_ = s.Rollback()
-				log.Fatalf("Could not send password reset email: %s", err)
-			}
-			fmt.Println("Password reset email sent successfully.")
-		}
-
-		if err := s.Commit(); err != nil {
-			log.Fatalf("Could not send password reset email: %s", err)
-		}
 	},
 }
 

@@ -22,7 +22,7 @@ import (
 	"xorm.io/xorm"
 )
 
-// Confirm tokens are exempt from the cleanup cron so registration links never expire; change links must.
+// Confirm tokens are exempt from the cleanup cron for initial account setup; change links must expire.
 const emailChangeTokenValidity = 24 * time.Hour
 
 // EmailConfirm holds the token to confirm a mail address
@@ -53,7 +53,7 @@ func ConfirmEmail(s *xorm.Session, c *EmailConfirm) (err error) {
 
 	user, err := GetUserWithEmail(s, &User{ID: token.UserID})
 	if err != nil {
-		// A locked account may still activate its registration, but not swap its login address.
+		// A locked account may still finish initial setup, but not swap its login address.
 		if !IsErrAccountLocked(err) || user.PendingEmail != "" {
 			return err
 		}

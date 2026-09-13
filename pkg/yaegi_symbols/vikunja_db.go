@@ -12,9 +12,6 @@ import (
 func init() {
 	Symbols["code.vikunja.io/api/pkg/db/db"] = map[string]reflect.Value{
 		// function, constant and variable definitions
-		"AssertCount":                    reflect.ValueOf(db.AssertCount),
-		"AssertExists":                   reflect.ValueOf(db.AssertExists),
-		"AssertMissing":                  reflect.ValueOf(db.AssertMissing),
 		"CreateDBEngine":                 reflect.ValueOf(db.CreateDBEngine),
 		"CreateParadeDBIndexes":          reflect.ValueOf(db.CreateParadeDBIndexes),
 		"CreateTestEngine":               reflect.ValueOf(db.CreateTestEngine),
@@ -26,7 +23,6 @@ func init() {
 		"InitTestFixtures":               reflect.ValueOf(db.InitTestFixtures),
 		"IsMySQLDuplicateEntryError":     reflect.ValueOf(db.IsMySQLDuplicateEntryError),
 		"IsUniqueConstraintError":        reflect.ValueOf(db.IsUniqueConstraintError),
-		"LoadAndAssertFixtures":          reflect.ValueOf(db.LoadAndAssertFixtures),
 		"LoadFixtures":                   reflect.ValueOf(db.LoadFixtures),
 		"MultiFieldSearch":               reflect.ValueOf(db.MultiFieldSearch),
 		"MultiFieldSearchWithBoosts":     reflect.ValueOf(db.MultiFieldSearchWithBoosts),

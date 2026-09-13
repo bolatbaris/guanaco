@@ -96,7 +96,7 @@ func (lu *ProjectUser) Create(s *xorm.Session, a web.Auth) (err error) {
 	lu.UserID = u.ID
 
 	// Check if the user already has access or is owner of that project
-	// We explicitly DONT check for teams here
+	// Access is intentionally limited to direct user shares.
 	if l.OwnerID == lu.UserID {
 		return ErrUserAlreadyHasAccess{UserID: lu.UserID, ProjectID: lu.ProjectID}
 	}

@@ -96,6 +96,10 @@ func FullInitWithoutAsync() {
 	// Set Engine
 	InitEngines()
 
+	if err := ensureSingleUser(); err != nil {
+		log.Fatalf("Could not provision configured single user: %s", err)
+	}
+
 	// Initialize license validation — funds ongoing development of Vikunja.
 	// See the package comment in pkg/license/license.go before removing.
 	license.Init()
@@ -145,7 +149,6 @@ func FullInit() {
 	models.RegisterSessionCleanupCron()
 	user.RegisterDeletionNotificationCron()
 	openid.CleanupSavedOpenIDProviders()
-	openid.RegisterEmptyOpenIDTeamCleanupCron()
 	openid.RegisterProviderAvailabilityCron()
 	models.RegisterAPITokenExpiryCheckCron()
 

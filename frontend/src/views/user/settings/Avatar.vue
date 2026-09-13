@@ -50,7 +50,6 @@
 						@ready="() => loading = false"
 					/>
 					<XButton
-						v-cy="'uploadAvatar'"
 						:loading="avatarService.loading || loading"
 						@click="uploadAvatar"
 					>

@@ -224,8 +224,6 @@ function getNotificationRoute(n: INotification): RouteLocationRaw | null {
 			return {name: 'task.detail', params: {id: (n.notification as {task: {id: number}}).task.id}}
 		case names.PROJECT_CREATED:
 			return {name: 'task.index', params: {projectId: (n.notification as {project: {id: number}}).project.id}}
-		case names.TEAM_MEMBER_ADDED:
-			return {name: 'teams.edit', params: {id: (n.notification as {team: {id: number}}).team.id}}
 		default:
 			return null
 	}

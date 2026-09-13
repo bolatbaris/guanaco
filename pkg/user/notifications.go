@@ -63,30 +63,6 @@ func (n *EmailConfirmNotification) Name() string {
 	return ""
 }
 
-// PasswordChangedNotification represents a PasswordChangedNotification notification
-type PasswordChangedNotification struct {
-	User *User
-}
-
-// ToMail returns the mail notification for PasswordChangedNotification
-func (n *PasswordChangedNotification) ToMail(lang string) *notifications.Mail {
-	return notifications.NewMail().
-		Subject(i18n.T(lang, "notifications.password.changed.subject")).
-		Greeting(i18n.T(lang, "notifications.greeting", n.User.GetName())).
-		Line(i18n.T(lang, "notifications.password.changed.success")).
-		Line(i18n.T(lang, "notifications.password.changed.warning"))
-}
-
-// ToDB returns the PasswordChangedNotification notification in a format which can be saved in the db
-func (n *PasswordChangedNotification) ToDB() interface{} {
-	return nil
-}
-
-// Name returns the name of the notification
-func (n *PasswordChangedNotification) Name() string {
-	return ""
-}
-
 // EmailChangeRequestedNotification represents a EmailChangeRequestedNotification notification
 type EmailChangeRequestedNotification struct {
 	User     *User
@@ -113,33 +89,6 @@ func (n *EmailChangeRequestedNotification) Name() string {
 	return ""
 }
 
-// ResetPasswordNotification represents a ResetPasswordNotification notification
-type ResetPasswordNotification struct {
-	User  *User
-	Token *Token
-}
-
-// ToMail returns the mail notification for ResetPasswordNotification
-func (n *ResetPasswordNotification) ToMail(lang string) *notifications.Mail {
-	return notifications.NewMail().
-		Subject(i18n.T(lang, "notifications.password.reset.subject")).
-		Greeting(i18n.T(lang, "notifications.greeting", n.User.GetName())).
-		Line(i18n.T(lang, "notifications.password.reset.instructions")).
-		Action(i18n.T(lang, "notifications.common.actions.reset_password"), config.ServicePublicURL.GetString()+"?userPasswordReset="+n.Token.ClearTextToken).
-		Line(i18n.T(lang, "notifications.password.reset.valid_duration")).
-		Line(i18n.T(lang, "notifications.common.have_nice_day"))
-}
-
-// ToDB returns the ResetPasswordNotification notification in a format which can be saved in the db
-func (n *ResetPasswordNotification) ToDB() interface{} {
-	return nil
-}
-
-// Name returns the name of the notification
-func (n *ResetPasswordNotification) Name() string {
-	return ""
-}
-
 // InvalidTOTPNotification represents a InvalidTOTPNotification notification
 type InvalidTOTPNotification struct {
 	User *User
@@ -151,8 +100,7 @@ func (n *InvalidTOTPNotification) ToMail(lang string) *notifications.Mail {
 		Subject(i18n.T(lang, "notifications.totp.invalid.subject")).
 		Greeting(i18n.T(lang, "notifications.greeting", n.User.GetName())).
 		Line(i18n.T(lang, "notifications.totp.invalid.message")).
-		Line(i18n.T(lang, "notifications.totp.invalid.warning")).
-		Action(i18n.T(lang, "notifications.common.actions.reset_password"), config.ServicePublicURL.GetString()+"get-password-reset")
+		Line(i18n.T(lang, "notifications.totp.invalid.warning"))
 }
 
 // ToDB returns the InvalidTOTPNotification notification in a format which can be saved in the db
@@ -172,13 +120,11 @@ type PasswordAccountLockedAfterInvalidTOTPNotification struct {
 
 // ToMail returns the mail notification for PasswordAccountLockedAfterInvalidTOTPNotification
 func (n *PasswordAccountLockedAfterInvalidTOTPNotification) ToMail(lang string) *notifications.Mail {
-	resetURL := config.ServicePublicURL.GetString() + "get-password-reset"
 	return notifications.NewMail().
 		Subject(i18n.T(lang, "notifications.totp.account_locked.subject")).
 		Greeting(i18n.T(lang, "notifications.greeting", n.User.GetName())).
 		Line(i18n.T(lang, "notifications.totp.account_locked.message")).
-		Line(i18n.T(lang, "notifications.totp.account_locked.disabled")).
-		Line(i18n.T(lang, "notifications.totp.account_locked.reset_instructions", resetURL, resetURL))
+		Line(i18n.T(lang, "notifications.totp.account_locked.disabled"))
 }
 
 // ToDB returns the PasswordAccountLockedAfterInvalidTOTPNotification notification in a format which can be saved in the db

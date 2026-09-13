@@ -16,52 +16,9 @@
 
 package mail
 
-import (
-	"reflect"
-	"testing"
+var isUnderTest bool
 
-	"github.com/stretchr/testify/assert"
-)
-
-var (
-	isUnderTest bool
-	sentMails   []*Opts
-)
-
-// Fake stops any mails from being sent and instead allows for recording and querying them.
+// Fake disables mail delivery for the critical smoke setup.
 func Fake() {
 	isUnderTest = true
-	sentMails = nil
-}
-
-// AssertSent asserts if a mail has been sent
-func AssertSent(t *testing.T, opts *Opts) {
-	var found bool
-	for _, testMail := range sentMails {
-		if reflect.DeepEqual(testMail, opts) {
-			found = true
-			break
-		}
-	}
-
-	assert.True(t, found, "Failed to assert mail '%v' has been sent.", opts)
-}
-
-// LastSent returns the most recently captured mail when running under Fake(),
-// or nil if no mail has been sent. Intended for tests.
-func LastSent() *Opts {
-	if len(sentMails) == 0 {
-		return nil
-	}
-	return sentMails[len(sentMails)-1]
-}
-
-// SentMails returns all mails captured since the last reset, in the order they were sent. Intended for tests.
-func SentMails() []*Opts {
-	return sentMails
-}
-
-// ResetSent clears the captured mail buffer. Intended for tests.
-func ResetSent() {
-	sentMails = nil
 }

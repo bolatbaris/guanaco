@@ -78,10 +78,6 @@ func SetupTokenMiddleware() echo.MiddlewareFunc {
 // An autopatch leg inherits the client PATCH's authorisation only as long as it
 // resolves to the very route that PATCH was authorised against.
 func shouldSkipRouteCheck(c *echo.Context) bool {
-	if c.Path() == "/api/v1/token/test" || c.Path() == "/api/v2/token/test" {
-		return true
-	}
-
 	// Autopatch re-dispatches a bare GET on the authorised route; a query string
 	// or any other method means the client smuggled it in through the path.
 	if c.Request().Method != http.MethodGet || c.Request().URL.RawQuery != "" {

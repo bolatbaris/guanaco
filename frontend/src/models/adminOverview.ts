@@ -5,10 +5,8 @@ export default class AdminOverviewModel extends AbstractModel<IAdminOverview> im
 	users = 0
 	projects = 0
 	tasks = 0
-	teams = 0
 	shares: IAdminOverviewShares = {
 		linkShares: 0,
-		teamShares: 0,
 		userShares: 0,
 	}
 	license: IAdminOverviewLicense = {

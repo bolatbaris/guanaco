@@ -39,7 +39,6 @@ func init() {
 	notifications.Register(func() notifications.PersistedNotification { return &TaskDeletedNotification{} })
 	notifications.Register(func() notifications.PersistedNotification { return &TaskCreatedNotification{} })
 	notifications.Register(func() notifications.PersistedNotification { return &ProjectCreatedNotification{} })
-	notifications.Register(func() notifications.PersistedNotification { return &TeamMemberAddedNotification{} })
 	notifications.Register(func() notifications.PersistedNotification { return &UserMentionedInTaskNotification{} })
 }
 
@@ -330,37 +329,6 @@ func (n *ProjectCreatedNotification) ToDB() interface{} {
 // Name returns the name of the notification
 func (n *ProjectCreatedNotification) Name() string {
 	return "project.created"
-}
-
-// TeamMemberAddedNotification represents a TeamMemberAddedNotification notification
-type TeamMemberAddedNotification struct {
-	Member *user.User `json:"member"`
-	Doer   *user.User `json:"doer"`
-	Team   *Team      `json:"team"`
-}
-
-// ToTitle returns the translated one-line title for TeamMemberAddedNotification
-func (n *TeamMemberAddedNotification) ToTitle(lang string) string {
-	return i18n.T(lang, "notifications.team.member_added.subject", n.Doer.GetName(), n.Team.Name)
-}
-
-// ToMail returns the mail notification for TeamMemberAddedNotification
-func (n *TeamMemberAddedNotification) ToMail(lang string) *notifications.Mail {
-	return notifications.NewMail().
-		From(n.Doer.GetNameAndFromEmail()).
-		Greeting(i18n.T(lang, "notifications.greeting", n.Member.GetName())).
-		Line(i18n.T(lang, "notifications.team.member_added.message", notifications.EscapeMarkdown(n.Doer.GetName()), notifications.EscapeMarkdown(n.Team.Name))).
-		Action(i18n.T(lang, "notifications.common.actions.open_team"), config.ServicePublicURL.GetString()+"teams/"+strconv.FormatInt(n.Team.ID, 10)+"/edit")
-}
-
-// ToDB returns the TeamMemberAddedNotification notification in a format which can be saved in the db
-func (n *TeamMemberAddedNotification) ToDB() interface{} {
-	return n
-}
-
-// Name returns the name of the notification
-func (n *TeamMemberAddedNotification) Name() string {
-	return "team.member.added"
 }
 
 func getOverdueSinceString(until time.Duration, language string) (overdueSince string) {

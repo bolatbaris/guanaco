@@ -25,7 +25,6 @@ import (
 
 	"code.vikunja.io/api/pkg/config"
 	"code.vikunja.io/api/pkg/log"
-	"code.vikunja.io/api/pkg/models"
 	"code.vikunja.io/api/pkg/modules/auth"
 	"code.vikunja.io/api/pkg/modules/avatar"
 	"code.vikunja.io/api/pkg/modules/avatar/upload"
@@ -166,7 +165,7 @@ func sanitizedUserQuery(username string) (string, bool) {
 	return fmt.Sprintf(config.AuthLdapUserFilter.GetString(), escapedUsername), true
 }
 
-func AuthenticateUserInLDAP(s *xorm.Session, username, password string, syncGroups bool, avatarSyncAttribute string) (u *user.User, err error) {
+func AuthenticateUserInLDAP(s *xorm.Session, username, password string, avatarSyncAttribute string) (u *user.User, err error) {
 	if password == "" || username == "" {
 		return nil, user.ErrNoUsernamePassword{}
 	}
@@ -246,30 +245,7 @@ func AuthenticateUserInLDAP(s *xorm.Session, username, password string, syncGrou
 		}
 	}
 
-	if !syncGroups {
-		return
-	}
-
-	// After verifying the user's password above the connection is bound as the
-	// end user. Many directories restrict group searches to service accounts, so
-	// re-bind as the service account before enumerating groups when configured.
-	if config.AuthLdapGroupSyncUseServiceAccount.GetBool() {
-		bindDN := config.AuthLdapBindDN.GetString()
-		bindPassword := config.AuthLdapBindPassword.GetString()
-		if bindDN != "" && bindPassword != "" {
-			if err = l.Bind(bindDN, bindPassword); err != nil {
-				return nil, fmt.Errorf("could not re-bind service account for group sync: %w", err)
-			}
-		} else {
-			if err = l.UnauthenticatedBind(""); err != nil {
-				return nil, fmt.Errorf("could not re-bind anonymously for group sync: %w", err)
-			}
-		}
-	}
-
-	err = syncUserGroups(s, l, u, userdn)
-
-	return u, err
+	return u, nil
 }
 
 func getOrCreateLdapUser(s *xorm.Session, entry *ldap.Entry) (u *user.User, err error) {
@@ -328,49 +304,5 @@ func getOrCreateLdapUser(s *xorm.Session, entry *ldap.Entry) (u *user.User, err 
 		}
 	}
 
-	return
-}
-
-func syncUserGroups(s *xorm.Session, l *ldap.Conn, u *user.User, userdn string) (err error) {
-	searchRequest := ldap.NewSearchRequest(
-		config.AuthLdapBaseDN.GetString(),
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		config.AuthLdapGroupSyncFilter.GetString(),
-		[]string{
-			"dn",
-			"cn",
-			config.AuthLdapAttributeMemberID.GetString(),
-			"description",
-		},
-		nil,
-	)
-
-	sr, err := l.Search(searchRequest)
-	if err != nil {
-		log.Errorf("Error searching for LDAP groups: %v", err)
-		return err
-	}
-
-	var teams []*models.Team
-
-	for _, group := range sr.Entries {
-		groupName := group.GetAttributeValue("cn")
-		members := group.GetAttributeValues(config.AuthLdapAttributeMemberID.GetString())
-		description := group.GetAttributeValue("description")
-
-		log.Debugf("Group %s has %d members", groupName, len(members))
-
-		for _, member := range members {
-			if member == userdn || member == u.Username {
-				teams = append(teams, &models.Team{
-					Name:        groupName,
-					ExternalID:  group.DN,
-					Description: description,
-				})
-			}
-		}
-	}
-
-	err = models.SyncExternalTeamsForUser(s, u, teams, user.IssuerLDAP, "LDAP")
 	return
 }

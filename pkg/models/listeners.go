@@ -41,8 +41,6 @@ func RegisterListeners() {
 	events.RegisterListener((&TaskCreatedEvent{}).Name(), &SendTaskCreatedNotification{})
 	events.RegisterListener((&TaskDeletedEvent{}).Name(), &SendTaskDeletedNotification{})
 	events.RegisterListener((&ProjectCreatedEvent{}).Name(), &SendProjectCreatedNotification{})
-	events.RegisterListener((&TeamMemberAddedEvent{}).Name(), &SendTeamMemberAddedNotification{})
-	events.RegisterListener((&TeamMemberRemovedEvent{}).Name(), &CleanupTaskAssignmentsAfterTeamRemoval{})
 	events.RegisterListener((&TaskCommentUpdatedEvent{}).Name(), &HandleTaskCommentEditMentions{})
 	events.RegisterListener((&TaskCreatedEvent{}).Name(), &HandleTaskCreateMentions{})
 	events.RegisterListener((&TaskUpdatedEvent{}).Name(), &HandleTaskUpdatedMentions{})
@@ -75,7 +73,6 @@ func RegisterListeners() {
 		RegisterEventForWebhook(&ProjectUpdatedEvent{})
 		RegisterEventForWebhook(&ProjectDeletedEvent{})
 		RegisterEventForWebhook(&ProjectSharedWithUserEvent{})
-		RegisterEventForWebhook(&ProjectSharedWithTeamEvent{})
 		RegisterUserDirectedEventForWebhook(&TaskReminderFiredEvent{})
 		RegisterUserDirectedEventForWebhook(&TaskOverdueEvent{})
 		RegisterUserDirectedEventForWebhook(&TasksOverdueEvent{})
@@ -293,55 +290,7 @@ func registerEventsForAuditLogging() {
 			Metadata: map[string]any{"user_id": e.User.ID},
 		}
 	})
-	audit.RegisterEventForAudit(func(e *ProjectSharedWithTeamEvent) *audit.Entry {
-		return &audit.Entry{
-			Action:   audit.ActionProjectSharedWithTeam,
-			Actor:    auditActorFromUser(e.Doer),
-			Target:   audit.ProjectTarget(e.Project.ID),
-			Metadata: map[string]any{"team_id": e.Team.ID},
-		}
-	})
-
-	// Teams
-	audit.RegisterEventForAudit(func(e *TeamCreatedEvent) *audit.Entry {
-		return &audit.Entry{
-			Action: audit.ActionTeamCreated,
-			Actor:  auditActorFromUser(e.Doer),
-			Target: audit.TeamTarget(e.Team.ID),
-		}
-	})
-	audit.RegisterEventForAudit(func(e *TeamDeletedEvent) *audit.Entry {
-		return &audit.Entry{
-			Action: audit.ActionTeamDeleted,
-			Actor:  auditActorFromUser(e.Doer),
-			Target: audit.TeamTarget(e.Team.ID),
-		}
-	})
-	audit.RegisterEventForAudit(func(e *TeamMemberAddedEvent) *audit.Entry {
-		return &audit.Entry{
-			Action:   audit.ActionTeamMemberAdded,
-			Actor:    auditActorFromUser(e.Doer),
-			Target:   audit.TeamTarget(e.Team.ID),
-			Metadata: map[string]any{"member_id": e.Member.ID},
-		}
-	})
-	audit.RegisterEventForAudit(func(e *TeamMemberRemovedEvent) *audit.Entry {
-		return &audit.Entry{
-			Action:   audit.ActionTeamMemberRemoved,
-			Actor:    auditActorFromUser(e.Doer),
-			Target:   audit.TeamTarget(e.Team.ID),
-			Metadata: map[string]any{"member_id": e.Member.ID},
-		}
-	})
-
 	// Admin actions
-	audit.RegisterEventForAudit(func(e *AdminUserCreatedEvent) *audit.Entry {
-		return &audit.Entry{
-			Action: audit.ActionAdminUserCreated,
-			Actor:  auditActorFromUser(e.Doer),
-			Target: audit.UserTarget(e.User.ID),
-		}
-	})
 	audit.RegisterEventForAudit(func(e *AdminUserAdminGrantedEvent) *audit.Entry {
 		return &audit.Entry{
 			Action: audit.ActionAdminUserAdminGranted,
@@ -365,20 +314,6 @@ func registerEventsForAuditLogging() {
 				"old_status": e.OldStatus,
 				"new_status": e.NewStatus,
 			},
-		}
-	})
-	audit.RegisterEventForAudit(func(e *AdminUserPasswordSetEvent) *audit.Entry {
-		return &audit.Entry{
-			Action: audit.ActionAdminUserPasswordSet,
-			Actor:  auditActorFromUser(e.Doer),
-			Target: audit.UserTarget(e.User.ID),
-		}
-	})
-	audit.RegisterEventForAudit(func(e *AdminUserPasswordResetSentEvent) *audit.Entry {
-		return &audit.Entry{
-			Action: audit.ActionAdminUserPasswordResetSent,
-			Actor:  auditActorFromUser(e.Doer),
-			Target: audit.UserTarget(e.User.ID),
 		}
 	})
 	audit.RegisterEventForAudit(func(e *AdminUserDeletedEvent) *audit.Entry {
@@ -1624,70 +1559,6 @@ func (wl *WebhookListener) Handle(msg *message.Message) (err error) {
 	}
 
 	return nil
-}
-
-///////
-// Team Events
-
-// CleanupTaskAssignmentsAfterTeamRemoval represents a listener
-type CleanupTaskAssignmentsAfterTeamRemoval struct{}
-
-// Name defines the name of the listener
-func (l *CleanupTaskAssignmentsAfterTeamRemoval) Name() string {
-	return "task.assignees.cleanup.team_removal"
-}
-
-// Handle cleans up task assignments and subscriptions for members removed from teams
-func (l *CleanupTaskAssignmentsAfterTeamRemoval) Handle(msg *message.Message) (err error) {
-	event := &TeamMemberRemovedEvent{}
-	err = json.Unmarshal(msg.Payload, event)
-	if err != nil {
-		return err
-	}
-
-	s := db.NewSession()
-	defer s.Close()
-
-	if event == nil || event.Team == nil || event.Member == nil {
-		return nil
-	}
-
-	err = cleanupTaskMembersAfterTeamRemoval(s, event.Team.ID, event.Member.ID)
-	if err != nil {
-		_ = s.Rollback()
-		return err
-	}
-
-	return s.Commit()
-}
-
-// SendTeamMemberAddedNotification  represents a listener
-type SendTeamMemberAddedNotification struct {
-}
-
-// Name defines the name for the SendTeamMemberAddedNotification listener
-func (s *SendTeamMemberAddedNotification) Name() string {
-	return "team.member.added.notification"
-}
-
-// Handle is executed when the event SendTeamMemberAddedNotification listens on is fired
-func (s *SendTeamMemberAddedNotification) Handle(msg *message.Message) (err error) {
-	event := &TeamMemberAddedEvent{}
-	err = json.Unmarshal(msg.Payload, event)
-	if err != nil {
-		return err
-	}
-
-	// Don't notify the user themselves
-	if event.Doer.ID == event.Member.ID {
-		return nil
-	}
-
-	return notifications.Notify(event.Member, &TeamMemberAddedNotification{
-		Member: event.Member,
-		Doer:   event.Doer,
-		Team:   event.Team,
-	})
 }
 
 // HandleUserDataExport  represents a listener

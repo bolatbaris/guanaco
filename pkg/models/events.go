@@ -276,68 +276,6 @@ func (p *ProjectSharedWithUserEvent) Name() string {
 	return "project.shared.user"
 }
 
-// ProjectSharedWithTeamEvent represents an event where a project has been shared with a team
-type ProjectSharedWithTeamEvent struct {
-	Project *Project   `json:"project"`
-	Team    *Team      `json:"team"`
-	Doer    *user.User `json:"doer"`
-}
-
-// Name defines the name for ProjectSharedWithTeamEvent
-func (p *ProjectSharedWithTeamEvent) Name() string {
-	return "project.shared.team"
-}
-
-/////////////////
-// Team Events //
-/////////////////
-
-// TeamMemberAddedEvent defines an event where a user is added to a team
-type TeamMemberAddedEvent struct {
-	Team   *Team      `json:"team"`
-	Member *user.User `json:"member"`
-	Doer   *user.User `json:"doer"`
-}
-
-// Name defines the name for TeamMemberAddedEvent
-func (t *TeamMemberAddedEvent) Name() string {
-	return "team.member.added"
-}
-
-// TeamMemberRemovedEvent defines an event where a user is removed from a team
-type TeamMemberRemovedEvent struct {
-	Team   *Team      `json:"team"`
-	Member *user.User `json:"member"`
-	Doer   *user.User `json:"doer"`
-}
-
-// Name defines the name for TeamMemberRemovedEvent
-func (t *TeamMemberRemovedEvent) Name() string {
-	return "team.member.removed"
-}
-
-// TeamCreatedEvent represents a TeamCreatedEvent event
-type TeamCreatedEvent struct {
-	Team *Team      `json:"team"`
-	Doer *user.User `json:"doer"`
-}
-
-// Name defines the name for TeamCreatedEvent
-func (t *TeamCreatedEvent) Name() string {
-	return "team.created"
-}
-
-// TeamDeletedEvent represents a TeamDeletedEvent event
-type TeamDeletedEvent struct {
-	Team *Team      `json:"team"`
-	Doer *user.User `json:"doer"`
-}
-
-// Name defines the name for TeamDeletedEvent
-func (t *TeamDeletedEvent) Name() string {
-	return "team.deleted"
-}
-
 // UserDataExportRequestedEvent represents a UserDataExportRequestedEvent event
 type UserDataExportRequestedEvent struct {
 	User *user.User `json:"user"`
@@ -454,17 +392,6 @@ func (e *APITokenUsedEvent) Name() string {
 // exist for audit logging and are deliberately not registered as webhook
 // events — they are instance-level, not project-scoped.
 
-// AdminUserCreatedEvent represents a user being provisioned through the admin API
-type AdminUserCreatedEvent struct {
-	User *user.User `json:"user"`
-	Doer *user.User `json:"doer"`
-}
-
-// Name defines the name for AdminUserCreatedEvent
-func (e *AdminUserCreatedEvent) Name() string {
-	return "admin.user.created"
-}
-
 // AdminUserAdminGrantedEvent represents a user being promoted to instance admin
 type AdminUserAdminGrantedEvent struct {
 	User *user.User `json:"user"`
@@ -498,30 +425,6 @@ type AdminUserStatusChangedEvent struct {
 // Name defines the name for AdminUserStatusChangedEvent
 func (e *AdminUserStatusChangedEvent) Name() string {
 	return "admin.user.status.changed"
-}
-
-// AdminUserPasswordSetEvent represents an admin setting a user's password.
-// It carries no password material.
-type AdminUserPasswordSetEvent struct {
-	User *user.User `json:"user"`
-	Doer *user.User `json:"doer"`
-}
-
-// Name defines the name for AdminUserPasswordSetEvent
-func (e *AdminUserPasswordSetEvent) Name() string {
-	return "admin.user.password.set"
-}
-
-// AdminUserPasswordResetSentEvent represents an admin triggering the
-// password-reset email for a user. It carries no reset token.
-type AdminUserPasswordResetSentEvent struct {
-	User *user.User `json:"user"`
-	Doer *user.User `json:"doer"`
-}
-
-// Name defines the name for AdminUserPasswordResetSentEvent
-func (e *AdminUserPasswordResetSentEvent) Name() string {
-	return "admin.user.password_reset.sent"
 }
 
 // AdminUserDeletedEvent represents a user being deleted through the admin API

@@ -11,7 +11,6 @@ export const SHORTCUTS = {
 		upcoming: 'KeyG KeyU',
 		projects: 'KeyG KeyP',
 		labels: 'KeyG KeyA',
-		teams: 'KeyG KeyM',
 	},
 	taskDetail: {
 		openProject: 'KeyU',

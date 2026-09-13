@@ -126,23 +126,14 @@ const (
 	ActionProjectUpdated        = "project.updated"
 	ActionProjectDeleted        = "project.deleted"
 	ActionProjectSharedWithUser = "project.shared.user"
-	ActionProjectSharedWithTeam = "project.shared.team"
 
-	ActionTeamCreated       = "team.created"
-	ActionTeamDeleted       = "team.deleted"
-	ActionTeamMemberAdded   = "team.member.added"
-	ActionTeamMemberRemoved = "team.member.removed"
-
-	ActionAdminUserCreated           = "admin.user.created"
-	ActionAdminUserAdminGranted      = "admin.user.admin.granted"
-	ActionAdminUserAdminRevoked      = "admin.user.admin.revoked"
-	ActionAdminUserStatusChanged     = "admin.user.status.changed"
-	ActionAdminUserPasswordSet       = "admin.user.password.set"        // #nosec G101 -- action identifier, not a credential
-	ActionAdminUserPasswordResetSent = "admin.user.password_reset.sent" // #nosec G101
-	ActionAdminUserDeleted           = "admin.user.deleted"
-	ActionAdminProjectOwnerChanged   = "admin.project.owner.changed"
-	ActionAdminUsersListed           = "admin.users.listed"
-	ActionAdminAccessDenied          = "admin.access.denied"
+	ActionAdminUserAdminGranted    = "admin.user.admin.granted"
+	ActionAdminUserAdminRevoked    = "admin.user.admin.revoked"
+	ActionAdminUserStatusChanged   = "admin.user.status.changed"
+	ActionAdminUserDeleted         = "admin.user.deleted"
+	ActionAdminProjectOwnerChanged = "admin.project.owner.changed"
+	ActionAdminUsersListed         = "admin.users.listed"
+	ActionAdminAccessDenied        = "admin.access.denied"
 )
 
 // The type strings are unexported; these constructors are the only way to
@@ -164,5 +155,4 @@ func ActorFromDoerID(id int64) Actor {
 func TaskTarget(id int64) Target     { return Target{Type: "task", ID: id} }
 func ProjectTarget(id int64) Target  { return Target{Type: "project", ID: id} }
 func UserTarget(id int64) Target     { return Target{Type: "user", ID: id} }
-func TeamTarget(id int64) Target     { return Target{Type: "team", ID: id} }
 func APITokenTarget(id int64) Target { return Target{Type: "api_token", ID: id} }

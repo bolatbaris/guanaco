@@ -5,9 +5,7 @@
   ],
   "include": [
     "env.config.d.ts",
-    "vite.config.*",
-    "vitest.config.*",
-    "playwright.config.*"
+    "vite.config.*"
   ],
   "compilerOptions": {
     "composite": true,

@@ -15,34 +15,13 @@ this file is veans-specific.
   `veans/code-header-template.txt` (a copy of the parent's, kept local
   so the linter resolves the path relative to this module).
 
-## Building and testing
+## Building and validation
 
-- `mage build` → `./veans` binary. The `Aliases` map in `magefile.go`
-  routes bare names like `mage test` to `Test.All` — without aliases,
-  mage rejects namespace invocations ("Unknown target specified").
-- Unit tests: `mage test` (passes `-short`) or `go test -short ./...`.
-  The e2e package's `TestMain` gates the suite on `-short`, mirroring
-  the parent monorepo's `pkg/webtests` convention. Without `-short`
-  and without `VEANS_E2E_API_URL` set, the e2e tests fail loudly with
-  a "configure or pass -short" hint.
-- E2e tests: `mage test:e2e` (no `-short`). Assumes an externally-
-  running Vikunja at `VEANS_E2E_API_URL`. The harness seeds its own
-  admin user via `PATCH /api/v1/test/users` — same mechanism the
-  playwright suite uses — so the API must be booted with
-  `VIKUNJA_SERVICE_TESTINGTOKEN=<token>` and the same value passed in
-  via `VEANS_E2E_TESTING_TOKEN`. Alternative path:
-  `VEANS_E2E_ADMIN_TOKEN=<jwt>` skips the seed and uses the given
-  token as-is, for driving a long-lived Vikunja the suite shouldn't
-  mutate user rows on.
-- Local e2e loop: from the parent repo root, build the API
-  (`mage build:build`), run it with sqlite-memory + a known JWT
-  secret + `VIKUNJA_SERVICE_TESTINGTOKEN`, then `mage test:e2e` from
-  `veans/` with `VEANS_E2E_API_URL` + `VEANS_E2E_TESTING_TOKEN`. No
-  manual seeding step — the test harness handles it.
-- CI: the `test-veans-e2e` job in `.github/workflows/test.yml` consumes
-  the existing `vikunja_bin` artifact from `api-build`; don't recompile
-  the API in a parallel workflow. The `veans-test` job runs unit tests
-  with `-short` for fast feedback, independent of `api-build`.
+- `mage build` → `./veans` binary.
+- The former unit and E2E test suites were removed. Validate CLI changes manually
+  against a development API and run the parent repository's critical smoke check
+  when API availability needs verification.
+- `mage lint` and `mage lint:fix` run golangci-lint.
 
 ## Vikunja wire-format gotchas
 

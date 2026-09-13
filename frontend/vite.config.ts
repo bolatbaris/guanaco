@@ -1,6 +1,4 @@
-/// <reference types="vitest" />
 import {defineConfig, type PluginOption, loadEnv} from 'vite'
-import {configDefaults} from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import {URL, fileURLToPath} from 'node:url'
 import {dirname, resolve} from 'node:path'
@@ -112,12 +110,6 @@ function getBuildConfig(env: Record<string, string>) {
 		define: {
 			__WORKBOX_VERSION__: JSON.stringify(`v${workboxVersion}`),
 		},
-		// https://vitest.dev/config/
-		test: {
-			environment: 'happy-dom',
-			exclude: [...configDefaults.exclude, 'e2e/**'],
-			'vitest.commandLine': 'pnpm test:unit',
-		},
 		css: {
 			preprocessorOptions: {
 				sass: {
@@ -213,11 +205,6 @@ function getBuildConfig(env: Record<string, string>) {
 							name: 'Tasks Next Month',
 							short_name: 'Next Month',
 							url: '/tasks/by/month',
-						},
-						{
-							name: 'Teams Overview',
-							short_name: 'Teams',
-							url: '/teams',
 						},
 					],
 				},

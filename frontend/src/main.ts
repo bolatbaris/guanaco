@@ -45,7 +45,6 @@ import focus from '@/directives/focus'
 import tooltip from '@/directives/tooltip'
 import 'floating-vue/dist/style.css'
 import shortcut from '@/directives/shortcut'
-import testid from '@/directives/testid'
 
 // global components
 import FontAwesomeIcon from '@/components/misc/Icon'
@@ -79,7 +78,6 @@ setLanguage(browserLanguage).then(() => {
 	app.directive('focus', focus)
 	app.directive('tooltip', tooltip)
 	app.directive('shortcut', shortcut)
-	app.directive('cy', testid)
 
 	app.component('Icon', FontAwesomeIcon)
 	app.component('XButton', Button)

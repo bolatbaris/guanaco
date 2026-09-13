@@ -30,7 +30,6 @@
 		>
 			<h2>{{ $t('home.lastViewed') }}</h2>
 			<ProjectCardGrid
-				v-cy="'projectCardGrid'"
 				:projects="projectHistory"
 				:show-even-number-of-projects="true"
 			/>

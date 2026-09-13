@@ -43,13 +43,6 @@
 						class="label"
 						for="password"
 					>{{ $t('user.auth.password') }}</label>
-					<RouterLink
-						v-if="localAuthEnabled"
-						:to="{ name: 'user.password-reset.request' }"
-						class="reset-password-link"
-					>
-						{{ $t('user.auth.forgotPassword') }}
-					</RouterLink>
 				</div>
 				<Password
 					v-model="password"
@@ -82,19 +75,6 @@
 			>
 				{{ $t('user.auth.login') }}
 			</XButton>
-			<p
-				v-if="registrationEnabled"
-				class="mbs-2"
-			>
-				{{ $t('user.auth.noAccountYet') }}
-				<RouterLink
-					:to="{ name: 'user.register' }"
-					type="secondary"
-					class="inline-link"
-				>
-					{{ $t('user.auth.createAccount') }}
-				</RouterLink>
-			</p>
 		</form>
 
 		<div
@@ -146,7 +126,6 @@ const authStore = useAuthStore()
 const configStore = useConfigStore()
 const {redirectIfSaved} = useRedirectToLastVisited()
 
-const registrationEnabled = computed(() => configStore.auth.local.registrationEnabled)
 const localAuthEnabled = computed(() => configStore.auth.local.enabled)
 const ldapAuthEnabled = computed(() => configStore.auth.ldap.enabled)
 
@@ -253,9 +232,6 @@ async function submit() {
 	margin: 0 0.4rem 0 0;
 }
 
-.reset-password-link {
-	display: inline-block;
-}
 
 // Underline links sitting inside body text so they're not distinguished by color alone
 .inline-link {

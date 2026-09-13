@@ -14,14 +14,6 @@
   ],
   "packageRules": [
     {
-      "matchPackageNames": [
-        "happy-dom"
-      ],
-      "extends": [
-        "schedule:weekly"
-      ]
-    },
-    {
       "groupName": "caniuse-and-related",
       "matchPackageNames": [
         "caniuse-lite",
@@ -58,13 +50,6 @@
       "groupName": "dev-dependencies",
       "extends": [
         "schedule:daily"
-      ]
-    },
-    {
-      "groupName": "playwright",
-      "matchPackageNames": [
-        "@playwright/{/,}**",
-        "mcr.microsoft.com/playwright"
       ]
     },
     {

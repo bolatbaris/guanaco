@@ -4,8 +4,6 @@ FROM --platform=$BUILDPLATFORM node:24.21.0-alpine@sha256:be80f76cf40ec8e42b9bec
 WORKDIR /build
 
 ENV PNPM_CACHE_FOLDER=.cache/pnpm/
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV CYPRESS_INSTALL_BINARY=0
 
 COPY frontend/pnpm-lock.yaml frontend/package.json frontend/pnpm-workspace.yaml ./
 RUN npm install -g corepack && corepack enable && \

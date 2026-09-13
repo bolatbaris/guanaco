@@ -170,7 +170,6 @@
 		</ul>
 		<XButton
 			v-else-if="isEditing && showSave"
-			v-cy="'saveEditor'"
 			class="mbs-4"
 			variant="secondary"
 			:shadow="false"

@@ -17,7 +17,6 @@ import {useBaseStore} from '@/stores/base'
 import {useConfigStore} from '@/stores/config'
 
 import Login from '@/views/user/Login.vue'
-import Register from '@/views/user/Register.vue'
 import LinkSharingAuth from '@/views/sharing/LinkSharingAuth.vue'
 import OpenIdAuth from '@/views/user/OpenIdAuth.vue'
 import UpcomingTasks from '@/views/tasks/ShowTasks.vue'
@@ -69,32 +68,6 @@ const router = createRouter({
 			},
 		},
 		{
-			path: '/get-password-reset',
-			name: 'user.password-reset.request',
-			component: () => import('@/views/user/RequestPasswordReset.vue'),
-			meta: {
-				title: 'user.auth.resetPassword',
-			},
-		},
-		{
-			path: '/password-reset',
-			name: 'user.password-reset.reset',
-			component: () => import('@/views/user/PasswordReset.vue'),
-			meta: {
-				title: 'user.auth.resetPassword',
-			},
-		},
-		{
-			path: '/register',
-			name: 'user.register',
-			// FIXME: use dynamic imports
-			// component: () => import('@/views/user/Register.vue'),
-			component: Register,
-			meta: {
-				title: 'user.auth.createAccount',
-			},
-		},
-		{
 			path: '/user/settings',
 			name: 'user.settings',
 			component: () => import('@/views/user/Settings.vue'),
@@ -140,11 +113,6 @@ const router = createRouter({
 					path: '/user/settings/general',
 					name: 'user.settings.general',
 					component: () => import('@/views/user/settings/General.vue'),
-				},
-				{
-					path: '/user/settings/password-update',
-					name: 'user.settings.password-update',
-					component: () => import('@/views/user/settings/PasswordUpdate.vue'),
 				},
 				{
 					path: '/user/settings/totp',
@@ -384,24 +352,6 @@ const router = createRouter({
 			}),
 		},
 		{
-			path: '/teams',
-			name: 'teams.index',
-			component: () => import('@/views/teams/ListTeams.vue'),
-		},
-		{
-			path: '/teams/new',
-			name: 'teams.create',
-			component: () =>  import('@/views/teams/NewTeam.vue'),
-			meta: {
-				showAsModal: true,
-			},
-		},
-		{
-			path: '/teams/:id/edit',
-			name: 'teams.edit',
-			component: () => import('@/views/teams/EditTeam.vue'),
-		},
-		{
 			path: '/labels',
 			name: 'labels.index',
 			component: () => import('@/views/labels/ListLabels.vue'),
@@ -510,18 +460,6 @@ export async function getAuthForRoute(to: RouteLocation, authStore) {
 			return redirectDest
 		}
 		return
-	}
-
-	// Check if password reset token is in query params
-	const resetToken = to.query.userPasswordReset as string | undefined
-	
-	// Redirect to password reset page if we have a token stored
-	if (resetToken && to.name !== 'user.password-reset.reset') {
-		return {name: 'user.password-reset.reset', query: { userPasswordReset: resetToken }}
-	}
-
-	if (typeof resetToken === 'undefined' && to.name === 'user.password-reset.reset') {
-		return {name: 'user.login'}
 	}
 
 	// Check if email confirmation token is in query params

@@ -20,12 +20,10 @@ import (
 	"embed"
 	"fmt"
 	"path/filepath"
-	"testing"
 
 	"code.vikunja.io/api/pkg/config"
 
 	"github.com/go-testfixtures/testfixtures/v3"
-	"github.com/stretchr/testify/require"
 	"xorm.io/xorm/schemas"
 )
 
@@ -112,10 +110,4 @@ func LoadFixtures() error {
 		}
 	}
 	return nil
-}
-
-// LoadAndAssertFixtures loads all fixtures defined before and asserts they are correctly loaded
-func LoadAndAssertFixtures(t *testing.T) {
-	err := LoadFixtures()
-	require.NoError(t, err)
 }

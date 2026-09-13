@@ -1043,7 +1043,7 @@ func CreateNewProjectForUser(s *xorm.Session, u *user.User) (err error) {
 	return err
 }
 
-// RegisterUser creates a user plus their default inbox project; shared by /register and the admin create-user route.
+// RegisterUser provisions a user plus their default inbox project.
 func RegisterUser(s *xorm.Session, u *user.User) (*user.User, error) {
 	newUser, err := user.CreateUser(s, u)
 	if err != nil {
@@ -1474,11 +1474,6 @@ func (p *Project) Delete(s *xorm.Session, a web.Auth) (err error) {
 	}
 
 	_, err = s.Where("project_id = ?", p.ID).Delete(&ProjectUser{})
-	if err != nil {
-		return
-	}
-
-	_, err = s.Where("project_id = ?", p.ID).Delete(&TeamProject{})
 	if err != nil {
 		return
 	}

@@ -124,35 +124,13 @@ Resolved in order on every command:
 
 ```
 mage build              # go build -o ./veans ./cmd/veans
-mage test               # unit tests across the module
-mage test:filter EXPR   # go test -run EXPR ./...
-mage test:e2e           # e2e suite (needs VEANS_E2E_API_URL)
 mage lint / lint:fix    # golangci-lint
 mage fmt                # go fmt ./...
 mage clean              # remove built binary
 ```
 
-## End-to-end tests
-
-The suite in `e2e/` assumes a running Vikunja API. Locally, point it at any
-dev instance:
-
-```sh
-export VEANS_E2E_API_URL=http://localhost:3456
-export VEANS_E2E_ADMIN_USER=user1
-export VEANS_E2E_ADMIN_PASS=12345678   # canonical fixture password
-mage test:e2e
-```
-
-CI spins Vikunja up the same way the frontend Playwright suite does — see
-`.github/workflows/veans-e2e.yml`. The workflow builds the parent API
-binary, starts it with `VIKUNJA_DATABASE_TYPE=sqlite`,
-`VIKUNJA_DATABASE_PATH=memory`, fixtures from `pkg/db/fixtures/`, and runs
-`mage test:e2e` from this directory.
-
-E2E tests never touch the developer's keychain — they override `HOME` and
-`XDG_CONFIG_HOME` per test, which forces the credential store to fall
-through to its file backend.
+The former unit and E2E test suites were removed. Validate CLI changes manually
+against a development Vikunja instance.
 
 ## Status model
 

@@ -260,13 +260,8 @@ func HandleFailedTOTPAuth(user *User) {
 	s := db.NewSession()
 	defer s.Close()
 
-	if err := RequestUserPasswordResetToken(s, user); err != nil {
-		log.Errorf("Could not issue password reset token for user %d after 10 failed TOTP attempts: %s", user.ID, err)
-		_ = s.Rollback()
-		return
-	}
 	if err := notifications.Notify(user, &PasswordAccountLockedAfterInvalidTOTPNotification{User: user}, s); err != nil {
-		log.Errorf("Could not send password information mail to user %d after 10 failed TOTP attempts: %s", user.ID, err)
+		log.Errorf("Could not send account lock notification to user %d after 10 failed TOTP attempts: %s", user.ID, err)
 		_ = s.Rollback()
 		return
 	}

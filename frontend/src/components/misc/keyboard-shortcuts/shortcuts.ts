@@ -50,10 +50,6 @@ export const KEYBOARD_SHORTCUTS: ShortcutGroup[] = [
 				title: 'keyboardShortcuts.navigation.labels',
 				...shortcutBindingToDisplay(SHORTCUTS.navigation.labels),
 			},
-			{
-				title: 'keyboardShortcuts.navigation.teams',
-				...shortcutBindingToDisplay(SHORTCUTS.navigation.teams),
-			},
 		],
 	},
 	{

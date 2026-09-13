@@ -49,7 +49,6 @@
 								{{ $t('misc.cancel') }}
 							</XButton>
 							<XButton
-								v-cy="'modalPrimary'"
 								variant="primary"
 								:shadow="false"
 								@click="$emit('submit')"

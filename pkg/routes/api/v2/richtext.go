@@ -51,7 +51,7 @@ func requestWantsMarkdown(ctx context.Context) bool {
 // richTextFormatAPIDescription documents the cross-cutting markdown behavior at
 // the top of the OpenAPI spec (Scalar renders it on the docs landing page).
 const richTextFormatAPIDescription = "## Rich-text fields\n\n" +
-	"Descriptions (task, project, label, team, saved filter) and task comments are stored as HTML. " +
+	"Descriptions (task, project, label, saved filter) and task comments are stored as HTML. " +
 	"Add `?format=markdown` to read and write them as GFM Markdown instead; on write it is converted " +
 	"to HTML and `@mentions` resolved to existing users. On `PATCH`, send the `X-Vikunja-Format: markdown` " +
 	"header instead (merge-patch drops query parameters). CalDAV always exchanges task descriptions as " +

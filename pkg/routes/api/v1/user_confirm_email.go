@@ -26,8 +26,8 @@ import (
 )
 
 // UserConfirmEmail is the handler to confirm a user email
-// @Summary Confirm the email of a new user
-// @Description Confirms the email of a newly registered user.
+// @Summary Confirm an email address
+// @Description Confirms an account email address.
 // @tags user
 // @Accept json
 // @Produce json

@@ -1,13 +1,11 @@
 <template>
 	<div
-		v-cy="'projects-list'"
 		class="content loader-container"
 		:class="{'is-loading': loading}"
 	>
 		<header class="project-header">
 			<FancyCheckbox
 				v-model="showArchived"
-				v-cy="'show-archived-check'"
 			>
 				{{ $t('project.showArchived') }}
 			</FancyCheckbox>
@@ -20,7 +18,6 @@
 					{{ $t('filters.create.title') }}
 				</XButton>
 				<XButton
-					v-cy="'new-project'"
 					:to="{name: 'project.create'}"
 					icon="plus"
 				>

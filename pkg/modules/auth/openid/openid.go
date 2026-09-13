@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"code.vikunja.io/api/pkg/db"
@@ -98,14 +97,13 @@ func (b *boolish) UnmarshalJSON(data []byte) error {
 }
 
 type claims struct {
-	Email              string                   `json:"email"`
-	EmailVerified      boolish                  `json:"email_verified"`
-	Name               string                   `json:"name"`
-	PreferredUsername  string                   `json:"preferred_username"`
-	Nickname           string                   `json:"nickname"`
-	VikunjaGroups      []map[string]interface{} `json:"vikunja_groups"`
-	Picture            string                   `json:"picture"`
-	ExtraSettingsLinks map[string]any           `json:"extra_settings_links"`
+	Email              string         `json:"email"`
+	EmailVerified      boolish        `json:"email_verified"`
+	Name               string         `json:"name"`
+	PreferredUsername  string         `json:"preferred_username"`
+	Nickname           string         `json:"nickname"`
+	Picture            string         `json:"picture"`
+	ExtraSettingsLinks map[string]any `json:"extra_settings_links"`
 }
 
 func init() {
@@ -217,7 +215,7 @@ func HandleCallback(c *echo.Context) error {
 // AuthenticateCallback resolves an OpenID Connect callback to an authenticated
 // user: it exchanges the auth code, verifies the ID token, creates or updates the
 // matching local user, enforces the account-status and TOTP gates, and syncs the
-// user's external teams. It is the transport-agnostic core shared by the v1 echo
+// user. It is the transport-agnostic core shared by the v1 echo
 // handler and the v2 Huma handler; the caller issues the auth token. The
 // ErrOpenIDBadRequestWithDetails error keeps its provider detail so v1 can render
 // its bespoke body and v2 can map it to RFC 9457.
@@ -264,8 +262,7 @@ func AuthenticateCallback(ctx context.Context, cb *Callback, providerKey string)
 		return nil, nil, &user.ErrAccountLocked{UserID: u.ID}
 	}
 
-	// Must run before team sync so a failed 2FA attempt cannot mutate team
-	// membership. Commit before HandleFailedTOTPAuth so the getOrCreateUser
+	// Commit before HandleFailedTOTPAuth so the getOrCreateUser
 	// writes persist and the SQLite write lock is released — its dedicated
 	// session needs to acquire its own. See GHSA-fgfv-pv97-6cmj.
 	if err := enforceTOTPIfRequired(s, u, cb.TOTPPasscode); err != nil {
@@ -281,78 +278,16 @@ func AuthenticateCallback(ctx context.Context, cb *Callback, providerKey string)
 		return nil, nil, err
 	}
 
-	teamData := getTeamDataFromToken(cl.VikunjaGroups, provider)
-
-	err = models.SyncExternalTeamsForUser(s, u, teamData, idToken.Issuer, provider.Name)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	err = s.Commit()
 	if err != nil {
 		_ = s.Rollback()
-		log.Errorf("Error creating new team for provider %s: %v", provider.Name, err)
+		log.Errorf("Error persisting OpenID user for provider %s: %v", provider.Name, err)
 		return nil, nil, err
 	}
 
 	events.DispatchPending(ctx, s)
 
 	return u, oidcData, nil
-}
-
-func getTeamDataFromToken(groups []map[string]interface{}, provider *Provider) (teamData []*models.Team) {
-	teamData = []*models.Team{}
-	for _, t := range groups {
-		var name string
-		var description string
-		var oidcID string
-		var isPublic bool
-
-		// Read name
-		_, exists := t["name"]
-		if exists {
-			name = t["name"].(string)
-		}
-
-		// Read description
-		_, exists = t["description"]
-		if exists {
-			description = t["description"].(string)
-		}
-
-		// Read isPublic flag
-		_, exists = t["isPublic"]
-		if exists {
-			isPublic = t["isPublic"].(bool)
-		}
-
-		// Read oidcID
-		_, exists = t["oidcID"]
-		if exists {
-			switch id := t["oidcID"].(type) {
-			case string:
-				oidcID = id
-			case int64:
-				oidcID = strconv.FormatInt(id, 10)
-			case float64:
-				oidcID = strconv.FormatFloat(id, 'f', -1, 64)
-			default:
-				log.Errorf("No oidcID assigned for %v or type %v not supported", t, t)
-			}
-		}
-		if name == "" || oidcID == "" {
-			log.Errorf("Claim of your custom scope does not hold name or oidcID for automatic group assignment through oidc provider. Please check %s", provider.Name)
-			continue
-		}
-		teamData = append(teamData, &models.Team{
-			Name:        name,
-			ExternalID:  oidcID,
-			Description: description,
-			IsPublic:    isPublic,
-		})
-	}
-
-	return teamData
 }
 
 // Download and store a user's avatar from an OpenID provider
@@ -553,10 +488,6 @@ func mergeClaims(cl *claims, cl2 *claims, forceUserInfo bool) error {
 
 	if (forceUserInfo && cl2.Picture != "") || cl.Picture == "" {
 		cl.Picture = cl2.Picture
-	}
-
-	if (forceUserInfo && len(cl2.VikunjaGroups) > 0) || len(cl.VikunjaGroups) == 0 {
-		cl.VikunjaGroups = cl2.VikunjaGroups
 	}
 
 	if (forceUserInfo && len(cl2.ExtraSettingsLinks) > 0) || len(cl.ExtraSettingsLinks) == 0 {

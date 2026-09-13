@@ -3,7 +3,6 @@
 		<XButton
 			v-if="entries.length > 0"
 			v-tooltip="$t('timeTracking.logTime')"
-			v-cy="'addTaskTimeEntry'"
 			:aria-label="$t('timeTracking.logTime')"
 			class="is-pulled-right d-print-none"
 			:class="{'is-active': showForm}"

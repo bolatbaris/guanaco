@@ -1,7 +1,6 @@
 <template>
 	<div
 		v-if="timeTrackingStore.hasActiveTimer"
-		v-cy="'timerBadge'"
 		class="timer-badge"
 	>
 		<RouterLink
@@ -13,7 +12,6 @@
 		</RouterLink>
 		<BaseButton
 			v-tooltip="$t('timeTracking.stop')"
-			v-cy="'stopTimer'"
 			class="timer-badge__stop"
 			:aria-label="$t('timeTracking.stop')"
 			@click="stop"

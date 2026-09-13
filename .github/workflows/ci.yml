@@ -21,8 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test
+  build:
+    name: Build
     uses: ./.github/workflows/test.yml
     secrets: inherit
 
@@ -31,5 +31,5 @@ jobs:
     if: ${{ github.ref_type == 'tag' || github.ref_name == 'main' }}
     uses: ./.github/workflows/release.yml
     needs:
-      - test
+      - build
     secrets: inherit

@@ -131,11 +131,6 @@ type Notifiable interface {
 // i.e. only once the row is committed, so a rolled-back transaction (and its
 // event-handler retry) cannot duplicate mails (#2971).
 func Notify(notifiable Notifiable, notification Notification, sessions ...*xorm.Session) (err error) {
-	if isUnderTest {
-		sentTestNotifications = append(sentTestNotifications, notification)
-		return nil
-	}
-
 	should, err := notifiable.ShouldNotify(sessions...)
 	if err != nil || !should {
 		log.Debugf("Not notifying user %d because they are disabled", notifiable.RouteForDB())

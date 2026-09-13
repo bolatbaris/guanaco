@@ -5,6 +5,12 @@ docs/
 .devenv/
 .direnv/
 .idea/
+.git/
+.github/
+.env
+.env.*
+*.log
+.DS_Store
 
 Dockerfile
 docker-manifest.tmpl

@@ -15,6 +15,34 @@ function getSentryModule(): Promise<typeof import('@sentry/vue')> {
 	return sentryModulePromise ??= import('@sentry/vue')
 }
 
+export async function captureFrontendTestError(): Promise<boolean> {
+	if (typeof window === 'undefined') {
+		return false
+	}
+
+	const dsn = window.SENTRY_DSN?.trim() || import.meta.env.VITE_SENTRY_DSN?.trim()
+	if (!dsn) {
+		return false
+	}
+
+	try {
+		const Sentry = await getSentryModule()
+		if (!Sentry.getClient()) {
+			return false
+		}
+
+		const eventId = Sentry.captureException(new Error('GlitchTip frontend test exception'), {
+			tags: {
+				glitchtip_test: 'true',
+				component: 'frontend',
+			},
+		})
+		return Boolean(eventId)
+	} catch {
+		return false
+	}
+}
+
 function getPathname(request?: Request): string | undefined {
 	if (!request) {
 		return undefined

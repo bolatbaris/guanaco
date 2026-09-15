@@ -1413,7 +1413,15 @@
     "title": "About",
     "version": "Version: {version}",
     "frontendVersion": "Frontend version: {version}",
-    "apiVersion": "API version: {version}"
+    "apiVersion": "API version: {version}",
+    "glitchtipTestTitle": "GlitchTip test events",
+    "glitchtipTestDescription": "Send deliberate test events to verify the frontend and backend GlitchTip projects.",
+    "testFrontendError": "Send frontend test error",
+    "testBackendError": "Send backend test error",
+    "frontendTestSent": "Frontend test event sent. Check the frontend GlitchTip project.",
+    "frontendTestUnavailable": "Frontend tracking is not enabled or did not accept the test event.",
+    "backendTestSent": "Backend test event sent. Check the backend GlitchTip project.",
+    "backendTestUnavailable": "Backend tracking is not enabled or the test request failed."
   },
   "timeTracking": {
     "title": "Time tracking",

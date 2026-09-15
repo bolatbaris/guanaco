@@ -1035,6 +1035,25 @@ components:
           readOnly: true
           type: string
       type: object
+    ObservabilityTestBodyBody:
+      additionalProperties: false
+      properties:
+        $schema:
+          description: A URL to the JSON Schema for this object.
+          examples:
+            - /api/v2/schemas/ObservabilityTestBodyBody.json
+          format: uri
+          readOnly: true
+          type: string
+        captured:
+          description: Whether the backend sent the test exception to the configured Sentry-compatible service.
+          readOnly: true
+          type: boolean
+        message:
+          description: A human-readable result of the test request.
+          readOnly: true
+          type: string
+      type: object
     OpenIDAuthInfo:
       additionalProperties: false
       properties:
@@ -5580,6 +5599,26 @@ paths:
       summary: OAuth 2.0 token endpoint
       tags:
         - auth
+  /observability/test/backend:
+    post:
+      description: Captures a deliberate backend exception with a diagnostic tag. It does not change application data and is available only to authenticated users.
+      operationId: observability-test-backend
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObservabilityTestBodyBody"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/VikunjaErrorModel"
+          description: Error
+      summary: Send a backend GlitchTip test event
+      tags:
+        - observability
   /projects:
     get:
       description: Returns the projects the authenticated user has access to (owned plus shared, with child projects of accessible parents), paginated. Archived projects are excluded unless is_archived=true. Pass expand=permissions to include each project's max_permission for the caller.

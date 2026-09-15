@@ -760,6 +760,21 @@ export type MigrationStartedBodyBody = {
     readonly message?: string;
 };
 
+export type ObservabilityTestBodyBody = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * Whether the backend sent the test exception to the configured Sentry-compatible service.
+     */
+    readonly captured?: boolean;
+    /**
+     * A human-readable result of the test request.
+     */
+    readonly message?: string;
+};
+
 export type OpenIdAuthInfo = {
     enabled?: boolean;
     providers?: Array<Provider> | null;
@@ -5266,6 +5281,31 @@ export type OauthTokenResponses = {
 };
 
 export type OauthTokenResponse = OauthTokenResponses[keyof OauthTokenResponses];
+
+export type ObservabilityTestBackendData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/observability/test/backend';
+};
+
+export type ObservabilityTestBackendErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type ObservabilityTestBackendError = ObservabilityTestBackendErrors[keyof ObservabilityTestBackendErrors];
+
+export type ObservabilityTestBackendResponses = {
+    /**
+     * OK
+     */
+    200: ObservabilityTestBodyBody;
+};
+
+export type ObservabilityTestBackendResponse = ObservabilityTestBackendResponses[keyof ObservabilityTestBackendResponses];
 
 export type ProjectsListData = {
     body?: never;

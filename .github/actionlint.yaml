@@ -4,3 +4,5 @@ self-hosted-runner:
   labels:
     - namespace-profile-default
     - blacksmith-8vcpu-ubuntu-2204
+    - glitchtip-runner
+    - local

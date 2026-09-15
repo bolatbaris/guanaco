@@ -14,7 +14,6 @@ export interface ConfigState {
 	version: string,
 	frontendUrl: string,
 	motd: string,
-	linkSharingEnabled: boolean,
 	maxFileSize: string,
 	maxItemsPerPage: number,
 	availableMigrators: Array<keyof typeof MIGRATORS>,
@@ -54,7 +53,6 @@ export const useConfigStore = defineStore('config', () => {
 		version: '',
 		frontendUrl: '',
 		motd: '',
-		linkSharingEnabled: true,
 		maxFileSize: '20MB',
 		maxItemsPerPage: 50,
 		availableMigrators: [],
@@ -92,9 +90,9 @@ export const useConfigStore = defineStore('config', () => {
 	const apiBase = computed(() => {
 		const {host, protocol, pathname} = parseURL(window.API_URL)
 
-		// Strip the /api/v1 suffix (and optional trailing slash) to get the deployment base.
+		// Strip the /api/v2 suffix (and optional trailing slash) to get the deployment base.
 		const basePath = pathname
-			.replace(/\/api\/v1\/?$/, '')
+			.replace(/\/api\/v2\/?$/, '')
 			.replace(/\/+$/, '')
 		return `${protocol}//${host}${basePath}`
 	})

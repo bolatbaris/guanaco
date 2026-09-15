@@ -37,7 +37,7 @@ func newAPICmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api <METHOD> <PATH>",
 		Short: "Raw REST passthrough — escape hatch for endpoints veans doesn't wrap",
-		Long: `Sends a request to /api/v2<PATH> as the bot. Use this when curated
+		Long: `Sends a request to /api/v2<PATH> as the configured user. Use this when curated
 commands don't shape the data the way you need. The response body is
 written to stdout verbatim.
 

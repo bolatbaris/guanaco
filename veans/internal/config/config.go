@@ -15,8 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Package config reads and writes the per-repo .veans.yml file. The schema
-// pins the project, view, canonical buckets, and bot identity so subsequent
-// veans calls have everything they need without round-tripping to the server.
+// pins the project, view, canonical buckets, and account username so
+// subsequent veans calls have everything they need without round-tripping to
+// the server.
 package config
 
 import (
@@ -44,7 +45,7 @@ type Config struct {
 	ProjectIdentifier string  `yaml:"project_identifier,omitempty"`
 	ViewID            int64   `yaml:"view_id"`
 	Buckets           Buckets `yaml:"buckets"`
-	Bot               Bot     `yaml:"bot"`
+	Username          string  `yaml:"username"`
 
 	// HTTPTimeout overrides the default 30s HTTP client timeout when
 	// non-zero. Accepts Go duration syntax in YAML ("60s", "5m", "1h30m").
@@ -62,12 +63,6 @@ type Buckets struct {
 	InReview   int64 `yaml:"in_review"`
 	Done       int64 `yaml:"done"`
 	Scrapped   int64 `yaml:"scrapped"`
-}
-
-// Bot identifies the Vikunja bot user veans operates as.
-type Bot struct {
-	Username string `yaml:"username"`
-	UserID   int64  `yaml:"user_id"`
 }
 
 // Path returns the absolute path the config was loaded from (or written to).
@@ -141,7 +136,7 @@ func (c *Config) SaveAs(path string) error {
 
 // RepoRoot returns the root of the git repo containing `start` (defaulting
 // to cwd). When `start` is not in a git repo, RepoRoot returns the absolute
-// `start` so callers can still derive a sensible bot username.
+// `start` so callers can still locate the local configuration.
 func RepoRoot(ctx context.Context, start string) (string, error) {
 	if start == "" {
 		var err error
@@ -158,29 +153,4 @@ func RepoRoot(ctx context.Context, start string) (string, error) {
 	}
 	abs, _ := filepath.Abs(start)
 	return abs, nil
-}
-
-// SuggestedBotUsername proposes `bot-<reponame>` from a repo root path.
-// Vikunja's username validator allows lowercase, digits, hyphens — we fold
-// the basename to a safe shape.
-func SuggestedBotUsername(root string) string {
-	base := filepath.Base(root)
-	var b strings.Builder
-	b.WriteString("bot-")
-	for _, r := range strings.ToLower(base) {
-		switch {
-		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
-			b.WriteRune(r)
-		case r == '-' || r == '_' || r == ' ' || r == '.':
-			b.WriteRune('-')
-		default:
-			// drop other characters silently
-		}
-	}
-	// Collapse runs of hyphens.
-	out := b.String()
-	for strings.Contains(out, "--") {
-		out = strings.ReplaceAll(out, "--", "-")
-	}
-	return strings.TrimRight(out, "-")
 }

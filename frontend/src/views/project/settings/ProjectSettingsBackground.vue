@@ -176,7 +176,7 @@ function newBackgroundSearch() {
 
 async function searchBackgrounds(page = 1) {
 	currentPage.value = page
-	const result = await backgroundService.getAll({}, {s: backgroundSearchTerm.value, p: page})
+	const result = await backgroundService.getAll({}, {q: backgroundSearchTerm.value}, page)
 	backgroundSearchResult.value = backgroundSearchResult.value.concat(result)
 	result.forEach((background: BackgroundImageModel) => {
 		getBlobFromBlurHash(background.blurHash)

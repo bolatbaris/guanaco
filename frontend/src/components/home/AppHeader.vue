@@ -35,7 +35,7 @@
 			</BaseButton>
 
 			<ProjectSettingsDropdown
-				v-if="canWriteCurrentProject && currentProject.id !== -1"
+				v-if="canWriteCurrentProject"
 				class="project-title-dropdown"
 				:project="currentProject"
 			>

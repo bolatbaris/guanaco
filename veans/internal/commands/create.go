@@ -31,7 +31,6 @@ import (
 type createFlags struct {
 	description string
 	statusName  string
-	priority    int64
 	labels      []string
 	parent      string
 	blockedBy   []string
@@ -58,7 +57,6 @@ func newCreateCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&f.description, "description", "d", "", "task description (HTML; see `veans prime` for canonical TipTap shapes)")
 	cmd.Flags().StringVarP(&f.statusName, "status", "s", "todo", "initial status (defaults to todo)")
-	cmd.Flags().Int64Var(&f.priority, "priority", 0, "priority (0=unset, 1=low, 5=DO_NOW)")
 	cmd.Flags().StringSliceVar(&f.labels, "label", nil, "labels to attach (repeatable; veans: prefix added if missing)")
 	cmd.Flags().StringVar(&f.parent, "parent", "", "parent task ID (creates parenttask relation)")
 	cmd.Flags().StringSliceVar(&f.blockedBy, "blocked-by", nil, "task IDs that block this one (repeatable)")
@@ -78,7 +76,6 @@ func runCreate(ctx context.Context, rt *runtime, title string, f *createFlags) (
 	created, err := rt.client.CreateTask(ctx, rt.cfg.ProjectID, &client.Task{
 		Title:       strings.TrimSpace(title),
 		Description: f.description,
-		Priority:    f.priority,
 		ProjectID:   rt.cfg.ProjectID,
 		BucketID:    bucketID,
 		Done:        st.Done(),

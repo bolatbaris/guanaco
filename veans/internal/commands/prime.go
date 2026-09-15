@@ -40,7 +40,7 @@ type primeContext struct {
 	ProjectIdentifier string
 	ViewID            int64
 	Buckets           config.Buckets
-	BotUsername       string
+	Username          string
 	TaskIDExample     string
 }
 
@@ -89,7 +89,7 @@ silently with status 0 — that makes the hook safe to install globally.`,
 				ProjectIdentifier: cfg.ProjectIdentifier,
 				ViewID:            cfg.ViewID,
 				Buckets:           cfg.Buckets,
-				BotUsername:       cfg.Bot.Username,
+				Username:          cfg.Username,
 				TaskIDExample:     cfg.FormatTaskID(1),
 			}
 

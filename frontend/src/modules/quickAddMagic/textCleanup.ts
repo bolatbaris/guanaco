@@ -22,8 +22,6 @@ export const cleanupItemText = (text: string, items: string[], prefix: string): 
 export const cleanupResult = (result: ParsedTaskText, prefixes: Prefixes): ParsedTaskText => {
 	result.text = cleanupItemText(result.text, result.labels, prefixes.label)
 	result.text = result.project !== null ? cleanupItemText(result.text, [result.project], prefixes.project) : result.text
-	result.text = result.priority !== null ? cleanupItemText(result.text, [String(result.priority)], prefixes.priority) : result.text
-	// Not removing assignees to avoid removing @text where the user does not exist
 	result.text = result.text.trim()
 
 	return result

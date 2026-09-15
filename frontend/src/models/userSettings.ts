@@ -4,7 +4,6 @@ import type {IFrontendSettings, IUserSettings} from '@/modelTypes/IUserSettings'
 import {getBrowserLanguage} from '@/i18n'
 import {PrefixMode} from '@/modules/quickAddMagic'
 import {DEFAULT_PROJECT_VIEW_SETTINGS} from '@/modelTypes/IProjectView'
-import {PRIORITIES} from '@/constants/priorities'
 import {DATE_DISPLAY} from '@/constants/dateDisplay'
 import {TIME_FORMAT} from '@/constants/timeFormat'
 import {RELATION_KIND} from '@/types/IRelationKind'
@@ -27,7 +26,6 @@ export default class UserSettingsModel extends AbstractModel<IUserSettings> impl
 		allowIconChanges: true,
 		filterIdUsedOnOverview: null,
 		defaultView: DEFAULT_PROJECT_VIEW_SETTINGS.FIRST,
-		minimumPriority: PRIORITIES.MEDIUM,
 		dateDisplay: DATE_DISPLAY.RELATIVE,
 		timeFormat: TIME_FORMAT.HOURS_24,
 		defaultTaskRelationType: RELATION_KIND.RELATED,

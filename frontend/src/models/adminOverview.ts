@@ -1,14 +1,10 @@
 import AbstractModel from './abstractModel'
-import type {IAdminOverview, IAdminOverviewLicense, IAdminOverviewShares} from '@/modelTypes/IAdminOverview'
+import type {IAdminOverview, IAdminOverviewLicense} from '@/modelTypes/IAdminOverview'
 
 export default class AdminOverviewModel extends AbstractModel<IAdminOverview> implements IAdminOverview {
 	users = 0
 	projects = 0
 	tasks = 0
-	shares: IAdminOverviewShares = {
-		linkShares: 0,
-		userShares: 0,
-	}
 	license: IAdminOverviewLicense = {
 		licensed: false,
 		instanceId: '',

@@ -35,7 +35,6 @@ import (
 func init() {
 	notifications.Register(func() notifications.PersistedNotification { return &ReminderDueNotification{} })
 	notifications.Register(func() notifications.PersistedNotification { return &TaskCommentNotification{} })
-	notifications.Register(func() notifications.PersistedNotification { return &TaskAssignedNotification{} })
 	notifications.Register(func() notifications.PersistedNotification { return &TaskDeletedNotification{} })
 	notifications.Register(func() notifications.PersistedNotification { return &TaskCreatedNotification{} })
 	notifications.Register(func() notifications.PersistedNotification { return &ProjectCreatedNotification{} })
@@ -166,72 +165,6 @@ func (n *TaskCommentNotification) Name() string {
 
 // ThreadID returns the thread ID for email threading
 func (n *TaskCommentNotification) ThreadID() string {
-	return getThreadID(n.Task.ID)
-}
-
-// TaskAssignedNotification represents a TaskAssignedNotification notification
-type TaskAssignedNotification struct {
-	Doer     *user.User `json:"doer"`
-	Task     *Task      `json:"task"`
-	Assignee *user.User `json:"assignee"`
-	Target   *user.User `json:"-"`
-	Project  *Project   `json:"project"`
-}
-
-// ToTitle returns the translated one-line title for TaskAssignedNotification
-func (n *TaskAssignedNotification) ToTitle(lang string) string {
-	if n.Target.ID == n.Assignee.ID {
-		return i18n.T(lang, "notifications.task.assigned.subject_to_assignee", n.Task.Title, n.Task.GetFullIdentifier())
-	}
-	if n.Doer.ID == n.Assignee.ID {
-		return i18n.T(lang, "notifications.task.assigned.subject_to_others_self", n.Task.Title, n.Task.GetFullIdentifier(), n.Doer.GetName())
-	}
-	return i18n.T(lang, "notifications.task.assigned.subject_to_others", n.Task.Title, n.Task.GetFullIdentifier(), n.Assignee.GetName())
-}
-
-// ToMail returns the mail notification for TaskAssignedNotification
-func (n *TaskAssignedNotification) ToMail(lang string) *notifications.Mail {
-	if n.Target.ID == n.Assignee.ID {
-		// Notification to the assignee
-		return notifications.NewMail().
-			From(n.Doer.GetNameAndFromEmail()).
-			Greeting(i18n.T(lang, "notifications.greeting", n.Target.GetName())).
-			Line(i18n.T(lang, "notifications.task.assigned.message_to_assignee", notifications.EscapeMarkdown(n.Doer.GetName()), notifications.EscapeMarkdown(n.Task.Title))).
-			Action(i18n.T(lang, "notifications.common.actions.open_task"), n.Task.GetFrontendURL()).
-			IncludeLinkToSettings(lang)
-	}
-
-	// Check if the doer assigned the task to themselves
-	if n.Doer.ID == n.Assignee.ID {
-		return notifications.NewMail().
-			From(n.Doer.GetNameAndFromEmail()).
-			Greeting(i18n.T(lang, "notifications.greeting", n.Target.GetName())).
-			Line(i18n.T(lang, "notifications.task.assigned.message_to_others_self", notifications.EscapeMarkdown(n.Doer.GetName()))).
-			Action(i18n.T(lang, "notifications.common.actions.open_task"), n.Task.GetFrontendURL()).
-			IncludeLinkToSettings(lang)
-	}
-
-	// Notification to others about assignment
-	return notifications.NewMail().
-		From(n.Doer.GetNameAndFromEmail()).
-		Greeting(i18n.T(lang, "notifications.greeting", n.Target.GetName())).
-		Line(i18n.T(lang, "notifications.task.assigned.message_to_others", notifications.EscapeMarkdown(n.Doer.GetName()), notifications.EscapeMarkdown(n.Assignee.GetName()))).
-		Action(i18n.T(lang, "notifications.common.actions.open_task"), n.Task.GetFrontendURL()).
-		IncludeLinkToSettings(lang)
-}
-
-// ToDB returns the TaskAssignedNotification notification in a format which can be saved in the db
-func (n *TaskAssignedNotification) ToDB() interface{} {
-	return n
-}
-
-// Name returns the name of the notification
-func (n *TaskAssignedNotification) Name() string {
-	return "task.assigned"
-}
-
-// ThreadID returns the thread ID for email threading
-func (n *TaskAssignedNotification) ThreadID() string {
 	return getThreadID(n.Task.ID)
 }
 

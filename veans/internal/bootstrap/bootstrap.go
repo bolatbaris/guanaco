@@ -14,11 +14,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package bootstrap orchestrates `veans init`. It chains together the steps
-// outlined in the plan: probe /info, acquire the human's transient token,
-// pick or create a project, designate a Kanban view, bootstrap canonical
-// buckets, create the bot user, share the project with the bot, mint the
-// bot's API token, and write .veans.yml.
+// Package bootstrap orchestrates `veans init`. It probes /info, acquires the
+// user's transient session, picks or creates a project, designates a Kanban
+// view, bootstraps canonical buckets, mints a scoped automation token for the
+// same user, and writes .veans.yml.
 //
 // The flow is split into small functions so e2e tests can drive it with
 // scripted answers without going through the cobra command surface.
@@ -30,7 +29,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -61,10 +59,6 @@ type Options struct {
 	HumanUsername string
 	HumanPassword string
 	HumanTOTP     string
-
-	// BotUsername overrides the bot-<reponame> default. The "bot-" prefix is
-	// auto-prepended if missing — Vikunja will reject otherwise.
-	BotUsername string
 
 	// ProjectID, when non-zero, skips the interactive project picker.
 	ProjectID int64
@@ -107,7 +101,7 @@ type Options struct {
 // Result is returned on success — just the bits printPostInitSummary reads.
 type Result struct {
 	Config       *config.Config
-	BotUser      *client.BotUser
+	Owner        *client.User
 	AgentChoices AgentHookChoice
 }
 
@@ -135,17 +129,7 @@ func Init(ctx context.Context, opts *Options) (*Result, error) {
 		return nil, err
 	}
 
-	// Validate the bot-username override (if any) against server-side
-	// rules now, so we fail fast before steps 4–7 do real work that
-	// we'd then have to undo. SuggestedBotUsername's output is
-	// always valid, so we only need to validate user input.
-	if opts.BotUsername != "" {
-		if err := validateBotUsername(normalizeBotUsername(opts.BotUsername, "")); err != nil {
-			return nil, err
-		}
-	}
-
-	// 1. Repo root + suggested bot username.
+	// 1. Repo root for the optional agent-hook installation.
 	repoRoot := opts.RepoRoot
 	if repoRoot == "" {
 		var err error
@@ -154,10 +138,6 @@ func Init(ctx context.Context, opts *Options) (*Result, error) {
 			return nil, output.Wrap(output.CodeUnknown, err, "detect repo root: %v", err)
 		}
 	}
-	suggested := config.SuggestedBotUsername(repoRoot)
-	botUsername := normalizeBotUsername(opts.BotUsername, suggested)
-	progress(opts.Out, "Bot username will be %q", botUsername)
-
 	// 2. Server URL.
 	if opts.Server == "" {
 		v, err := prompter.ReadLine("Vikunja server URL: ")
@@ -168,7 +148,7 @@ func Init(ctx context.Context, opts *Options) (*Result, error) {
 	}
 
 	// 3. Discover the actual API URL: the user might have typed bare
-	// "vikunja.example.com", or pasted the URL with /api/v1 already in
+	// "vikunja.example.com", or pasted the URL with /api/v2 already in
 	// it, or be on a default-port localhost install. DiscoverServer
 	// probes the plausible variants and returns the canonical base.
 	canonical, info, err := client.DiscoverServer(ctx, opts.Server)
@@ -193,6 +173,11 @@ func Init(ctx context.Context, opts *Options) (*Result, error) {
 		return nil, err
 	}
 	human.Token = tok
+	owner, err := human.CurrentUser(ctx)
+	if err != nil {
+		return nil, output.Wrap(output.CodeAuth, err, "identify authenticated user: %v", err)
+	}
+	progress(opts.Out, "Authenticated as %q", owner.Username)
 
 	// 5. Pick (or accept passed) project.
 	project, err := pickProject(ctx, human, opts.ProjectID, prompter, opts.Out)
@@ -214,36 +199,14 @@ func Init(ctx context.Context, opts *Options) (*Result, error) {
 		return nil, err
 	}
 
-	// 8. Resolve the bot user: reuse one we already own if the name is
-	// taken by us, prompt for a fresh name (with a petname suggestion)
-	// if the name is taken by someone else, otherwise create new.
-	bot, err := resolveBotUser(ctx, human, botUsername, project.Title, prompter, opts.Out)
-	if err != nil {
-		return nil, err
-	}
-
-	// 9. Share the project with the bot. 409 ("user already has access")
-	// is the expected response when reusing a bot that was set up by a
-	// previous init run — treat it as a soft-success.
-	_, shareErr := human.ShareProjectWithUser(ctx, project.ID, &client.ProjectUser{
-		Username:   bot.Username,
-		Permission: client.PermissionReadWrite,
-	})
-	switch {
-	case shareErr == nil:
-		progress(opts.Out, "Shared project with %q (read+write)", bot.Username)
-	case isConflictErr(shareErr):
-		progress(opts.Out, "Project already shared with %q", bot.Username)
-	default:
-		return nil, output.Wrap(output.CodeUnknown, shareErr, "share project with bot: %v", shareErr)
-	}
-
-	// 10. Discover available API permission scopes, mint the bot's token.
+	// 8. Discover available API permission scopes and mint an automation token
+	// for the authenticated user. OwnerID is intentionally omitted: the
+	// selected project belongs to this same account.
 	routes, err := human.Routes(ctx)
 	if err != nil {
 		return nil, output.Wrap(output.CodeUnknown, err, "fetch /routes: %v", err)
 	}
-	perms := client.PermissionsForBot(routes)
+	perms := client.PermissionsForAutomation(routes)
 	if len(perms) == 0 {
 		return nil, output.New(output.CodeUnknown, "no API token permissions available — Vikunja /routes returned no matching groups")
 	}
@@ -251,39 +214,35 @@ func Init(ctx context.Context, opts *Options) (*Result, error) {
 		Title:       "veans for " + project.Title,
 		Permissions: perms,
 		ExpiresAt:   client.FarFuture,
-		OwnerID:     bot.ID,
 	})
 	if err != nil {
-		return nil, output.Wrap(output.CodeUnknown, err, "mint bot token: %v", err)
+		return nil, output.Wrap(output.CodeUnknown, err, "mint automation token: %v", err)
 	}
 	if mintedToken.Token == "" {
 		return nil, output.New(output.CodeUnknown, "POST /tokens did not return a token plaintext — cannot continue")
 	}
 
-	// 11. Persist credentials. Discard human JWT immediately after.
-	if err := store.Set(opts.Server, bot.Username, mintedToken.Token); err != nil {
-		return nil, output.Wrap(output.CodeUnknown, err, "store bot token: %v", err)
+	// 9. Persist credentials. Discard the session JWT immediately after.
+	if err := store.Set(opts.Server, owner.Username, mintedToken.Token); err != nil {
+		return nil, output.Wrap(output.CodeUnknown, err, "store automation token: %v", err)
 	}
 	human.Token = ""
 
-	// 12. Write .veans.yml.
+	// 10. Write .veans.yml.
 	cfg := &config.Config{
 		Server:            opts.Server,
 		ProjectID:         project.ID,
 		ProjectIdentifier: project.Identifier,
 		ViewID:            view.ID,
 		Buckets:           buckets,
-		Bot: config.Bot{
-			Username: bot.Username,
-			UserID:   bot.ID,
-		},
+		Username:          owner.Username,
 	}
 	if err := cfg.SaveAs(opts.ConfigPath); err != nil {
 		return nil, output.Wrap(output.CodeUnknown, err, "write %s: %v", opts.ConfigPath, err)
 	}
 	progress(opts.Out, "Wrote %s", opts.ConfigPath)
 
-	// 13. Offer to install agent hooks. Pre-seeded from flags; the rest
+	// 11. Offer to install agent hooks. Pre-seeded from flags; the rest
 	// is prompted unless --no-hooks. Failures here are non-fatal — the
 	// repo is already configured; the user can install hooks by hand.
 	choices := AgentHookChoice{
@@ -302,15 +261,15 @@ func Init(ctx context.Context, opts *Options) (*Result, error) {
 
 	return &Result{
 		Config:       cfg,
-		BotUser:      bot,
+		Owner:        owner,
 		AgentChoices: choices,
 	}, nil
 }
 
 // confirmOverwriteExistingConfig refuses to silently clobber an existing
-// .veans.yml. The bot token in the credentials store is keyed on
-// (server, bot-username); a blind re-init can swap the project under
-// the agent's feet AND stomp the previous token in the keyring.
+// .veans.yml. The automation token in the credentials store is keyed on
+// (server, username); a blind re-init can swap the project under the agent's
+// feet AND stomp the previous token in the keyring.
 func confirmOverwriteExistingConfig(opts *Options, p auth.Prompter) error {
 	if opts.OverwriteExistingConfig {
 		return nil
@@ -334,42 +293,6 @@ func confirmOverwriteExistingConfig(opts *Options, p auth.Prompter) error {
 	return output.New(output.CodeConflict,
 		"refusing to overwrite %s without confirmation (delete the file to re-init)",
 		opts.ConfigPath)
-}
-
-func normalizeBotUsername(override, suggested string) string {
-	if override == "" {
-		return suggested
-	}
-	if !strings.HasPrefix(override, "bot-") {
-		return "bot-" + override
-	}
-	return override
-}
-
-// botUsernamePattern mirrors the server's username regex closely enough
-// to catch the rejections that would otherwise blow up steps 4–7 mid-init.
-// The server allows lowercase letters, digits, hyphens, underscores, and
-// dots; we additionally require the `bot-` prefix and forbid the
-// `link-share-N` shape Vikunja reserves for share-links.
-var botUsernamePattern = regexp.MustCompile(`^bot-[a-z0-9][a-z0-9._-]*$`)
-
-var linkShareSuffix = regexp.MustCompile(`^bot-link-share-\d+$`)
-
-// validateBotUsername mirrors the server-side rules so a bad
-// `--bot-username` override (or interactive prompt answer) fails fast
-// instead of dying with a 400 deep in step 8.
-func validateBotUsername(name string) error {
-	if !botUsernamePattern.MatchString(name) {
-		return output.New(output.CodeValidation,
-			"invalid bot username %q: must start with `bot-` and contain only lowercase letters, digits, hyphens, underscores, and dots",
-			name)
-	}
-	if linkShareSuffix.MatchString(name) {
-		return output.New(output.CodeValidation,
-			"invalid bot username %q: `link-share-N` is reserved by Vikunja for share-link users",
-			name)
-	}
-	return nil
 }
 
 func pickProject(ctx context.Context, c *client.Client, id int64, p auth.Prompter, out io.Writer) (*client.Project, error) {
@@ -601,12 +524,4 @@ func progress(w io.Writer, format string, args ...any) {
 		return
 	}
 	fmt.Fprintf(w, "  → "+format+"\n", args...)
-}
-
-// isConflictErr reports whether the wrapped HTTP error is a 409 — used by
-// init's "share project with bot" step, which legitimately gets one when
-// the bot is being reused from an earlier run.
-func isConflictErr(err error) bool {
-	var oe *output.Error
-	return errors.As(err, &oe) && oe.Code == output.CodeConflict
 }

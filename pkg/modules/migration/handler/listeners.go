@@ -23,12 +23,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"code.vikunja.io/api/pkg/config"
 	"code.vikunja.io/api/pkg/errorreport"
 	"code.vikunja.io/api/pkg/events"
 	"code.vikunja.io/api/pkg/log"
 	"code.vikunja.io/api/pkg/modules/migration"
 	"code.vikunja.io/api/pkg/notifications"
+	"code.vikunja.io/api/pkg/observability"
 	"code.vikunja.io/api/pkg/web"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -41,12 +41,24 @@ func RegisterListeners() {
 
 // Only used for sentry
 type migrationFailedError struct {
-	MigratorKind  string
-	OriginalError error
+	MigratorKind string
 }
 
 func (m *migrationFailedError) Error() string {
-	return fmt.Sprintf("migration from %s failed, original error message was: %s", m.MigratorKind, m.OriginalError.Error())
+	return fmt.Sprintf("migration from %s failed", normalizeMigratorKind(m.MigratorKind))
+}
+
+func normalizeMigratorKind(kind string) string {
+	const maxKindLength = 64
+
+	kind = errorreport.Normalize(kind)
+	if kind == "" {
+		return "unknown"
+	}
+	if runes := []rune(kind); len(runes) > maxKindLength {
+		return string(runes[:maxKindLength])
+	}
+	return kind
 }
 
 // shouldReportMigrationError filters out failures we cannot fix: a 4xx from the service we migrate from,
@@ -71,7 +83,7 @@ func shouldReportMigrationError(err error) bool {
 // migrationFingerprint keeps failures apart by migrator and cause: every migration error reaches
 // Sentry wrapped in the same migrationFailedError from the same call site.
 func migrationFingerprint(migratorKind string, err error) []string {
-	fingerprint := []string{"migration_failed", migratorKind}
+	fingerprint := []string{"migration_failed", normalizeMigratorKind(migratorKind)}
 
 	var upstreamErr *migration.ErrUpstreamRequestFailed
 	if errors.As(err, &upstreamErr) {
@@ -123,17 +135,17 @@ func (s *MigrationListener) Handle(msg *message.Message) (err error) {
 		log.Errorf("[Migration] Migration %d from %s for user %d failed. Error was: %s", migrationID, event.MigratorKind, event.User.ID, err.Error())
 
 		var nerr error
-		if config.SentryEnabled.GetBool() && shouldReportMigrationError(err) {
+		if observability.Enabled() && shouldReportMigrationError(err) {
 			nerr = notifications.Notify(event.User, &MigrationFailedReportedNotification{
 				MigratorName: ms.Name(),
 			})
 			failure := &migrationFailedError{
-				MigratorKind:  event.MigratorKind,
-				OriginalError: err,
+				MigratorKind: event.MigratorKind,
 			}
-			sentry.WithScope(func(scope *sentry.Scope) {
+			hub := observability.HubFromContext(msg.Context())
+			hub.WithScope(func(scope *sentry.Scope) {
 				errorreport.ApplyFingerprint(scope, err, migrationFingerprint(event.MigratorKind, err)...)
-				sentry.CaptureException(failure)
+				hub.CaptureException(failure)
 			})
 		} else {
 			nerr = notifications.Notify(event.User, &MigrationFailedNotification{

@@ -149,7 +149,7 @@ func adminUsersList(ctx context.Context, in *ListParams) (*adminUserListBody, er
 	}
 	events.DispatchPending(ctx, s)
 
-	providers, err := openid.GetAllProviders() //nolint:contextcheck // GetAllProviders reads a cached map; it takes no context, like the v1 admin handlers.
+	providers, err := openid.GetAllProviders() //nolint:contextcheck // GetAllProviders reads a cached map and takes no context.
 	if err != nil {
 		return nil, translateDomainError(err)
 	}
@@ -244,7 +244,7 @@ func adminCommitUser(ctx context.Context, action func(s *xorm.Session, doer *use
 	}
 	events.DispatchPending(ctx, s)
 
-	providers, err := openid.GetAllProviders() //nolint:contextcheck // GetAllProviders reads a cached map; it takes no context, like the v1 admin handlers.
+	providers, err := openid.GetAllProviders() //nolint:contextcheck // GetAllProviders reads a cached map and takes no context.
 	if err != nil {
 		return nil, translateDomainError(err)
 	}

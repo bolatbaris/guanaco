@@ -62,7 +62,7 @@ func TestCriticalSmoke(t *testing.T) {
 
 	loginRequest := httptest.NewRequest(
 		http.MethodPost,
-		"/api/v1/login",
+		"/api/v2/login",
 		strings.NewReader(`{"username":"user1","password":"12345678"}`),
 	)
 	loginRequest.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)

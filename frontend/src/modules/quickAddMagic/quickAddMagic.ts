@@ -1,13 +1,12 @@
 import {parseDate} from './dateParser'
 import {PREFIXES, PrefixMode} from './prefixes'
-import {getItemsFromPrefix, getLabelsFromPrefix, getProjectFromPrefix} from './prefixParser'
-import {getPriority} from './priorityParser'
+import {getLabelsFromPrefix, getProjectFromPrefix} from './prefixParser'
 import {getRepeats} from './repeatParser'
 import {cleanupItemText, cleanupResult} from './textCleanup'
 import type {ParsedTaskText} from './types'
 
 /**
- * Parses task text for dates, assignees, labels, projects, priorities and returns an object with all found intents.
+ * Parses task text for dates, labels, projects and returns an object with all found intents.
  *
  * @param text
  */
@@ -17,8 +16,6 @@ export const parseTaskText = (text: string, prefixesMode: PrefixMode = PrefixMod
 		date: null,
 		labels: [],
 		project: null,
-		priority: null,
-		assignees: [],
 		repeats: null,
 	}
 
@@ -42,11 +39,6 @@ export const parseTaskText = (text: string, prefixesMode: PrefixMode = PrefixMod
 
 	result.project = getProjectFromPrefix(result.text, prefixesMode)
 	result.text = result.project !== null ? cleanupItemText(result.text, [result.project], prefixes.project) : result.text
-
-	result.priority = getPriority(result.text, prefixes.priority)
-	result.text = result.priority !== null ? cleanupItemText(result.text, [String(result.priority)], prefixes.priority) : result.text
-
-	result.assignees = getItemsFromPrefix(result.text, prefixes.assignee)
 
 	const {textWithoutMatched, repeats} = getRepeats(result.text)
 	result.text = textWithoutMatched

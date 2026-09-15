@@ -20,10 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"code.vikunja.io/api/pkg/errorreport"
 	"code.vikunja.io/api/pkg/files"
 	"code.vikunja.io/api/pkg/log"
+	"code.vikunja.io/api/pkg/observability"
 	"code.vikunja.io/api/pkg/web"
 
 	"github.com/getsentry/sentry-go"
@@ -115,8 +117,11 @@ func CreateHTTPErrorHandler(e *echo.Echo, enableSentry bool) echo.HTTPErrorHandl
 		// or the echo.HTTPStatusCoder/HTTPError values if it was that type
 
 		// Sentry reporting for 5xx errors
-		if enableSentry && code >= 500 {
-			reportToSentry(originalErr, c)
+		if enableSentry && observability.Enabled() && code >= 500 {
+			reportToSentry(originalErr, c, code)
+		}
+		if enableSentry && observability.Enabled() && code == http.StatusNotFound && c.Path() == "" {
+			reportRouteMismatchToSentry(c)
 		}
 
 		// Send response
@@ -137,20 +142,56 @@ func CreateHTTPErrorHandler(e *echo.Echo, enableSentry bool) echo.HTTPErrorHandl
 }
 
 // reportToSentry sends an error to Sentry with request context
-func reportToSentry(err error, c *echo.Context) {
-	hub := GetSentryHubFromContext(c)
-	if hub != nil {
-		hub.WithScope(func(scope *sentry.Scope) {
-			scope.SetContext("request", sentry.Context{"url": c.Request().URL.String()})
-			errorreport.Apply(scope, err)
-			hub.CaptureException(err)
-		})
-	} else {
-		sentry.WithScope(func(scope *sentry.Scope) {
-			errorreport.Apply(scope, err)
-			sentry.CaptureException(err)
-		})
-		log.Debugf("Could not add context for sending error '%s' to sentry", err.Error())
+func reportToSentry(err error, c *echo.Context, status int) {
+	if !observability.Enabled() || err == nil {
+		return
 	}
+
+	hub := observability.HubFromContext(c.Request().Context())
+	// The route middleware keeps a request-scoped clone under its own key so
+	// error handling can preserve the scope created before Echo calls us.
+	if requestHub := GetSentryHubFromContext(c); requestHub != nil {
+		hub = requestHub
+	}
+	hub.WithScope(func(scope *sentry.Scope) {
+		setSentryHTTPContext(scope, c, status)
+		errorreport.Apply(scope, err)
+		hub.CaptureException(err)
+	})
 	log.Debugf("Error '%s' sent to sentry", err.Error())
+}
+
+func reportRouteMismatchToSentry(c *echo.Context) {
+	if !observability.Enabled() {
+		return
+	}
+
+	hub := observability.HubFromContext(c.Request().Context())
+	if requestHub := GetSentryHubFromContext(c); requestHub != nil {
+		hub = requestHub
+	}
+	hub.WithScope(func(scope *sentry.Scope) {
+		setSentryHTTPContext(scope, c, http.StatusNotFound)
+		hub.CaptureMessage("unmatched route")
+	})
+}
+
+func setSentryHTTPContext(scope *sentry.Scope, c *echo.Context, status int) {
+	request := c.Request()
+	path := c.Path()
+	if path == "" {
+		path = request.URL.Path
+	}
+
+	scope.SetTag("http.method", request.Method)
+	scope.SetTag("http.path", path)
+	scope.SetTag("http.status_code", strconv.Itoa(status))
+	if requestID := c.Response().Header().Get(echo.HeaderXRequestID); requestID != "" {
+		scope.SetTag("request_id", requestID)
+	}
+	scope.SetContext("http", sentry.Context{
+		"method": request.Method,
+		"path":   path,
+		"status": status,
+	})
 }

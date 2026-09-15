@@ -244,7 +244,6 @@ const previewTasks = computed(() => {
 		dueDate: pt.due_date || null,
 		startDate: pt.start_date || null,
 		endDate: pt.end_date || null,
-		priority: pt.priority,
 		labels: (pt.labels || []).map((l, li) => ({id: -(li + 1), title: l})),
 	}))
 })
@@ -266,7 +265,6 @@ function getAttributeLabel(attribute: string): string {
 		start_date: 'task.attributes.startDate',
 		end_date: 'task.attributes.endDate',
 		done: 'task.attributes.done',
-		priority: 'task.attributes.priority',
 		labels: 'task.attributes.labels',
 		reminder: 'task.attributes.reminders',
 		project: 'task.attributes.project',

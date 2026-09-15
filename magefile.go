@@ -41,6 +41,7 @@ import (
 
 	apiv2 "code.vikunja.io/api/pkg/routes/api/v2"
 
+	"github.com/danielgtaylor/huma/v2/yaml"
 	"github.com/iancoleman/strcase"
 	"github.com/magefile/mage/mg"
 )
@@ -62,8 +63,9 @@ var (
 	// Aliases are mage aliases of targets
 	Aliases = map[string]any{
 		"build":                    Build.Build,
+		"check:api-contract":       Check.APIContract,
 		"check:frontend-client":    Check.FrontendClient,
-		"check:got-swag":           Check.GotSwag,
+		"check:swagger-docs":       Check.SwaggerDocs,
 		"dev:make-migration":       Dev.MakeMigration,
 		"dev:make-event":           Dev.MakeEvent,
 		"dev:make-listener":        Dev.MakeListener,
@@ -204,19 +206,6 @@ func runAndStreamOutput(ctx context.Context, cmd string, args ...string) error {
 	return c.Run()
 }
 
-// Will check if the tool exists and if not install it from the provided import path
-// If any errors occur, it will exit with a status code of 1.
-func checkAndInstallGoTool(ctx context.Context, tool, importPath string) error {
-	if err := exec.CommandContext(ctx, tool).Run(); err != nil && strings.Contains(err.Error(), "executable file not found") {
-		fmt.Printf("%s not installed, installing %s...\n", tool, importPath)
-		if err := exec.CommandContext(ctx, "go", "install", goDetectVerboseFlag(), importPath).Run(); err != nil { //nolint:gosec // Every caller to checkAndInstallGoTool is hard-coded at time of writing, so no injection possible.
-			return fmt.Errorf("error installing %s: %w", tool, err)
-		}
-		fmt.Println("Installed.")
-	}
-	return nil
-}
-
 // Calculates a hash of a file
 func calculateSha256FileHash(path string) (hash string, err error) {
 	f, err := os.Open(path)
@@ -335,7 +324,17 @@ func (Test) Smoke(ctx context.Context) error {
 
 type Check mg.Namespace
 
+// APIContract verifies every checked-in API representation against its source.
+func (Check) APIContract() {
+	mg.Deps(Check.FrontendClient, Check.SwaggerDocs)
+}
+
 func (Check) FrontendClient(ctx context.Context) error {
+	beforeHash, err := frontendClientDirectoryHash()
+	if err != nil {
+		return err
+	}
+
 	if err := (Generate{}).FrontendClient(ctx); err != nil {
 		return err
 	}
@@ -354,12 +353,7 @@ func (Check) FrontendClient(ctx context.Context) error {
 	if firstHash != secondHash {
 		return errors.New("frontend API client generation is not idempotent")
 	}
-
-	status, err := runGitCommandWithOutput(ctx, "status", "--porcelain", "--", "frontend/src/client/generated")
-	if err != nil {
-		return err
-	}
-	if len(bytes.TrimSpace(status)) > 0 {
+	if beforeHash != firstHash {
 		return errors.New("frontend API client is not up to date: run 'mage generate:frontend-client' and commit the result")
 	}
 	return nil
@@ -392,31 +386,41 @@ func frontendClientDirectoryHash() (string, error) {
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }
 
-// GotSwag checks if the swagger docs need to be re-generated from the code annotations
-func (Check) GotSwag(ctx context.Context) error {
+// SwaggerDocs checks if the checked-in OpenAPI documents need to be regenerated.
+func (Check) SwaggerDocs(ctx context.Context) error {
 	mg.Deps(initVars)
-	// The check is pretty cheaply done: We take the hash of the swagger.json file, generate the docs,
+	if _, err := os.Stat("./pkg/swagger/docs.go"); err == nil {
+		return errors.New("obsolete pkg/swagger/docs.go is present: remove it and use the canonical Huma OpenAPI generator")
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("check obsolete generated Swagger Go package: %w", err)
+	}
+	// The check is pretty cheaply done: We take the hash of the OpenAPI files, generate the docs,
 	// hash the file again and compare the two hashes to see if anything changed. If that's the case,
 	// regenerating the docs is necessary.
-	// swag is not capable of just outputting the generated docs to stdout, therefore we need to do it this way.
-	// Another drawback of this is obviously it will only work once - we're not resetting the newly generated
-	// docs after the check. This behaviour is good enough for ci though.
-	oldHash, err := calculateSha256FileHash("./pkg/swagger/swagger.json")
+	oldJSONHash, err := calculateSha256FileHash("./pkg/swagger/swagger.json")
 	if err != nil {
-		return fmt.Errorf("error getting old hash of the swagger docs: %w", err)
+		return fmt.Errorf("error getting old hash of the OpenAPI JSON: %w", err)
+	}
+	oldYAMLHash, err := calculateSha256FileHash("./pkg/swagger/swagger.yaml")
+	if err != nil {
+		return fmt.Errorf("error getting old hash of the OpenAPI YAML: %w", err)
 	}
 
 	if generateErr := (Generate{}).SwaggerDocs(ctx); generateErr != nil {
 		return generateErr
 	}
 
-	newHash, err := calculateSha256FileHash("./pkg/swagger/swagger.json")
+	newJSONHash, err := calculateSha256FileHash("./pkg/swagger/swagger.json")
 	if err != nil {
-		return fmt.Errorf("error getting new hash of the swagger docs: %w", err)
+		return fmt.Errorf("error getting new hash of the OpenAPI JSON: %w", err)
+	}
+	newYAMLHash, err := calculateSha256FileHash("./pkg/swagger/swagger.yaml")
+	if err != nil {
+		return fmt.Errorf("error getting new hash of the OpenAPI YAML: %w", err)
 	}
 
-	if oldHash != newHash {
-		return fmt.Errorf("swagger docs are not up to date: run 'mage generate:swagger-docs' and commit the result")
+	if oldJSONHash != newJSONHash || oldYAMLHash != newYAMLHash {
+		return fmt.Errorf("OpenAPI docs are not up to date: run 'mage generate:swagger-docs' and commit the result")
 	}
 	return nil
 }
@@ -425,7 +429,7 @@ func (Check) GotSwag(ctx context.Context) error {
 func (Check) YaegiSymbols(ctx context.Context) error {
 	mg.Deps(initVars)
 
-	// Same hash-compare approach as GotSwag: regenerate in place and compare.
+	// Same hash-compare approach as SwaggerDocs: regenerate in place and compare.
 	// The regenerated files are not reset afterwards, which is fine for ci.
 	oldHashes := make(map[string]string, len(yaegiSymbolPackages))
 	for _, p := range yaegiSymbolPackages {
@@ -916,12 +920,12 @@ func (Check) GolangciFix(ctx context.Context) error {
 	return runAndStreamOutput(ctx, "golangci-lint", "run", "--fix")
 }
 
-// All runs golangci and the swagger test in parallel
+// All runs lint, contract, translation and generated-symbol checks in parallel.
 func (Check) All() {
 	mg.Deps(initVars)
 	mg.Deps(
 		Check.Golangci,
-		Check.GotSwag,
+		Check.APIContract,
 		Check.Translations,
 		Check.YaegiSymbols,
 	)
@@ -1210,8 +1214,21 @@ type Generate mg.Namespace
 
 const DefaultConfigYAMLSamplePath = "config.yml.sample"
 
-func (Generate) FrontendClient(ctx context.Context) error {
+func canonicalOpenAPIJSON() ([]byte, error) {
 	api, err := apiv2.NewCanonicalAPI()
+	if err != nil {
+		return nil, err
+	}
+
+	document, err := json.MarshalIndent(api.OpenAPI(), "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal canonical OpenAPI document: %w", err)
+	}
+	return append(document, '\n'), nil
+}
+
+func (Generate) FrontendClient(ctx context.Context) error {
+	document, err := canonicalOpenAPIJSON()
 	if err != nil {
 		return err
 	}
@@ -1223,7 +1240,7 @@ func (Generate) FrontendClient(ctx context.Context) error {
 	specPath := spec.Name()
 	defer func() { _ = os.Remove(specPath) }()
 
-	if err := json.NewEncoder(spec).Encode(api.OpenAPI()); err != nil {
+	if _, err := spec.Write(document); err != nil {
 		_ = spec.Close()
 		return fmt.Errorf("write temporary OpenAPI document: %w", err)
 	}
@@ -1243,14 +1260,31 @@ func (Generate) FrontendClient(ctx context.Context) error {
 	return nil
 }
 
-// SwaggerDocs generates the swagger docs from the code annotations
-func (Generate) SwaggerDocs(ctx context.Context) error {
+// SwaggerDocs writes the canonical Huma document in both JSON and YAML forms.
+func (Generate) SwaggerDocs(_ context.Context) error {
 	mg.Deps(initVars)
 
-	if err := checkAndInstallGoTool(ctx, "swag", "github.com/swaggo/swag/cmd/swag"); err != nil {
+	document, err := canonicalOpenAPIJSON()
+	if err != nil {
 		return err
 	}
-	return runAndStreamOutput(ctx, "swag", "init", "-g", "./pkg/routes/routes.go", "--parseDependency", "-d", ".", "-o", "./pkg/swagger")
+
+	if err := os.WriteFile("./pkg/swagger/swagger.json", document, 0o600); err != nil {
+		return fmt.Errorf("write canonical OpenAPI JSON: %w", err)
+	}
+
+	var yamlDocument bytes.Buffer
+	if err := yaml.Convert(&yamlDocument, bytes.NewReader(document)); err != nil {
+		return fmt.Errorf("convert canonical OpenAPI document to YAML: %w", err)
+	}
+	if err := os.WriteFile("./pkg/swagger/swagger.yaml", yamlDocument.Bytes(), 0o600); err != nil {
+		return fmt.Errorf("write canonical OpenAPI YAML: %w", err)
+	}
+
+	if err := os.Remove("./pkg/swagger/docs.go"); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove obsolete generated Swagger Go package: %w", err)
+	}
+	return nil
 }
 
 const yaegiSymbolsDir = "./pkg/yaegi_symbols"

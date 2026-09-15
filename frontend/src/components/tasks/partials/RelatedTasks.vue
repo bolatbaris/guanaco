@@ -261,7 +261,7 @@ const foundTasks = ref<ITask[]>([])
 async function findTasks(newQuery: string) {
 	query.value = newQuery
 	const result = await taskService.getAll({}, {
-		s: newQuery,
+		q: newQuery,
 		sort_by: 'done',
 	})
 	

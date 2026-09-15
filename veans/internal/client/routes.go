@@ -27,7 +27,7 @@ type RouteGroup map[string]struct {
 
 // Routes returns the API token route map. Used during bootstrap to
 // negotiate exactly which permission groups+actions exist on this Vikunja
-// instance, so the bot's API token only requests scopes the server knows
+// instance, so the automation token only requests scopes the server knows
 // about — avoiding hard-coding a permission list that could drift.
 func (c *Client) Routes(ctx context.Context) (map[string]RouteGroup, error) {
 	out := map[string]RouteGroup{}
@@ -37,18 +37,18 @@ func (c *Client) Routes(ctx context.Context) (map[string]RouteGroup, error) {
 	return out, nil
 }
 
-// PermissionsForBot picks a curated subset of route groups the veans bot
+// PermissionsForAutomation picks a curated subset of route groups veans
 // needs and projects the available actions of each. Groups not present on
 // the server are silently dropped, so the resulting permission map is
-// always valid for POST /tokens regardless of Vikunja version.
+// always valid for POST /tokens.
 //
 // The action names reflect Vikunja's actual route map (see GET /routes):
 // bucket CRUD and the bucket-task move endpoint live under the `projects`
 // group as `views_buckets*` and `views_buckets_tasks`, not a separate
 // `buckets` group.
-func PermissionsForBot(routes map[string]RouteGroup) map[string][]string {
+func PermissionsForAutomation(routes map[string]RouteGroup) map[string][]string {
 	wanted := map[string][]string{
-		// Read + write tasks across the project. The bot creates, updates,
+		// Read + write tasks across the project. Automation creates, updates,
 		// and reads tasks; it doesn't delete (humans/merge hook close).
 		"tasks": {
 			"read_one", "read_all", "create", "update", "position",
@@ -71,7 +71,6 @@ func PermissionsForBot(routes map[string]RouteGroup) map[string][]string {
 		"labels":          {"read_one", "read_all", "create", "update", "delete"},
 		"tasks_comments":  {"read_one", "read_all", "create", "update", "delete"},
 		"tasks_relations": {"create", "delete"},
-		"tasks_assignees": {"read_all", "create", "delete", "update_bulk"},
 		"tasks_labels":    {"create", "delete", "read_all", "update_bulk"},
 	}
 	out := map[string][]string{}

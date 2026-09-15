@@ -74,7 +74,6 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
-	github.com/swaggo/swag v1.16.6
 	github.com/tkuchiki/go-timezone v0.2.3
 	github.com/traefik/yaegi v0.16.1
 	github.com/ulule/limiter/v3 v3.11.2
@@ -214,7 +213,6 @@ require (
 
 tool (
 	github.com/magefile/mage
-	github.com/swaggo/swag/cmd/swag
 	src.techknowlogick.com/xgo
 )
 

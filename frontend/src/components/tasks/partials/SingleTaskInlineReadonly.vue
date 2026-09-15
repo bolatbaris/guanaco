@@ -8,21 +8,9 @@
 				v-if="showProject && typeof project !== 'undefined'"
 				v-tooltip="$t('task.detail.belongsToProject', {project: project.title})"
 				class="task-project"
-				:class="{'mie-2': task.hexColor !== ''}"
 			>
 				{{ project.title }}
 			</span>
-
-			<ColorBubble
-				v-if="task.hexColor !== ''"
-				:color="getHexColor(task.hexColor)"
-				class="mie-1"
-			/>
-
-			<PriorityLabel
-				:priority="task.priority"
-				:done="task.done"
-			/>
 
 			<!-- Show any parent tasks to make it clear this task is a sub task of something -->
 			<span
@@ -43,12 +31,11 @@
 			:labels="task.labels"
 		/>
 
-		<AssigneeList
-			v-if="task.assignees.length > 0"
-			:assignees="task.assignees"
-			:avatar-size="20"
+		<DelegationBadge
+			v-if="task.delegatedTo"
+			:name="task.delegatedTo"
+			compact
 			class="mis-1"
-			:inline="true"
 		/>
 
 		<span
@@ -88,34 +75,21 @@
 		</span>
 
 		<ChecklistSummary :task="task" />
-
-		<progress
-			v-if="task.percentDone > 0"
-			class="progress is-small"
-			:value="task.percentDone * 100"
-			max="100"
-		>
-			{{ task.percentDone * 100 }}%
-		</progress>
 	</div>
 </template>
 
 <script setup lang="ts">
 import {computed} from 'vue'
 
-import {getHexColor} from '@/models/task'
 import type {ITask} from '@/modelTypes/ITask'
 
-import PriorityLabel from '@/components/tasks/partials/PriorityLabel.vue'
 import Labels from '@/components/tasks/partials/Labels.vue'
 import ChecklistSummary from '@/components/tasks/partials/ChecklistSummary.vue'
-
-import ColorBubble from '@/components/misc/ColorBubble.vue'
 
 import {formatDisplayDate, formatISO, formatDateLong} from '@/helpers/time/formatDate'
 
 import {useProjectStore} from '@/stores/projects'
-import AssigneeList from '@/components/tasks/partials/AssigneeList.vue'
+import DelegationBadge from '@/components/tasks/partials/DelegationBadge.vue'
 
 const props = withDefaults(defineProps<{
 	task: ITask,

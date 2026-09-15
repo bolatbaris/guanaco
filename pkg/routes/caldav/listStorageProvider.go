@@ -353,7 +353,7 @@ func (vcls *VikunjaCaldavProjectStorage) canReadCollection(s *xorm.Session) (boo
 	return can, err
 }
 
-// Read-only shares and pseudo collections are both the model's call, not the route's.
+// Read-only shares and saved-filter collections are both the model's call, not the route's.
 func (vcls *VikunjaCaldavProjectStorage) canWriteCollection(s *xorm.Session) (bool, error) {
 	if vcls.project == nil {
 		return false, nil
@@ -361,7 +361,7 @@ func (vcls *VikunjaCaldavProjectStorage) canWriteCollection(s *xorm.Session) (bo
 	return denyArchived(vcls.project.CanWrite(s, vcls.user))
 }
 
-// GHSA-48ch-p4gq-x46x: a task addressed through a collection must belong to it. A pseudo
+// GHSA-48ch-p4gq-x46x: a task addressed through a collection must belong to it. A saved-filter
 // collection has no project_id to compare against, so membership stands in.
 func (vcls *VikunjaCaldavProjectStorage) taskInCollection(s *xorm.Session, task *models.Task) (bool, error) {
 	if models.IsPseudoProjectID(vcls.project.ID) {
@@ -370,7 +370,7 @@ func (vcls *VikunjaCaldavProjectStorage) taskInCollection(s *xorm.Session, task 
 	return task.ProjectID == vcls.project.ID, nil
 }
 
-// A pseudo collection has no permissions of its own, so it cannot gate anything: membership
+// A saved-filter collection has no permissions of its own, so it cannot gate anything: membership
 // takes the place of the collection gate and the task's own project decides the rest.
 func (vcls *VikunjaCaldavProjectStorage) checkCollectionWrite(s *xorm.Session, task *models.Task) error {
 	if vcls.project == nil || !models.IsPseudoProjectID(vcls.project.ID) {
@@ -401,9 +401,7 @@ func (vcls *VikunjaCaldavProjectStorage) checkCollectionWrite(s *xorm.Session, t
 // REPORT names that many hrefs. A var only so tests can lower it.
 var membershipQueryChunkSize = 500
 
-// Callers must have access-gated the candidates first (via models.GetTasksByUIDs): the
-// favorites arm of TaskCollection.ReadAll is not project-scoped, so membership alone
-// does not prove the user may still read the task.
+// Callers must have access-gated the candidates first (via models.GetTasksByUIDs).
 func (vcls *VikunjaCaldavProjectStorage) collectionContainsAll(s *xorm.Session, taskIDs []int64) (map[int64]bool, error) {
 	members := make(map[int64]bool, len(taskIDs))
 	if len(taskIDs) == 0 {
@@ -571,7 +569,7 @@ func (vcls *VikunjaCaldavProjectStorage) CreateResource(rpath, content string) (
 	vTask.ProjectID = vcls.project.ID
 
 	// A client PUTting a UID that already exists is syncing a stale href - typically after
-	// the task moved to another project or out of this collection. Creating a second task
+	// the task was deleted or the collection membership changed. Creating a second task
 	// would silently fork it (#3482), and answering 403 would strand the client on a
 	// permanent denial, so 404 and let it resync to the real collection.
 	if vTask.UID != "" {
@@ -691,12 +689,9 @@ func (vcls *VikunjaCaldavProjectStorage) UpdateResource(rpath, content string) (
 	// At this point, we already have the right task in vcls.task, so we can use that ID directly
 	vTask.ID = vcls.task.ID
 
-	// Explicitly set the ProjectID in case the task now belongs to a different project:
-	vTask.ProjectID = vcls.project.ID
-	if models.IsPseudoProjectID(vcls.project.ID) {
-		// A pseudo id is no project to move the task into; leave it where it lives.
-		vTask.ProjectID = vcls.task.ProjectID
-	}
+	// The collection is only the address used to find the task. Its project is
+	// fixed after creation, including when the collection is a saved filter.
+	vTask.ProjectID = vcls.task.ProjectID
 
 	// Check the permissions
 	canUpdate, err := denyArchived(vTask.CanUpdate(s, vcls.user))
@@ -773,9 +768,6 @@ func (vcls *VikunjaCaldavProjectStorage) UpdateResource(rpath, content string) (
 	if props.Done {
 		base.Done = vTask.Done
 	}
-	if props.Priority {
-		base.Priority = vTask.Priority
-	}
 	if props.DueDate {
 		base.DueDate = vTask.DueDate
 	}
@@ -784,9 +776,6 @@ func (vcls *VikunjaCaldavProjectStorage) UpdateResource(rpath, content string) (
 	}
 	if props.EndDate {
 		base.EndDate = vTask.EndDate
-	}
-	if props.Color {
-		base.HexColor = vTask.HexColor
 	}
 	// nil = no VALARM, keep stored reminders; non-nil (even empty) = client owns the alarm set.
 	if vTask.Reminders != nil {

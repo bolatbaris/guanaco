@@ -33,7 +33,6 @@ func (c *Client) ListLabels(ctx context.Context, search string) ([]*Label, error
 		q.Set("page", strconv.Itoa(page))
 		q.Set("per_page", "50")
 		if search != "" {
-			// v2's list search param is `q` (v1 used `s`).
 			q.Set("q", search)
 		}
 		batch, totalPages, err := doList[*Label](ctx, c, "/labels", q)

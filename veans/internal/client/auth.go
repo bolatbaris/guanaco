@@ -28,8 +28,8 @@ func (c *Client) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, 
 	return &out, nil
 }
 
-// CurrentUser fetches /user — handy for resolving the bot's own user_id from
-// its API token without poking the human's data.
+// CurrentUser fetches /user so bootstrap can associate the token with the
+// authenticated account in the local credential store.
 func (c *Client) CurrentUser(ctx context.Context) (*User, error) {
 	var out User
 	if err := c.Do(ctx, "GET", "/user", nil, nil, &out); err != nil {

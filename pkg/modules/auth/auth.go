@@ -57,8 +57,7 @@ type Token struct {
 const RefreshTokenCookieName = "vikunja_refresh_token" //nolint:gosec // not a credential
 
 const (
-	RefreshTokenPathV1 = "/api/v1/user/token/refresh" //nolint:gosec // a route path, not a credential
-	RefreshTokenPathV2 = "/api/v2/user/token/refresh" //nolint:gosec // a route path, not a credential
+	RefreshTokenPath = "/api/v2/user/token/refresh" //nolint:gosec // a route path, not a credential
 )
 
 // getRefreshTokenCookiePaths prefixes each refresh endpoint with the base
@@ -69,15 +68,10 @@ func getRefreshTokenCookiePaths() []string {
 		basePath = strings.TrimRight(u.Path, "/")
 	}
 
-	refreshTokenPaths := []string{RefreshTokenPathV1, RefreshTokenPathV2}
-	paths := make([]string, len(refreshTokenPaths))
-	for i, p := range refreshTokenPaths {
-		paths[i] = basePath + p
-	}
-	return paths
+	return []string{basePath + RefreshTokenPath}
 }
 
-// SetRefreshTokenCookie sets one HttpOnly cookie per refresh endpoint (v1, v2),
+// SetRefreshTokenCookie sets one HttpOnly cookie for the refresh endpoint,
 // path-scoped so the browser only sends it on refresh requests. A single
 // cookie at Path=/api would ship the long-lived token on every API request.
 // Browsers match cookie paths by prefix, so each endpoint needs its own.
@@ -109,8 +103,7 @@ func ClearRefreshTokenCookie(c *echo.Context) {
 }
 
 // IssuedUserToken bundles a freshly minted access token with the matching
-// refresh token and the cookie max-age both v1 and v2 use to set the
-// HttpOnly refresh cookie.
+// refresh token and cookie max-age for the canonical API.
 type IssuedUserToken struct {
 	AccessToken  string
 	RefreshToken string
@@ -118,8 +111,7 @@ type IssuedUserToken struct {
 }
 
 // IssueUserToken creates a session for the user and mints a JWT access token plus
-// a refresh token for it. It is the transport-agnostic core both v1 (which writes
-// the echo response) and v2 (Huma) call; callers set the refresh cookie and the
+// a refresh token for it. The Huma handlers set the refresh cookie and the
 // Cache-Control header themselves via WriteUserAuthCookies. Pass oidc for
 // OpenID Connect logins to store the logout data; nil otherwise.
 func IssueUserToken(ctx context.Context, u *user.User, deviceInfo, ipAddress string, long bool, oidc *models.SessionOIDCData) (*IssuedUserToken, error) {
@@ -162,8 +154,8 @@ func IssueUserToken(ctx context.Context, u *user.User, deviceInfo, ipAddress str
 // WriteUserAuthCookies sets the HttpOnly refresh-token cookie and the
 // Cache-Control: no-store header on a response. The cookie is path-scoped to the
 // refresh endpoint, so the browser only sends it there; JavaScript never sees the
-// refresh token, which protects it from XSS. Shared by the v1 echo handlers and
-// the v2 Huma handlers (which reach the echo context via the humabridge
+// refresh token, which protects it from XSS. The Huma handlers reach the echo
+// context via the humabridge
 // EchoContextKey stash on their request context).
 func WriteUserAuthCookies(c *echo.Context, token *IssuedUserToken) {
 	SetRefreshTokenCookie(c, token.RefreshToken, token.CookieMaxAge)

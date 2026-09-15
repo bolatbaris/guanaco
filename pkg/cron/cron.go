@@ -17,6 +17,8 @@
 package cron
 
 import (
+	"code.vikunja.io/api/pkg/log"
+	"code.vikunja.io/api/pkg/observability"
 	"github.com/robfig/cron/v3"
 )
 
@@ -30,8 +32,24 @@ func Init() {
 
 // Schedule schedules a job as a cron job
 func Schedule(schedule string, f func()) (err error) {
-	_, err = c.AddFunc(schedule, f)
+	_, err = c.AddFunc(schedule, func() {
+		defer func() {
+			if recover() == nil {
+				return
+			}
+
+			log.Errorf("Scheduled callback panicked")
+			observability.CaptureException(&scheduledCallbackPanic{})
+		}()
+		f()
+	})
 	return
+}
+
+type scheduledCallbackPanic struct{}
+
+func (*scheduledCallbackPanic) Error() string {
+	return "scheduled callback panicked"
 }
 
 // Stop stops the cron scheduler

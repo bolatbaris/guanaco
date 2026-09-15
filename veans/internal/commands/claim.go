@@ -29,7 +29,7 @@ import (
 func newClaimCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "claim <id>",
-		Short: "Claim a task: assign the bot, move to In Progress, tag with branch",
+		Short: "Claim a task: move to In Progress and tag with branch",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rt, err := loadRuntime()
@@ -51,15 +51,6 @@ func newClaimCmd() *cobra.Command {
 			if err := rt.client.MoveTaskToBucket(cmd.Context(),
 				rt.cfg.ProjectID, rt.cfg.ViewID, bid, id); err != nil {
 				return err
-			}
-
-			// Assign the bot. Idempotent on repeat — Vikunja returns 409 if
-			// already assigned, which we map to a soft-skip.
-			if err := rt.client.AddAssignee(cmd.Context(), id, rt.cfg.Bot.UserID); err != nil {
-				var oe *output.Error
-				if !errors.As(err, &oe) || oe.Code != output.CodeConflict {
-					return err
-				}
 			}
 
 			// Tag with the current branch label, if there is one.

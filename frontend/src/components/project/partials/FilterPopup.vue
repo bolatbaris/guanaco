@@ -66,7 +66,7 @@ watch(
 
 const hasFilters = computed(() => {
 	return value.value.filter !== '' ||
-		value.value.s !== ''
+		value.value.q !== ''
 })
 
 const modalOpen = ref(false)
@@ -84,7 +84,7 @@ function showResults() {
 	emit('update:modelValue', {
 		...value.value,
 		filter: value.value.filter,
-		s: value.value.s,
+		q: value.value.q,
 	})
 	modalOpen.value = false
 }

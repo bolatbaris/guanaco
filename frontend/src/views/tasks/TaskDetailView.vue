@@ -74,48 +74,34 @@
 				>
 					<div class="columns details">
 						<div
-							v-if="activeFields.assignees"
-							class="column assignees"
+							v-if="activeFields.delegation || task.delegatedTo"
+							:ref="e => setFieldRef('delegation', e)"
+							class="column delegation"
 						>
-							<!-- Assignees -->
 							<div class="detail-title">
-								<Icon icon="users" />
-								{{ $t('task.attributes.assignees') }}
+								<Icon icon="user-edit" />
+								{{ $t('task.delegation.title') }}
 							</div>
-							<EditAssignees
-								v-if="canWrite"
-								:ref="e => setFieldRef('assignees', e)"
-								v-model="task.assignees"
-								:project-id="task.projectId"
-								:task-id="task.id"
-							/>
-							<AssigneeList
-								v-else
-								:assignees="task.assignees"
+							<DelegationBadge
+								v-if="task.delegatedTo"
+								:name="task.delegatedTo"
 								class="mbs-2"
 							/>
-						</div>
-						<CustomTransition
-							name="flash-background"
-							appear
-						>
 							<div
-								v-if="activeFields.priority"
-								class="column"
+								v-if="canWrite"
+								class="delegation-editor"
 							>
-								<!-- Priority -->
 								<div class="detail-title">
-									<Icon icon="exclamation-circle" />
-									{{ $t('task.attributes.priority') }}
+									{{ task.delegatedTo ? $t('task.delegation.changeTitle') : $t('task.delegation.assignTitle') }}
 								</div>
-								<PrioritySelect
-									:ref="e => setFieldRef('priority', e)"
-									v-model="task.priority"
-									:disabled="!canWrite"
-									@update:modelValue="setPriority"
+								<EditDelegation
+									:model-value="task.delegatedTo"
+									:task-id="task.id"
+									:disabled="taskService.loading"
+									@update:modelValue="updateDelegation"
 								/>
 							</div>
-						</CustomTransition>
+						</div>
 						<CustomTransition
 							name="flash-background"
 							appear
@@ -148,27 +134,6 @@
 										</span>
 									</BaseButton>
 								</div>
-							</div>
-						</CustomTransition>
-						<CustomTransition
-							name="flash-background"
-							appear
-						>
-							<div
-								v-if="activeFields.percentDone"
-								class="column"
-							>
-								<!-- Progress -->
-								<div class="detail-title">
-									<Icon icon="percent" />
-									{{ $t('task.attributes.percentDone') }}
-								</div>
-								<PercentDoneSelect
-									:ref="e => setFieldRef('percentDone', e)"
-									v-model="task.percentDone"
-									:disabled="!canWrite"
-									@update:modelValue="setPercentDone"
-								/>
 							</div>
 						</CustomTransition>
 						<CustomTransition
@@ -294,27 +259,6 @@
 								/>
 							</div>
 						</CustomTransition>
-						<CustomTransition
-							name="flash-background"
-							appear
-						>
-							<div
-								v-if="activeFields.color"
-								class="column"
-							>
-								<!-- Color -->
-								<div class="detail-title">
-									<Icon icon="fill-drip" />
-									{{ $t('task.attributes.color') }}
-								</div>
-								<ColorPicker
-									:ref="e => setFieldRef('color', e)"
-									v-model="taskColor"
-									menu-position="bottom"
-									@update:modelValue="saveTask()"
-								/>
-							</div>
-						</CustomTransition>
 					</div>
 
 					<!-- Labels -->
@@ -333,8 +277,6 @@
 							v-model="task.labels"
 							:disabled="!canWrite"
 							:task-id="taskId"
-							:creatable="!authStore.isLinkShareAuth"
-							:creation-disabled-message="authStore.isLinkShareAuth ? $t('task.label.linkShareCannotCreate') : ''"
 						/>
 					</div>
 
@@ -401,28 +343,6 @@
 						/>
 					</div>
 
-					<!-- Move Task -->
-					<div
-						v-if="activeFields.moveProject"
-						class="content details"
-					>
-						<h2 class="task-section-title">
-							<span class="icon is-grey">
-								<Icon icon="list" />
-							</span>
-							{{ $t('task.detail.move') }}
-						</h2>
-						<div class="field has-addons">
-							<div class="control is-expanded">
-								<ProjectSearch
-									:ref="e => setFieldRef('moveProject', e)"
-									:filter="project => project.id !== task.projectId"
-									@update:modelValue="changeProject"
-								/>
-							</div>
-						</div>
-					</div>
-
 					<!-- Comments -->
 					<Comments
 						:can-write="canWrite"
@@ -454,22 +374,6 @@
 						>
 							{{ task.done ? $t('task.detail.undone') : $t('task.detail.done') }}
 						</XButton>
-						<TaskSubscription
-							entity="task"
-							:entity-id="task.id"
-							:model-value="task.subscription"
-							@update:modelValue="sub => task.subscription = sub"
-						/>
-						<XButton
-							v-shortcut="SHORTCUTS.taskDetail.favorite"
-							variant="secondary"
-							:icon="task.isFavorite ? 'star' : ['far', 'star']"
-							@click="toggleFavorite"
-						>
-							{{
-								task.isFavorite ? $t('task.detail.actions.unfavorite') : $t('task.detail.actions.favorite')
-							}}
-						</XButton>
 						
 						<span class="action-heading">{{ $t('task.detail.organization') }}</span>
 						
@@ -481,40 +385,14 @@
 						>
 							{{ $t('task.detail.actions.label') }}
 						</XButton>
-						<XButton
-							v-shortcut="SHORTCUTS.taskDetail.priority"
-							variant="secondary"
-							icon="exclamation-circle"
-							@click="setFieldActive('priority')"
-						>
-							{{ $t('task.detail.actions.priority') }}
-						</XButton>
-						<XButton
-							variant="secondary"
-							icon="percent"
-							@click="setFieldActive('percentDone')"
-						>
-							{{ $t('task.detail.actions.percentDone') }}
-						</XButton>
-						<XButton
-							v-shortcut="SHORTCUTS.taskDetail.color"
-							variant="secondary"
-							icon="fill-drip"
-							:icon-color="color"
-							@click="setFieldActive('color')"
-						>
-							{{ $t('task.detail.actions.color') }}
-						</XButton>
-						
 						<span class="action-heading">{{ $t('task.detail.management') }}</span>
 
 						<XButton
-							v-shortcut="SHORTCUTS.taskDetail.assignees"
 							variant="secondary"
-							icon="users"
-							@click="setFieldActive('assignees')"
+							icon="user-edit"
+							@click="setFieldActive('delegation')"
 						>
-							{{ $t('task.detail.actions.assign') }}
+							{{ task.delegatedTo ? $t('task.delegation.changeAction') : $t('task.delegation.action') }}
 						</XButton>
 						<XButton
 							v-shortcut="SHORTCUTS.taskDetail.attachments"
@@ -531,14 +409,6 @@
 							@click="setRelatedTasksActive()"
 						>
 							{{ $t('task.detail.actions.relatedTasks') }}
-						</XButton>
-						<XButton
-							v-shortcut="SHORTCUTS.taskDetail.moveProject"
-							variant="secondary"
-							icon="list"
-							@click="setFieldActive('moveProject')"
-						>
-							{{ $t('task.detail.actions.moveProject') }}
 						</XButton>
 						<XButton
 							variant="secondary"
@@ -661,9 +531,7 @@ import TaskModel from '@/models/task'
 
 import type {ITask} from '@/modelTypes/ITask'
 import type {IAttachment} from '@/modelTypes/IAttachment'
-import type {IProject} from '@/modelTypes/IProject'
 
-import {PRIORITIES, type Priority} from '@/constants/priorities'
 import {PERMISSIONS} from '@/constants/permissions'
 import {PRO_FEATURE} from '@/constants/proFeatures'
 import {SHORTCUTS} from '@/constants/shortcuts'
@@ -674,23 +542,18 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import Attachments from '@/components/tasks/partials/Attachments.vue'
 import TaskTimeTracking from '@/components/time-tracking/TaskTimeTracking.vue'
 import ChecklistSummary from '@/components/tasks/partials/ChecklistSummary.vue'
-import ColorPicker from '@/components/input/ColorPicker.vue'
 import Comments from '@/components/tasks/partials/Comments.vue'
 import CreatedUpdated from '@/components/tasks/partials/CreatedUpdated.vue'
 import Datepicker from '@/components/input/Datepicker.vue'
 import Description from '@/components/tasks/partials/Description.vue'
-import EditAssignees from '@/components/tasks/partials/EditAssignees.vue'
+import EditDelegation from '@/components/tasks/partials/EditDelegation.vue'
 import EditLabels from '@/components/tasks/partials/EditLabels.vue'
+import DelegationBadge from '@/components/tasks/partials/DelegationBadge.vue'
 import Heading from '@/components/tasks/partials/Heading.vue'
-import ProjectSearch from '@/components/tasks/partials/ProjectSearch.vue'
-import PercentDoneSelect from '@/components/tasks/partials/PercentDoneSelect.vue'
-import PrioritySelect from '@/components/tasks/partials/PrioritySelect.vue'
 import RelatedTasks from '@/components/tasks/partials/RelatedTasks.vue'
 import Reminders from '@/components/tasks/partials/Reminders.vue'
 import RepeatAfter from '@/components/tasks/partials/RepeatAfter.vue'
-import TaskSubscription from '@/components/misc/Subscription.vue'
 import CustomTransition from '@/components/misc/CustomTransition.vue'
-import AssigneeList from '@/components/tasks/partials/AssigneeList.vue'
 import BucketSelect from '@/components/tasks/partials/BucketSelect.vue'
 import Reactions from '@/components/input/Reactions.vue'
 
@@ -704,7 +567,6 @@ import {playPopSound} from '@/helpers/playPop'
 import {useTaskStore} from '@/stores/tasks'
 import {useKanbanStore} from '@/stores/kanban'
 import {useProjectStore} from '@/stores/projects'
-import {useAuthStore} from '@/stores/auth'
 import {useBaseStore} from '@/stores/base'
 import {useConfigStore} from '@/stores/config'
 
@@ -732,7 +594,6 @@ const taskStore = useTaskStore()
 const configStore = useConfigStore()
 const timeTrackingEnabled = computed(() => configStore.isProFeatureEnabled(PRO_FEATURE.TIME_TRACKING))
 const kanbanStore = useKanbanStore()
-const authStore = useAuthStore()
 const baseStore = useBaseStore()
 
 const task = ref<ITask>(new TaskModel())
@@ -798,14 +659,6 @@ onBeforeRouteLeave(async () => {
 	}
 })
 
-// We doubled the task color property here because verte does not have a real change property, leading
-// to the color property change being triggered when the # is removed from it, leading to an update,
-// which leads in turn to a change... This creates an infinite loop in which the task is updated, changed,
-// updated, changed, updated and so on.
-// To prevent this, we put the task color property in a separate value which is set to the task color
-// when it is saved and loaded.
-const taskColor = ref<ITask['hexColor']>('')
-
 // Used to avoid flashing of empty elements if the task content is not yet loaded.
 const visible = ref(false)
 
@@ -821,14 +674,6 @@ const canWrite = computed(() => (
 	task.value.maxPermission !== null &&
 	task.value.maxPermission > PERMISSIONS.READ
 ))
-
-const color = computed(() => {
-	const color = task.value.getHexColor
-		? task.value.getHexColor()
-		: undefined
-
-	return color
-})
 
 const isModal = computed(() => Boolean(props.backdropView))
 
@@ -950,7 +795,6 @@ watch(
 			}
 			const loaded = await taskService.get({id}, {expand})
 			Object.assign(task.value, loaded)
-			taskColor.value = task.value.hexColor
 			setActiveFields()
 
 			if (task.value.isUnread) {
@@ -981,15 +825,11 @@ watch(
 	}, {immediate: true})
 
 type FieldType =
-	| 'assignees'
+	| 'delegation'
 	| 'attachments'
-	| 'color'
 	| 'dueDate'
 	| 'endDate'
 	| 'labels'
-	| 'moveProject'
-	| 'percentDone'
-	| 'priority'
 	| 'relatedTasks'
 	| 'reminders'
 	| 'repeatAfter'
@@ -997,15 +837,11 @@ type FieldType =
 	| 'timeTracking'
 
 const activeFields: { [type in FieldType]: boolean } = reactive({
-	assignees: false,
+	delegation: false,
 	attachments: false,
-	color: false,
 	dueDate: false,
 	endDate: false,
 	labels: false,
-	moveProject: false,
-	percentDone: false,
-	priority: false,
 	relatedTasks: false,
 	reminders: false,
 	repeatAfter: false,
@@ -1019,14 +855,12 @@ function setActiveFields() {
 	// task.endDate = task.endDate || null
 
 	// Set all active fields based on values in the model
-	activeFields.assignees = task.value.assignees.length > 0
+	activeFields.delegation = Boolean(task.value.delegatedTo)
 	activeFields.attachments = task.value.attachments.length > 0
 	activeFields.timeTracking = (task.value.timeEntriesCount ?? 0) > 0
 	activeFields.dueDate = task.value.dueDate !== null
 	activeFields.endDate = task.value.endDate !== null
 	activeFields.labels = task.value.labels.length > 0
-	activeFields.percentDone = task.value.percentDone > 0
-	activeFields.priority = task.value.priority !== PRIORITIES.UNSET
 	activeFields.relatedTasks = Object.keys(task.value.relatedTasks).length > 0
 	activeFields.reminders = task.value.reminders.length > 0
 	activeFields.repeatAfter = task.value.repeatAfter?.amount > 0 || task.value.repeatMode !== TASK_REPEAT_MODES.REPEAT_MODE_DEFAULT
@@ -1034,15 +868,11 @@ function setActiveFields() {
 }
 
 const activeFieldElements: { [id in FieldType]: HTMLElement | null } = reactive({
-	assignees: null,
+	delegation: null,
 	attachments: null,
-	color: null,
 	dueDate: null,
 	endDate: null,
 	labels: null,
-	moveProject: null,
-	percentDone: null,
-	priority: null,
 	relatedTasks: null,
 	reminders: null,
 	repeatAfter: null,
@@ -1092,8 +922,6 @@ async function saveTask(
 		return
 	}
 
-	currentTask.hexColor = taskColor.value
-
 	// If no end date is being set, but a start date and due date,
 	// use the due date as the end date
 	if (
@@ -1116,6 +944,21 @@ async function saveTask(
 		}]
 	}
 	success({message: t('task.detail.updateSuccess')}, actions)
+}
+
+function updateDelegation(delegatedTo: string | undefined) {
+	const canonicalDelegatedTo = delegatedTo ?? ''
+	const updatedTask: ITask = {
+		...task.value,
+		delegatedTo: canonicalDelegatedTo,
+	}
+	Object.assign(task.value, updatedTask)
+	activeFields.delegation = true
+
+	kanbanStore.setTaskInBucket(updatedTask)
+	if (taskStore.tasks[updatedTask.id]) {
+		taskStore.tasks[updatedTask.id] = updatedTask
+	}
 }
 
 useTaskDetailShortcuts({
@@ -1148,23 +991,6 @@ async function toggleTaskDone() {
 	)
 }
 
-async function changeProject(project: IProject | null) {
-	if (project === null) {
-		return
-	}
-	kanbanStore.removeTaskInBucket(task.value)
-	await saveTask({
-		...task.value,
-		projectId: project.id,
-	})
-	baseStore.setCurrentProject(project)
-}
-
-async function toggleFavorite() {
-	const newTask = await taskStore.toggleFavorite(task.value)
-	Object.assign(task.value, newTask)
-}
-
 async function duplicateCurrentTask() {
 	const duplicatedTask = await taskStore.duplicateTask(task.value.id)
 	if (duplicatedTask) {
@@ -1174,24 +1000,6 @@ async function duplicateCurrentTask() {
 			params: {id: duplicatedTask.id},
 		})
 	}
-}
-
-async function setPriority(priority: Priority) {
-	const newTask: ITask = {
-		...task.value,
-		priority,
-	}
-
-	return saveTask(newTask)
-}
-
-async function setPercentDone(percentDone: number) {
-	const newTask: ITask = {
-		...task.value,
-		percentDone,
-	}
-
-	return saveTask(newTask)
 }
 
 async function removeRepeatAfter() {
@@ -1333,7 +1141,7 @@ h2 .button {
 }
 
 .details.labels-list,
-.assignees {
+.delegation {
 	:deep(.multiselect) {
 		.input-wrapper {
 			&:not(:focus-within, :hover) {

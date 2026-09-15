@@ -19,7 +19,6 @@ package apiv2
 import (
 	"context"
 
-	"code.vikunja.io/api/pkg/db"
 	"code.vikunja.io/api/pkg/models"
 	"code.vikunja.io/api/pkg/modules/humabridge"
 	"code.vikunja.io/api/pkg/richtext"
@@ -53,14 +52,14 @@ func requestWantsMarkdown(ctx context.Context) bool {
 const richTextFormatAPIDescription = "## Rich-text fields\n\n" +
 	"Descriptions (task, project, label, saved filter) and task comments are stored as HTML. " +
 	"Add `?format=markdown` to read and write them as GFM Markdown instead; on write it is converted " +
-	"to HTML and `@mentions` resolved to existing users. On `PATCH`, send the `X-Vikunja-Format: markdown` " +
+	"to HTML. On `PATCH`, send the `X-Vikunja-Format: markdown` " +
 	"header instead (merge-patch drops query parameters). CalDAV always exchanges task descriptions as " +
 	"Markdown.\n\n" +
 	"Writing is lossy: Markdown can't express every HTML construct (e.g. underline), so a field you send " +
 	"as Markdown is stored as its converted HTML — formatting Markdown can't represent is dropped. Omit a " +
 	"field, or use `format=html`, to leave it untouched (note a full `PUT` and `PATCH` round-trip the " +
 	"whole resource, so send `format=html` unless you actually edited the rich-text fields). Unknown " +
-	"`@mentions` stay as plain text."
+	"Mention syntax is treated as ordinary text."
 
 // stripPatchFormatQuery removes the `format` query param AutoPatch copies onto
 // each synthesised PATCH. The query doesn't survive AutoPatch's re-dispatch, so
@@ -142,21 +141,18 @@ func convertTasksToMarkdown(ctx context.Context, tasks ...*models.Task) {
 }
 
 // convertToHTML converts the given Markdown fields to canonical HTML in place,
-// rebuilding @mentions, when the request asked for markdown (no-op otherwise).
+// converting rich text, when the request asked for markdown (no-op otherwise).
 // Write handlers call it on the request body before persisting.
 func convertToHTML(ctx context.Context, fields ...*string) error {
 	if !requestWantsMarkdown(ctx) {
 		return nil
 	}
 
-	s := db.NewSession()
-	defer s.Close()
-
 	for _, field := range fields {
 		if field == nil {
 			continue
 		}
-		htmlDesc, err := richtext.MarkdownToHTMLWithMentions(s, *field)
+		htmlDesc, err := richtext.MarkdownToHTML(*field)
 		if err != nil {
 			return err
 		}

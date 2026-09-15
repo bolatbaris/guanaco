@@ -75,11 +75,10 @@ func DiscoverServer(ctx context.Context, input string) (string, *Info, error) {
 // the origin + the path that should sit BEFORE /api/v2 (typically empty
 // or a reverse-proxy prefix). The probe itself adds /api/v2/info.
 func serverCandidates(input string) ([]string, error) {
-	// Strip a trailing /api/v1 or /api/v2[/] the user might have copied
+	// Strip a trailing /api/v2[/] the user might have copied
 	// from a curl example. We add the API path back in the probe, and
 	// otherwise we'd end up calling /api/v2/api/v2/info.
 	trimmed := strings.TrimRight(input, "/")
-	trimmed = strings.TrimSuffix(trimmed, "/api/v1")
 	trimmed = strings.TrimSuffix(trimmed, "/api/v2")
 	trimmed = strings.TrimRight(trimmed, "/")
 

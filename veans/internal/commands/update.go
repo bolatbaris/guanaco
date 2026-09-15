@@ -32,8 +32,6 @@ import (
 type updateFlags struct {
 	statusName       string
 	title            string
-	priority         int64
-	priorityIsSet    bool
 	addLabels        []string
 	removeLabels     []string
 	description      string
@@ -59,8 +57,6 @@ func newUpdateCmd() *cobra.Command {
 				return err
 			}
 			f.descriptionIsSet = cmd.Flags().Changed("description")
-			f.priorityIsSet = cmd.Flags().Changed("priority")
-
 			id, err := rt.resolveTaskID(cmd.Context(), args[0])
 			if err != nil {
 				return err
@@ -74,7 +70,6 @@ func newUpdateCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&f.statusName, "status", "s", "", "transition to a status")
 	cmd.Flags().StringVarP(&f.title, "title", "t", "", "new title")
-	cmd.Flags().Int64Var(&f.priority, "priority", 0, "new priority")
 	cmd.Flags().StringSliceVar(&f.addLabels, "label-add", nil, "labels to attach (repeatable; veans: prefix added if missing)")
 	cmd.Flags().StringSliceVar(&f.removeLabels, "label-remove", nil, "labels to detach (repeatable)")
 	cmd.Flags().StringVar(&f.description, "description", "", "replace the entire description")
@@ -136,11 +131,6 @@ func runUpdate(ctx context.Context, rt *runtime, id int64, f *updateFlags) (*cli
 		body.Title = &f.title
 		dirty = true
 	}
-	if f.priorityIsSet {
-		body.Priority = &f.priority
-		dirty = true
-	}
-
 	// Description ops are mutually-exclusive layers; --description wins
 	// outright, otherwise replace-old/new + append run on the current body.
 	newDesc, descChanged, err := composeDescription(current.Description, f)

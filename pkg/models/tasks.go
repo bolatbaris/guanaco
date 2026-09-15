@@ -32,7 +32,6 @@ import (
 	"code.vikunja.io/api/pkg/files"
 	"code.vikunja.io/api/pkg/log"
 	"code.vikunja.io/api/pkg/user"
-	"code.vikunja.io/api/pkg/utils"
 	"code.vikunja.io/api/pkg/web"
 
 	"dario.cat/mergo"
@@ -82,7 +81,7 @@ type Task struct {
 	Description string `xorm:"longtext null" json:"description"`
 	// The project this task belongs to.
 	// Must precede done/due_date: xorm orders composite index columns by struct field order.
-	ProjectID int64 `xorm:"bigint INDEX not null unique(tasks_project_index) index(project_done_due_date)" json:"project_id" param:"project" doc:"The id of the project this task belongs to. On create it is taken from the URL; on update, setting it to a different project moves the task (requires write access to the target project)."`
+	ProjectID int64 `xorm:"bigint INDEX not null unique(tasks_project_index) index(project_done_due_date)" json:"project_id" param:"project" readOnly:"true" doc:"The id of the project this task belongs to. On create it is taken from the URL and it cannot be changed afterward."`
 	// Whether a task is done or not.
 	Done bool `xorm:"INDEX null index(project_done_due_date)" json:"done"`
 	// The time when a task was marked as done. This field is system-controlled and cannot be set via API.
@@ -95,21 +94,13 @@ type Task struct {
 	RepeatAfter int64 `xorm:"bigint INDEX null" json:"repeat_after" valid:"range(0|9223372036854775807)" doc:"The interval in seconds this task repeats. When set, marking the task done re-opens it and bumps its reminders and due date by this amount."`
 	// Can have three possible values which will trigger when the task is marked as done: 0 = repeats after the amount specified in repeat_after, 1 = repeats all dates each months (ignoring repeat_after), 3 = repeats from the current date rather than the last set date.
 	RepeatMode TaskRepeatMode `xorm:"not null default 0" json:"repeat_mode" doc:"How the task repeats when marked done: 0 = after repeat_after seconds, 1 = monthly (ignores repeat_after), 2 = from the current date rather than the last set date."`
-	// The task priority. Can be anything you want, it is possible to sort by this later.
-	Priority int64 `xorm:"bigint null" json:"priority"`
 	// When this task starts.
 	StartDate time.Time `xorm:"DATETIME INDEX null 'start_date'" json:"start_date" query:"-"`
 	// When this task ends.
-	EndDate time.Time `xorm:"DATETIME INDEX null 'end_date'" json:"end_date" query:"-"`
-	// An array of users who are assigned to this task
-	Assignees []*user.User `xorm:"-" json:"assignees" readOnly:"true" doc:"The users assigned to this task. Read-only here; use the task-assignee endpoints to change assignments."`
+	EndDate     time.Time `xorm:"DATETIME INDEX null 'end_date'" json:"end_date" query:"-"`
+	DelegatedTo string    `xorm:"varchar(250) null" json:"delegated_to" readOnly:"true" doc:"The full name of the external person this task was delegated to. Set by the server; ignored on write."`
 	// An array of labels which are associated with this task. This property is read-only, you must use the separate endpoint to add labels to a task.
 	Labels []*Label `xorm:"-" json:"labels" readOnly:"true" doc:"The labels on this task. Read-only here; use the label-task endpoints to add or remove labels."`
-	// The task color in hex
-	HexColor string `xorm:"varchar(6) null" json:"hex_color" valid:"runelength(0|7)" maxLength:"7" doc:"The task color as a hex string without the leading '#'."`
-	// Determines how far a task is left from being done
-	PercentDone float64 `xorm:"DOUBLE null" json:"percent_done" doc:"How far the task is from done, between 0 and 1."`
-
 	// The task identifier, based on the project identifier and the task's index
 	Identifier string `xorm:"-" json:"identifier" readOnly:"true" doc:"The textual task identifier, derived from the project identifier and the task index (e.g. \"PROJ-12\")."`
 	// The task index, calculated per project
@@ -127,14 +118,7 @@ type Task struct {
 	// If this task has a cover image, the field will return the id of the attachment that is the cover image.
 	CoverImageAttachmentID int64 `xorm:"bigint default 0" json:"cover_image_attachment_id" doc:"The id of the attachment used as this task's cover image, or 0 for none."`
 
-	// True if a task is a favorite task. Favorite tasks show up in a separate "Important" project. This value depends on the user making the call to the api.
-	IsFavorite bool `xorm:"-" json:"is_favorite" doc:"Whether the requesting user has favorited this task. Per-user, so it differs between callers."`
-
 	IsUnread *bool `xorm:"-" json:"is_unread,omitempty" readOnly:"true" doc:"Whether the task is unread for the requesting user. Only present when requested via the is_unread expand option."`
-
-	// The subscription status for the user reading this task. You can only read this property, use the subscription endpoints to modify it.
-	// Will only returned when retrieving one task.
-	Subscription *Subscription `xorm:"-" json:"subscription,omitempty" readOnly:"true" doc:"The requesting user's subscription to this task. Read-only here; use the subscription endpoints to change it. Only present when reading a single task."`
 
 	// A timestamp when this task was created. You cannot change this value.
 	Created time.Time `xorm:"created not null" json:"created" readOnly:"true" doc:"When this task was created. Set by the server; ignored on write."`
@@ -253,8 +237,8 @@ type taskSearchOptions struct {
 // @Produce json
 // @Param page query int false "The page number. Used for pagination. If not provided, the first page of results is returned."
 // @Param per_page query int false "The maximum number of items per page. Note this parameter is limited by the configured maximum of items per page."
-// @Param s query string false "Search tasks by task text."
-// @Param sort_by query string false "The sorting parameter. You can pass this multiple times to get the tasks ordered by multiple different parametes, along with `order_by`. Possible values to sort by are `id`, `title`, `description`, `done`, `done_at`, `due_date`, `created_by_id`, `project_id`, `repeat_after`, `priority`, `start_date`, `end_date`, `hex_color`, `percent_done`, `uid`, `created`, `updated`, `relevance`. `relevance` sorts by search relevance (most relevant first, requires `s`; ignored when the database cannot score the query). Default is `id`."
+// @Param q query string false "Search tasks by task text."
+// @Param sort_by query string false "The sorting parameter. You can pass this multiple times to get the tasks ordered by multiple different parametes, along with `order_by`. Possible values to sort by are `id`, `title`, `description`, `done`, `done_at`, `due_date`, `created_by_id`, `project_id`, `repeat_after`, `start_date`, `end_date`, `uid`, `created`, `updated`, `relevance`. `relevance` sorts by search relevance (most relevant first, requires `q`; ignored when the database cannot score the query). Default is `id`."
 // @Param order_by query string false "The ordering parameter. Possible values to order by are `asc` or `desc`. Default is `asc`."
 // @Param filter query string false "The filter query to match tasks by. Check out https://vikunja.io/docs/filters for a full explanation of the feature."
 // @Param filter_timezone query string false "The time zone which should be used for date match (statements like "now" resolve to different actual times)"
@@ -317,13 +301,9 @@ func getTaskIndexFromSearchString(s string) (index int64) {
 	return
 }
 
-func getProjectIDsFromProjects(projects []*Project) (projectIDs []int64, hasFavoritesProject bool) {
+func getProjectIDsFromProjects(projects []*Project) (projectIDs []int64) {
 	projectIDs = []int64{}
 	for _, p := range projects {
-		if p.ID == FavoritesPseudoProject.ID {
-			hasFavoritesProject = true
-			continue
-		}
 		projectIDs = append(projectIDs, p.ID)
 	}
 	return
@@ -337,8 +317,10 @@ func getRawTasksForProjects(s *xorm.Session, projects []*Project, a web.Auth, op
 	}
 
 	// Get all project IDs and get the tasks
-	var hasFavoritesProject bool
-	opts.projectIDs, hasFavoritesProject = getProjectIDsFromProjects(projects)
+	opts.projectIDs = getProjectIDsFromProjects(projects)
+	if len(opts.projectIDs) == 0 {
+		return nil, 0, 0, nil
+	}
 
 	// Add the id parameter as the last parameter to sortby by default, but only if it is not already passed as the last parameter.
 	if len(opts.sortby) == 0 ||
@@ -352,9 +334,8 @@ func getRawTasksForProjects(s *xorm.Session, projects []*Project, a web.Auth, op
 	opts.search = strings.TrimSpace(opts.search)
 
 	var dbSearcher taskSearcher = &dbTaskSearcher{
-		s:                   s,
-		a:                   a,
-		hasFavoritesProject: hasFavoritesProject,
+		s: s,
+		a: a,
 	}
 	tasks, totalItems, err = dbSearcher.Search(opts)
 
@@ -529,23 +510,6 @@ func addIsUnreadToTasks(s *xorm.Session, taskIDs []int64, taskMap map[int64]*Tas
 	return nil
 }
 
-// Get all assignees
-func addAssigneesToTasks(s *xorm.Session, taskIDs []int64, taskMap map[int64]*Task) (err error) {
-	taskAssignees, err := getRawTaskAssigneesForTasks(s, taskIDs)
-	if err != nil {
-		return
-	}
-	// Put the assignees in the task map
-	for i, a := range taskAssignees {
-		if a != nil {
-			a.Email = "" // Obfuscate the email
-			taskMap[a.TaskID].Assignees = append(taskMap[a.TaskID].Assignees, &taskAssignees[i].User)
-		}
-	}
-
-	return
-}
-
 // Get all labels for all the tasks
 func addLabelsToTasks(s *xorm.Session, taskIDs []int64, taskMap map[int64]*Task) (err error) {
 	labels, _, _, err := GetLabelsByTaskIDs(s, taskIDs, nil, -1)
@@ -619,11 +583,6 @@ func addRelatedTasksToTasks(s *xorm.Session, taskIDs []int64, taskMap map[int64]
 		return
 	}
 
-	taskFavorites, err := getFavorites(s, relatedTaskIDs, a, FavoriteKindTask)
-	if err != nil {
-		return err
-	}
-
 	// NOTE: while it certainly be possible to run this function on	fullRelatedTasks again, we don't do this for performance reasons.
 
 	// Go through all task relations and put them into the task objects
@@ -633,8 +592,6 @@ func addRelatedTasksToTasks(s *xorm.Session, taskIDs []int64, taskMap map[int64]
 			log.Debugf("Related task not found for task relation: taskID=%d, otherTaskID=%d, relationKind=%v", rt.TaskID, rt.OtherTaskID, rt.RelationKind)
 			continue
 		}
-		fullRelatedTasks[rt.OtherTaskID].IsFavorite = taskFavorites[rt.OtherTaskID]
-
 		// We're duplicating the other task to avoid cycles as these can't be represented properly in json
 		// and would thus fail with an error.
 		otherTask := &Task{}
@@ -693,7 +650,7 @@ func addBucketsToTasks(s *xorm.Session, a web.Auth, taskIDs []int64, taskMap map
 }
 
 // This function takes a map with pointers and returns a slice with pointers to tasks
-// It adds more stuff like assignees/labels/etc to a bunch of tasks
+// It adds more stuff like labels, reminders, and attachments to a bunch of tasks.
 //
 //nolint:gocyclo
 func addMoreInfoToTasks(s *xorm.Session, taskMap map[int64]*Task, a web.Auth, view *ProjectView, expand []TaskCollectionExpandable) (err error) {
@@ -715,11 +672,6 @@ func addMoreInfoToTasks(s *xorm.Session, taskMap map[int64]*Task, a web.Auth, vi
 		projectIDs = append(projectIDs, i.ProjectID)
 	}
 
-	err = addAssigneesToTasks(s, taskIDs, taskMap)
-	if err != nil {
-		return
-	}
-
 	err = addLabelsToTasks(s, taskIDs, taskMap)
 	if err != nil {
 		return
@@ -736,11 +688,6 @@ func addMoreInfoToTasks(s *xorm.Session, taskMap map[int64]*Task, a web.Auth, vi
 	}
 
 	taskReminders, err := getTaskReminderMap(s, taskIDs)
-	if err != nil {
-		return err
-	}
-
-	taskFavorites, err := getFavorites(s, taskIDs, a, FavoriteKindTask)
 	if err != nil {
 		return err
 	}
@@ -824,8 +771,6 @@ func addMoreInfoToTasks(s *xorm.Session, taskMap map[int64]*Task, a web.Auth, vi
 
 		// Build the task identifier from the project identifier and task index
 		task.setIdentifier(projects[task.ProjectID])
-
-		task.IsFavorite = taskFavorites[task.ID]
 
 		if reactions != nil {
 			r, has := reactions[task.ID]
@@ -951,7 +896,7 @@ func setNewTaskIndexes(s *xorm.Session, projectID int64, tasks []*Task) (err err
 
 // Create is the implementation to create a project task
 // @Summary Create a task
-// @Description Inserts a task into a project.
+// @Description Inserts a task into the project identified by the URL. The task remains in that project after creation.
 // @tags task
 // @Accept json
 // @Produce json
@@ -964,11 +909,11 @@ func setNewTaskIndexes(s *xorm.Session, projectID int64, tasks []*Task) (err err
 // @Failure 500 {object} models.Message "Internal error"
 // @Router /projects/{id}/tasks [put]
 func (t *Task) Create(s *xorm.Session, a web.Auth) (err error) {
-	return createTask(s, t, a, true, true)
+	return createTask(s, t, a, true)
 }
 
-func createTask(s *xorm.Session, t *Task, a web.Auth, updateAssignees bool, setBucket bool) (err error) {
-	err = createTasks(s, t.ProjectID, []*Task{t}, a, updateAssignees, setBucket)
+func createTask(s *xorm.Session, t *Task, a web.Auth, setBucket bool) (err error) {
+	err = createTasks(s, t.ProjectID, []*Task{t}, a, setBucket)
 	// Single-create callers expect the raw error type, not the batch wrapper.
 	var berr ErrInvalidTaskInBulkCreation
 	if errors.As(err, &berr) {
@@ -1036,15 +981,9 @@ func resolveProvidedBuckets(s *xorm.Session, a web.Auth, projectID int64, tasks 
 	return taskProvidedBucket, nil
 }
 
-// createTasks inserts row by row because multi-row inserts don't reliably return autoincrement ids on all supported databases.
-func createTasks(s *xorm.Session, projectID int64, tasks []*Task, a web.Auth, updateAssignees bool, setBucket bool) (err error) {
-	if len(tasks) == 0 {
-		return nil
-	}
-
+func prepareTasksForCreation(projectID int64, tasks []*Task) error {
 	for i, t := range tasks {
-		err = validateTaskForCreation(t)
-		if err != nil {
+		if err := validateTaskForCreation(t); err != nil {
 			return ErrInvalidTaskInBulkCreation{Index: i, Err: err}
 		}
 
@@ -1052,43 +991,28 @@ func createTasks(s *xorm.Session, projectID int64, tasks []*Task, a web.Auth, up
 		t.ID = 0
 	}
 
-	// Check if the project exists
-	p, err := GetProjectSimpleByID(s, projectID)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
-	createdBy, err := GetUserOrLinkShareUser(s, a)
-	if err != nil {
-		return err
-	}
-
-	err = setNewTaskIndexes(s, projectID, tasks)
-	if err != nil {
-		return err
-	}
-
+func insertTasksForCreation(s *xorm.Session, tasks []*Task, createdByID int64) error {
 	for _, t := range tasks {
-		t.CreatedByID = createdBy.ID
+		t.CreatedByID = createdByID
+		t.DelegatedTo = ""
 
 		// Generate a uuid if we don't already have one
 		if t.UID == "" {
 			t.UID = uuid.NewString()
 		}
 
-		t.HexColor = utils.NormalizeHex(t.HexColor)
-
-		_, err = s.Insert(t)
-		if err != nil {
+		if _, err := s.Insert(t); err != nil {
 			return err
 		}
 	}
 
-	taskProvidedBucket, err := resolveProvidedBuckets(s, a, projectID, tasks)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
+func persistTaskPositionsAndBuckets(s *xorm.Session, a web.Auth, projectID int64, tasks []*Task, setBucket bool, taskProvidedBucket map[int64]*Bucket) error {
 	views, err := lockProjectViewsForPositionUpdate(s, projectID)
 	if err != nil {
 		return err
@@ -1107,60 +1031,84 @@ func createTasks(s *xorm.Session, projectID int64, tasks []*Task, a web.Auth, up
 	}
 
 	if len(positions) > 0 {
-		err = bulkInsertTaskPositions(s, positions, false)
-		if err != nil {
-			return
+		if err = bulkInsertTaskPositions(s, positions, false); err != nil {
+			return err
 		}
 
-		err = resolvePositionConflictsAfterInsert(s, positions)
-		if err != nil {
-			return
+		if err = resolvePositionConflictsAfterInsert(s, positions); err != nil {
+			return err
 		}
 	}
 
 	if len(taskBuckets) > 0 {
-		_, err = s.Insert(&taskBuckets)
-		if err != nil {
-			return
+		if _, err = s.Insert(&taskBuckets); err != nil {
+			return err
 		}
 	}
 
-	// Link shares can't have subscriptions
-	_, creatorIsUser := a.(*user.User)
+	return nil
+}
 
+func finalizeCreatedTasks(s *xorm.Session, project *Project, tasks []*Task, createdBy *user.User) error {
 	for _, t := range tasks {
 		t.CreatedBy = createdBy
 
-		// Update the assignees
-		if updateAssignees {
-			if err := t.updateTaskAssignees(s, t.Assignees, a); err != nil {
-				return err
-			}
-		}
-
-		// Update the reminders
 		if err := t.updateReminders(s, t); err != nil {
 			return err
 		}
 
-		t.setIdentifier(p)
-
-		if t.IsFavorite {
-			if err := addToFavorites(s, t.ID, createdBy, FavoriteKindTask); err != nil {
-				return err
-			}
-		}
-
-		if creatorIsUser {
-			if err := subscribeUserImplicitly(s, SubscriptionEntityTask, t.ID, createdBy); err != nil {
-				return err
-			}
-		}
+		t.setIdentifier(project)
 
 		events.DispatchOnCommit(s, &TaskCreatedEvent{
 			Task: t,
 			Doer: createdBy,
 		})
+	}
+
+	return nil
+}
+
+// createTasks inserts row by row because multi-row inserts don't reliably return autoincrement ids on all supported databases.
+func createTasks(s *xorm.Session, projectID int64, tasks []*Task, a web.Auth, setBucket bool) (err error) {
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	if err = prepareTasksForCreation(projectID, tasks); err != nil {
+		return err
+	}
+
+	// Check if the project exists
+	p, err := GetProjectSimpleByID(s, projectID)
+	if err != nil {
+		return err
+	}
+
+	createdBy, err := GetUserOrLinkShareUser(s, a)
+	if err != nil {
+		return err
+	}
+
+	err = setNewTaskIndexes(s, projectID, tasks)
+	if err != nil {
+		return err
+	}
+
+	if err = insertTasksForCreation(s, tasks, createdBy.ID); err != nil {
+		return err
+	}
+
+	taskProvidedBucket, err := resolveProvidedBuckets(s, a, projectID, tasks)
+	if err != nil {
+		return err
+	}
+
+	if err = persistTaskPositionsAndBuckets(s, a, projectID, tasks, setBucket, taskProvidedBucket); err != nil {
+		return err
+	}
+
+	if err = finalizeCreatedTasks(s, p, tasks, createdBy); err != nil {
+		return err
 	}
 
 	events.DispatchOnCommit(s, &TasksBatchCreatedEvent{
@@ -1261,7 +1209,7 @@ func setTasksInBucketInViews(s *xorm.Session, views []*ProjectView, tasks []*Tas
 
 // Update updates a project task
 // @Summary Update a task
-// @Description Updates a task. This includes marking it as done. Assignees you pass will be updated, see their individual endpoints for more details on how this is done. To update labels, see the description of the endpoint.
+// @Description Updates a task. This includes marking it as done. The task's project is assigned on creation and cannot be changed. The authenticated user remains the system owner; use the delegation endpoint for an external person. To update labels, see the description of the endpoint.
 // @tags task
 // @Accept json
 // @Produce json
@@ -1286,10 +1234,12 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	if err != nil {
 		return
 	}
+	t.DelegatedTo = ot.DelegatedTo
 
-	if t.ProjectID == 0 {
-		t.ProjectID = ot.ProjectID
+	if t.ProjectID != 0 && t.ProjectID != ot.ProjectID {
+		return ErrInvalidTaskColumn{Column: "project_id"}
 	}
+	t.ProjectID = ot.ProjectID
 
 	// Get the stored reminders
 	reminders, err := getRemindersForTasks(s, []int64{t.ID})
@@ -1300,11 +1250,6 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	// Old task has the stored reminders
 	ot.Reminders = reminders
 
-	// Update the assignees
-	if err := ot.updateTaskAssignees(s, t.Assignees, a); err != nil {
-		return err
-	}
-
 	// All columns to update in a separate variable to be able to add to them
 	colsToUpdate := []string{
 		"title",
@@ -1312,12 +1257,8 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 		"done",
 		"due_date",
 		"repeat_after",
-		"priority",
 		"start_date",
 		"end_date",
-		"hex_color",
-		"percent_done",
-		"project_id",
 		"bucket_id",
 		"repeat_mode",
 		"cover_image_attachment_id",
@@ -1356,23 +1297,11 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 		if !fieldSet["repeat_after"] {
 			t.RepeatAfter = ot.RepeatAfter
 		}
-		if !fieldSet["priority"] {
-			t.Priority = ot.Priority
-		}
 		if !fieldSet["start_date"] {
 			t.StartDate = ot.StartDate
 		}
 		if !fieldSet["end_date"] {
 			t.EndDate = ot.EndDate
-		}
-		if !fieldSet["hex_color"] {
-			t.HexColor = ot.HexColor
-		}
-		if !fieldSet["percent_done"] {
-			t.PercentDone = ot.PercentDone
-		}
-		if !fieldSet["project_id"] {
-			t.ProjectID = ot.ProjectID
 		}
 		if !fieldSet["bucket_id"] {
 			t.BucketID = ot.BucketID
@@ -1389,78 +1318,24 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 		return err
 	}
 
-	// If the task is being moved between projects, make sure to move the bucket + index as well
-	if t.ProjectID != 0 && ot.ProjectID != t.ProjectID {
-		t.Index, err = calculateNextTaskIndex(s, t.ProjectID)
-		if err != nil {
-			return err
-		}
-		t.BucketID = 0
-		colsToUpdate = append(colsToUpdate, "index")
-	}
-
 	views := []*ProjectView{}
-	if t.Done != ot.Done || t.ProjectID != ot.ProjectID {
-		// Locks both projects: a move rewrites task_positions in the old project too.
-		_, err = lockProjectViewsForPositionUpdate(s, ot.ProjectID, t.ProjectID)
+	if t.Done != ot.Done {
+		_, err = lockProjectViewsForPositionUpdate(s, ot.ProjectID)
 		if err != nil {
 			return
 		}
 
 		err = s.
 			Where("project_id = ? AND view_kind = ? AND bucket_configuration_mode = ?",
-				t.ProjectID, ProjectViewKindKanban, BucketConfigurationModeManual).
+				ot.ProjectID, ProjectViewKindKanban, BucketConfigurationModeManual).
 			Find(&views)
 		if err != nil {
 			return
 		}
 	}
 
-	// When a task was moved between projects, ensure it is in the correct bucket
-	if t.ProjectID != ot.ProjectID {
-		_, err = s.Where("task_id = ?", t.ID).Delete(&TaskBucket{})
-		if err != nil {
-			return err
-		}
-		_, err = s.Where("task_id = ?", t.ID).Delete(&TaskPosition{})
-		if err != nil {
-			return err
-		}
-
-		for _, view := range views {
-			var bucketID = view.DoneBucketID
-			if bucketID == 0 || !t.Done {
-				bucketID, err = getDefaultBucketID(s, view)
-				if err != nil {
-					return err
-				}
-			}
-
-			tb := &TaskBucket{
-				BucketID:      bucketID,
-				TaskID:        t.ID,
-				ProjectViewID: view.ID,
-				ProjectID:     t.ProjectID,
-			}
-			err = updateTaskBucket(s, a, tb)
-			if err != nil {
-				return err
-			}
-
-			tp, err := calculateNewPositionForTask(s, a, t, view)
-			if err != nil {
-				return err
-			}
-
-			err = updateTaskPosition(s, a, tp)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	// When a task changed its done status, make sure it is in the correct bucket
-	if t.ProjectID == ot.ProjectID && !t.isRepeating() && t.Done != ot.Done {
+	if !t.isRepeating() && t.Done != ot.Done {
 		err = t.moveTaskToDoneBuckets(s, a, views)
 		if err != nil {
 			return
@@ -1470,7 +1345,7 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	// Repeating tasks don't stay in the done bucket — route them back
 	// to the default bucket so the next iteration shows up in the
 	// "To-Do" column. See #2573.
-	if t.ProjectID == ot.ProjectID && t.isRepeating() && !ot.Done && t.Done {
+	if t.isRepeating() && !ot.Done && t.Done {
 		err = t.moveTaskToDefaultBuckets(s, a, views)
 		if err != nil {
 			return
@@ -1525,22 +1400,6 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 		}
 	}
 
-	wasFavorite, err := isFavorite(s, t.ID, a, FavoriteKindTask)
-	if err != nil {
-		return
-	}
-	if t.IsFavorite && !wasFavorite {
-		if err := addToFavorites(s, t.ID, a, FavoriteKindTask); err != nil {
-			return err
-		}
-	}
-
-	if !t.IsFavorite && wasFavorite {
-		if err := removeFromFavorite(s, t.ID, a, FavoriteKindTask); err != nil {
-			return err
-		}
-	}
-
 	// Update the labels
 	//
 	// Maybe FIXME:
@@ -1565,8 +1424,6 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 		return err
 	}
 
-	t.HexColor = utils.NormalizeHex(t.HexColor)
-
 	//////
 	// Mergo does ignore nil values. Because of that, we need to check all parameters and set the updated to
 	// nil/their nil value in the struct which is inserted.
@@ -1574,10 +1431,6 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	// Done
 	if !t.Done {
 		ot.Done = false
-	}
-	// Priority
-	if t.Priority == 0 {
-		ot.Priority = 0
 	}
 	// Description
 	if t.Description == "" {
@@ -1599,21 +1452,9 @@ func (t *Task) updateSingleTask(s *xorm.Session, a web.Auth, fields []string) (e
 	if t.EndDate.IsZero() {
 		ot.EndDate = time.Time{}
 	}
-	// Color
-	if t.HexColor == "" {
-		ot.HexColor = ""
-	}
-	// Percent Done
-	if t.PercentDone == 0 {
-		ot.PercentDone = 0
-	}
 	// Repeat from current date
 	if t.RepeatMode == TaskRepeatModeDefault {
 		ot.RepeatMode = TaskRepeatModeDefault
-	}
-	// Is Favorite
-	if !t.IsFavorite {
-		ot.IsFavorite = false
 	}
 	// Attachment cover image
 	if t.CoverImageAttachmentID == 0 {
@@ -1655,12 +1496,9 @@ func updateTasks(s *xorm.Session, a web.Auth, t *Task, ids []int64, fields []str
 		return nil, fmt.Errorf("could not load projects of tasks to update: %w", err)
 	}
 
-	projectIDs := make([]int64, 0, len(existing)+1)
+	projectIDs := make([]int64, 0, len(existing))
 	for _, et := range existing {
 		projectIDs = append(projectIDs, et.ProjectID)
-	}
-	if t.ProjectID != 0 {
-		projectIDs = append(projectIDs, t.ProjectID)
 	}
 
 	_, err = lockProjectViewsForPositionUpdate(s, projectIDs...)
@@ -2152,17 +1990,6 @@ func (t *Task) Delete(s *xorm.Session, a web.Auth) (err error) {
 // task was soft-deleted by the user.
 func hardDeleteTask(s *xorm.Session, t *Task) (err error) {
 
-	// Delete assignees
-	if _, err = s.Where("task_id = ?", t.ID).Delete(&TaskAssginee{}); err != nil {
-		return err
-	}
-
-	// Favorites of all users, not just the doer's
-	_, err = s.Where("entity_id = ? AND kind = ?", t.ID, FavoriteKindTask).Delete(&Favorite{})
-	if err != nil {
-		return
-	}
-
 	// Delete label associations
 	_, err = s.Where("task_id = ?", t.ID).Delete(&LabelTask{})
 	if err != nil {
@@ -2227,11 +2054,6 @@ func hardDeleteTask(s *xorm.Session, t *Task) (err error) {
 
 	// Delete all reminders
 	_, err = s.Where("task_id = ?", t.ID).Delete(&TaskReminder{})
-	if err != nil {
-		return
-	}
-
-	_, err = s.Where("entity_id = ? AND entity_type = ?", t.ID, SubscriptionEntityTask).Delete(&Subscription{})
 	if err != nil {
 		return
 	}
@@ -2309,14 +2131,6 @@ func (t *Task) ReadOne(s *xorm.Session, a web.Auth) (err error) {
 	}
 
 	*t = *taskMap[t.ID]
-
-	subs, err := GetSubscriptionForUser(s, SubscriptionEntityTask, t.ID, a)
-	if err != nil && IsErrProjectDoesNotExist(err) {
-		return nil
-	}
-	if subs != nil {
-		t.Subscription = &subs.Subscription
-	}
 
 	return
 }

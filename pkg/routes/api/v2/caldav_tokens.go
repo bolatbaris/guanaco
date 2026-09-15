@@ -27,7 +27,7 @@ import (
 
 // CalDAV tokens are scoped to the authenticated user, not a CRUDable resource:
 // there is no per-token Can* method, so these handlers own their own user lookup
-// (user.GetFromAuth refuses link shares) and session/commit lives in the user package.
+// and session/commit lives in the user package.
 
 type caldavTokenListBody struct {
 	Body Paginated[*user.Token]
@@ -44,7 +44,7 @@ func RegisterCalDAVTokenRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "caldav-tokens-create",
 		Summary:     "Generate a CalDAV token",
-		Description: "Generates a CalDAV token for the authenticated user. The clear-text token is returned only in this response and can never be retrieved again. Link shares cannot have CalDAV tokens.",
+		Description: "Generates a CalDAV token for the authenticated user. The clear-text token is returned only in this response and can never be retrieved again.",
 		Method:      http.MethodPost,
 		Path:        "/user/settings/token/caldav",
 		Tags:        tags,

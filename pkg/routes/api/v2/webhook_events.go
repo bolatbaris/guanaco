@@ -31,7 +31,7 @@ type webhookEventsBody struct {
 }
 
 // RegisterWebhookEventRoutes wires the available-webhook-events listing onto the
-// Huma API. Like v1, the whole endpoint only exists when webhooks are enabled.
+// Huma API. The whole endpoint only exists when webhooks are enabled.
 func RegisterWebhookEventRoutes(api huma.API) {
 	if !config.WebhooksEnabled.GetBool() {
 		return

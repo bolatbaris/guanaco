@@ -14,9 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package credentials handles bot-token storage with a keychain → env → file
-// fallback chain. The store is keyed by (server, account); `account` is the
-// bot's username — the human's token is never persisted.
+// Package credentials handles automation-token storage with a keychain → env
+// → file fallback chain. The store is keyed by (server, account).
 package credentials
 
 import (

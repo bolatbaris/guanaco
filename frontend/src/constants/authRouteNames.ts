@@ -5,6 +5,5 @@
  */
 export const AUTH_ROUTE_NAMES = new Set([
 	'user.login',
-	'link-share.auth',
 	'openid.auth',
 ])

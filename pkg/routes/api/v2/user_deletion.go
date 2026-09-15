@@ -75,8 +75,7 @@ func RegisterUserDeletionRoutes(api huma.API) {
 
 func init() { AddRouteRegistrar(RegisterUserDeletionRoutes) }
 
-// authUserFromCtx resolves the full DB user for the authenticated caller, refusing
-// link shares (which have no account to delete) with a 403.
+// authUserFromCtx resolves the full DB user for the authenticated caller.
 func authUserFromCtx(ctx context.Context, s *xorm.Session) (*user.User, error) {
 	a, err := authFromCtx(ctx)
 	if err != nil {

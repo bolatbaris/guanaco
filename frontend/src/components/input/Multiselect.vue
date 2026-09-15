@@ -80,76 +80,89 @@
 		<CustomTransition name="fade">
 			<div
 				v-if="searchResultsVisible"
-				:id="listboxId"
 				class="search-results"
 				:class="{'search-results-inline': inline}"
-				role="listbox"
-				:aria-label="accessibleName"
 			>
-				<BaseButton
-					v-for="(data, index) in filteredSearchResults"
-					:key="index"
-					:ref="(el) => setResult(el, index)"
-					class="search-result-button is-fullwidth"
-					role="option"
-					@keydown.up.prevent="() => preSelect(index - 1)"
-					@keydown.down.prevent="() => preSelect(index + 1)"
-					@keydown.esc="closeAndRefocus"
-					@click.prevent.stop="() => select(data)"
+				<div
+					v-if="noResultsMessageVisible"
+					class="search-result-hint"
+					role="status"
+					aria-live="polite"
 				>
-					<span>
-						<slot
-							name="searchResult"
-							:option="data"
-						>
-							<span class="search-result">{{ label !== '' ? data[label] : data }}</span>
-						</slot>
-					</span>
-					<span
-						v-if="selectPlaceholder.trim()"
-						class="hint-text"
-					>
-						{{ selectPlaceholder }}
-					</span>
-				</BaseButton>
-
-				<BaseButton
-					v-if="creatableAvailable"
-					:ref="(el) => setResult(el, filteredSearchResults.length)"
-					class="search-result-button is-fullwidth is-create-option"
-					role="option"
-					@keydown.up.prevent="() => preSelect(filteredSearchResults.length - 1)"
-					@keydown.down.prevent="() => preSelect(filteredSearchResults.length + 1)"
-					@keydown.esc="closeAndRefocus"
-					@keyup.enter.prevent="create"
-					@click.prevent.stop="create"
-				>
-					<span>
-						<Icon
-							icon="plus"
-							class="create-icon"
-						/>
-						<slot
-							name="searchResult"
-							:option="query"
-						>
-							<span class="search-result">
-								{{ query }}
-							</span>
-						</slot>
-					</span>
-					<span class="hint-text is-always-visible">
-						{{ createPlaceholder }}
-					</span>
-				</BaseButton>
+					{{ noResultsMessage }}
+				</div>
 
 				<div
-					v-if="creationHintVisible"
-					class="search-result-hint"
-					role="option"
-					aria-disabled="true"
+					:id="listboxId"
+					class="search-results-listbox"
+					role="listbox"
+					:aria-label="accessibleName"
 				>
-					{{ creationDisabledMessage }}
+					<BaseButton
+						v-for="(data, index) in filteredSearchResults"
+						:key="index"
+						:ref="(el) => setResult(el, index)"
+						class="search-result-button is-fullwidth"
+						role="option"
+						@keydown.up.prevent="() => preSelect(index - 1)"
+						@keydown.down.prevent="() => preSelect(index + 1)"
+						@keydown.esc="closeAndRefocus"
+						@click.prevent.stop="() => select(data)"
+					>
+						<span>
+							<slot
+								name="searchResult"
+								:option="data"
+							>
+								<span class="search-result">{{ label !== '' ? data[label] : data }}</span>
+							</slot>
+						</span>
+						<span
+							v-if="selectPlaceholder.trim()"
+							class="hint-text"
+						>
+							{{ selectPlaceholder }}
+						</span>
+					</BaseButton>
+
+					<BaseButton
+						v-if="creatableAvailable"
+						:ref="(el) => setResult(el, filteredSearchResults.length)"
+						class="search-result-button is-fullwidth is-create-option"
+						role="option"
+						@keydown.up.prevent="() => preSelect(filteredSearchResults.length - 1)"
+						@keydown.down.prevent="() => preSelect(filteredSearchResults.length + 1)"
+						@keydown.esc="closeAndRefocus"
+						@keyup.enter.prevent="create"
+						@click.prevent.stop="create"
+					>
+						<span>
+							<Icon
+								icon="plus"
+								class="create-icon"
+							/>
+							<slot
+								name="searchResult"
+								:option="query"
+							>
+								<span class="search-result">
+									{{ query }}
+								</span>
+							</slot>
+						</span>
+						<span class="hint-text is-always-visible">
+							{{ createPlaceholder }}
+						</span>
+					</BaseButton>
+
+					<div
+						v-if="creationHintVisible"
+						class="search-result-hint"
+						role="option"
+						aria-disabled="true"
+					>
+						{{ creationDisabledMessage }}
+					</div>
 				</div>
 			</div>
 		</CustomTransition>
@@ -183,6 +196,10 @@ const props = withDefaults(defineProps<{
 	name?: string
 	/** If true, will provide an 'add this as a new value' entry which  fires an @create event when clicking on it. */
 	creatable?: boolean
+	/** When set, shows a non-interactive row when a non-empty query has no results. */
+	noResultsMessage?: string
+	/** If true, exact matches ignore surrounding/repeated whitespace and letter casing. */
+	normalizeExactMatch?: boolean
 	/** When set and `creatable` is false, shows a non-interactive hint row explaining why a non-matching query can't be added. */
 	creationDisabledMessage?: string
 	/** The text shown next to the new value option. */
@@ -199,6 +216,8 @@ const props = withDefaults(defineProps<{
 	searchDelay?: number
 	/** If true, closes the dropdown after an entry is selected */
 	closeAfterSelect?: boolean
+	/** If true, allows clearing a selected single value. */
+	clearable?: boolean
 	/** If false, the search input will get the autocomplete="off" attributes attached to it. */
 	autocompleteEnabled?: boolean
 	/** If true, disables the multiselect input */
@@ -211,6 +230,8 @@ const props = withDefaults(defineProps<{
 	searchResults: () => [] as T[],
 	label: '',
 	creatable: false,
+	noResultsMessage: '',
+	normalizeExactMatch: false,
 	creationDisabledMessage: '',
 	createPlaceholder: () => useI18n().t('input.multiselect.createPlaceholder'),
 	selectPlaceholder: () => useI18n().t('input.multiselect.selectPlaceholder'),
@@ -219,6 +240,7 @@ const props = withDefaults(defineProps<{
 	showEmpty: false,
 	searchDelay: 200,
 	closeAfterSelect: true,
+	clearable: true,
 	autocompleteEnabled: true,
 	disabled: false,
 	id: undefined,
@@ -250,13 +272,19 @@ const listboxId = useId()
 
 const accessibleName = computed(() => props.ariaLabel || props.placeholder || undefined)
 
+function normalizeExactMatchValue(value: string): string {
+	return value.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
 function elementInResults(elem: string | T, label: string, query: string): boolean {
 	// Don't make create available if we have an exact match in our search results.
-	if (label !== '') {
-		return (elem as Record<string, unknown>)[label] === query
+	const value = label !== '' ? (elem as Record<string, unknown>)[label] : elem
+
+	if (!props.normalizeExactMatch || typeof value !== 'string') {
+		return value === query
 	}
 
-	return elem === query
+	return normalizeExactMatchValue(value) === normalizeExactMatchValue(query)
 }
 
 const query = ref<string | T>('')
@@ -288,7 +316,8 @@ const searchResultsVisible = computed(() => {
 	return showSearchResults.value && (
 		(filteredSearchResults.value.length > 0) ||
 		(props.creatable && query.value !== '') ||
-		creationHintVisible.value
+		creationHintVisible.value ||
+		noResultsMessageVisible.value
 	)
 })
 
@@ -299,10 +328,12 @@ const queryHasExactMatch = computed(() => {
 	return hasResult || hasQueryAlreadyAdded
 })
 
-const creatableAvailable = computed(() => props.creatable && query.value !== '' && !queryHasExactMatch.value)
+const creatableAvailable = computed(() => props.creatable && query.value !== '' && !queryHasExactMatch.value && !props.loading && !localLoading.value)
 
 // Shown in place of the create option when creation is disabled and the query matches nothing, so the field doesn't look dead.
-const creationHintVisible = computed(() => props.creationDisabledMessage !== '' && !props.creatable && query.value !== '' && !queryHasExactMatch.value)
+const creationHintVisible = computed(() => props.creationDisabledMessage !== '' && !props.creatable && query.value !== '' && !queryHasExactMatch.value && !props.loading && !localLoading.value)
+
+const noResultsMessageVisible = computed(() => props.noResultsMessage.trim() !== '' && query.value !== '' && filteredSearchResults.value.length === 0 && !props.loading && !localLoading.value)
 
 const filteredSearchResults = computed(() => {
 	const currentInternal = internalValue.value
@@ -317,7 +348,7 @@ const hasMultiple = computed(() => {
 	return props.multiple && Array.isArray(internalValue.value) && internalValue.value.length > 0
 })
 
-const removalAvailable = computed(() => !props.multiple && internalValue.value !== null && query.value !== '' && !(props.loading || localLoading.value))
+const removalAvailable = computed(() => props.clearable && !props.multiple && internalValue.value !== null && query.value !== '' && !(props.loading || localLoading.value))
 function resetSelectedValue() {
 	select(null)
 }
@@ -508,7 +539,7 @@ function preSelect(index: number) {
 }
 
 function create() {
-	if (query.value === '') {
+	if (query.value === '' || !creatableAvailable.value) {
 		return
 	}
 

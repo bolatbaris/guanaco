@@ -59,9 +59,9 @@ func RegisterNotificationsFeedRoutes(api huma.API) {
 
 func init() { AddRouteRegistrar(RegisterNotificationsFeedRoutes) }
 
-// notificationsAtomFeed authenticates with HTTP Basic (sharing the feeds
-// validator) and streams the Atom feed; there is no handler.Do* for a non-JSON
-// body and the auth can't ride the group's JWT middleware.
+// notificationsAtomFeed authenticates with HTTP Basic and streams the Atom
+// feed; there is no handler.Do* for a non-JSON body and the auth can't ride the
+// group's JWT middleware.
 func notificationsAtomFeed(ctx context.Context, _ *struct{}) (*huma.StreamResponse, error) {
 	c, ok := ctx.Value(humabridge.EchoContextKey).(*echo.Context)
 	if !ok {

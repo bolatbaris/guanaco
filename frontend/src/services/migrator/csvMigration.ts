@@ -13,7 +13,6 @@ export type TaskAttribute =
 	| 'start_date'
 	| 'end_date'
 	| 'done'
-	| 'priority'
 	| 'labels'
 	| 'project'
 	| 'reminder'
@@ -26,7 +25,6 @@ export const TASK_ATTRIBUTES: TaskAttribute[] = [
 	'start_date',
 	'end_date',
 	'done',
-	'priority',
 	'labels',
 	'project',
 	'reminder',
@@ -58,7 +56,6 @@ export interface PreviewTask {
 	start_date?: string
 	end_date?: string
 	done: boolean
-	priority: number
 	labels?: string[]
 	project?: string
 }

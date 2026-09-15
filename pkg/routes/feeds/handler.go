@@ -36,13 +36,12 @@ import (
 
 const feedItemLimit = 50
 
-// AtomContentType is the content type of the notifications Atom feed. Shared so
-// the v1 echo handler and the v2 Huma op set the same header.
+// AtomContentType is the content type of the notifications Atom feed.
 const AtomContentType = "application/atom+xml; charset=utf-8"
 
 // BuildNotificationsAtomFeed renders the user's latest notifications as Atom XML
 // against an existing session. Notifications are not marked as read by being
-// fetched here. Shared by the v1 echo handler and the v2 Huma op.
+// fetched here.
 func BuildNotificationsAtomFeed(s *xorm.Session, u *user.User) (string, error) {
 	filter, err := models.NotificationProjectFilter(s, u)
 	if err != nil {

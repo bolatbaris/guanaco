@@ -253,7 +253,7 @@ const statusOptions = computed(() => [
 async function load() {
 	loading.value = true
 	try {
-		const params = searchTerm.value ? {s: searchTerm.value} : {}
+		const params = searchTerm.value ? {q: searchTerm.value} : {}
 		users.value = await adminUserService.getAll(new AdminUserModel(), params, currentPage.value)
 		totalPages.value = adminUserService.totalPages || 1
 	} catch (e) {

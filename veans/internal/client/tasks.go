@@ -126,7 +126,7 @@ func (c *Client) CreateTask(ctx context.Context, projectID int64, t *Task) (*Tas
 // UpdateTask partially updates a task via PATCH /tasks/{id} with a JSON Merge
 // Patch body: only the fields set on `patch` are written, the rest are left
 // intact (the fix for issue #2962, where a status-only update used to zero
-// description and priority). This endpoint does NOT move tasks between
+// task fields). This endpoint does NOT move tasks between
 // buckets — the task↔bucket relation is row-shaped in task_buckets, and
 // bucket_id on the request body is ignored. Use MoveTaskToBucket() for that.
 // The server still auto-flips the bucket when `done` toggles, between the

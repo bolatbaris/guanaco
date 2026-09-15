@@ -93,19 +93,6 @@
       "remember": "Stay logged in"
     },
     "settings": {
-      "bots": {
-        "title": "Bot Users",
-        "description": "Bot users are API-only users you own. They can be added to projects, assigned tasks, and authenticated with API tokens. They cannot log in interactively.",
-        "namePlaceholder": "My Assistant",
-        "create": "Create bot",
-        "enable": "Enable",
-        "badge": "Bot",
-        "delete": {
-          "header": "Delete this bot user",
-          "text1": "Are you sure you want to delete the bot user \"{username}\"?",
-          "text2": "This is irreversible. Any API tokens belonging to this bot will be revoked."
-        }
-      },
       "title": "Settings",
       "currentPassword": "Current password",
       "currentPasswordPlaceholder": "Your current password",
@@ -150,7 +137,6 @@
         "quickAddDefaultRemindersHint": "Add one or more reminders relative to the task's due date. Leave empty to disable.",
         "filterUsedOnOverview": "Saved filter used on the overview page",
         "showLastViewed": "Show last viewed projects on the overview page",
-        "minimumPriority": "Minimum visible task priority",
         "dateDisplay": "Date display format",
         "dateDisplayOptions": {
           "relative": "Relative (e.g. 3 days ago)",
@@ -345,9 +331,17 @@
     "myOpenTasksFilterTitle": "My Open Tasks",
     "favorite": "Mark this project as favorite",
     "unfavorite": "Remove this project from favorites",
+    "subscription": {
+      "subscribedThroughParentProject": "You are subscribed to this project through a parent project. Unsubscribing here stops notifications for this project and everything in it.",
+      "subscribed": "You are currently subscribed to this project and will receive notifications for changes.",
+      "notSubscribed": "You are not subscribed to this project and won't receive notifications for changes.",
+      "subscribe": "Subscribe",
+      "unsubscribe": "Unsubscribe",
+      "subscribeSuccess": "You are now subscribed to this project",
+      "unsubscribeSuccess": "You are now unsubscribed to this project"
+    },
     "openSettingsMenu": "Open project settings menu",
     "description": "Project description",
-    "favoriteDescription": "This project has all tasks marked as favorites.",
     "create": {
       "header": "New project",
       "titlePlaceholder": "The project's title goes here…",
@@ -601,14 +595,10 @@
         "canUseDatemath": "You can use date math to set relative dates. Click on the date value in a query to find out more.",
         "fields": {
           "done": "Whether the task is completed or not",
-          "priority": "The priority level of the task (1-5)",
-          "percentDone": "The percentage of completion for the task (0-100)",
           "dueDate": "The due date of the task",
           "startDate": "The start date of the task",
           "endDate": "The end date of the task",
           "doneAt": "The date and time when the task was completed",
-          "assignees": "The assignees of the task",
-          "createdBy": "The user who created the task (matched by username)",
           "labels": "The labels associated with the task",
           "project": "The project the task belongs to (only available for saved filters, not on a project level)",
           "reminders": "The reminders of the task as a date field, will return all tasks with at least one reminder matching the query",
@@ -635,12 +625,7 @@
         },
         "examples": {
           "intro": "Here are some examples of filter queries:",
-          "priorityEqual": "Matches tasks with priority level 4",
-          "dueDatePast": "Matches tasks with a due date in the past",
-          "undoneHighPriority": "Matches undone tasks with priority level 3 or higher",
-          "assigneesIn": "Matches tasks assigned to either \"user1\" or \"user2\"",
-          "createdByEqual": "Matches tasks created by \"user1\"",
-          "priorityOneOrTwoPastDue": "Matches tasks with priority level 1 or 2 and a due date in the past"
+          "dueDatePast": "Matches tasks with a due date in the past"
         }
       }
     }
@@ -652,16 +637,12 @@
     "options": {
       "titleAsc": "Title (A–Z)",
       "titleDesc": "Title (Z–A)",
-      "priorityDesc": "Priority (Highest first)",
-      "priorityAsc": "Priority (Lowest first)",
       "dueDateAsc": "Due date (Earliest first)",
       "dueDateDesc": "Due date (Latest first)",
       "startDateAsc": "Start date (Earliest first)",
       "startDateDesc": "Start date (Latest first)",
       "endDateAsc": "End date (Earliest first)",
       "endDateDesc": "End date (Latest first)",
-      "percentDoneDesc": "% done (Most done first)",
-      "percentDoneAsc": "% done (Least done first)",
       "createdDesc": "Created (Newest first)",
       "createdAsc": "Created (Oldest first)",
       "updatedDesc": "Updated (Newest first)",
@@ -743,16 +724,6 @@
       "color": "Color"
     }
   },
-  "sharing": {
-    "authenticating": "Authenticating…",
-    "passwordRequired": "This shared project requires a password. Please enter it below:",
-    "error": "An error occurred.",
-    "invalidPassword": "The password is invalid.",
-    "accessDenied": "Access denied. Please check your permissions and try again.",
-    "serverError": "Server error occurred. Please try again later.",
-    "projectLoadError": "Failed to load project information.",
-    "retry": "Retry"
-  },
   "navigation": {
     "overview": "Overview",
     "upcoming": "Upcoming",
@@ -774,7 +745,6 @@
     "disable": "Disable",
     "copy": "Copy to clipboard",
     "copyError": "Copy to clipboard failed",
-    "searchPlaceholder": "Type to search…",
     "previous": "Previous",
     "next": "Next",
     "poweredBy": "Powered by Vikunja",
@@ -810,8 +780,7 @@
     "skipToContent": "Skip to main content",
     "sortBy": "Sort by",
     "dateRange": "Date range",
-    "notSet": "Not set",
-    "user": "User"
+    "notSet": "Not set"
   },
   "input": {
     "projectColor": "Project color",
@@ -975,7 +944,6 @@
     "doneSuccess": "The task was successfully marked as done.",
     "undoneSuccess": "The task was successfully un-marked as done.",
     "readOnlyCheckbox": "You only have read access to this task and cannot mark it as done.",
-    "movedToProject": "The task was moved to {project}.",
     "undo": "Undo",
     "checklistTotal": "{checked} of {total} tasks",
     "checklistAllDone": "{total} tasks",
@@ -998,8 +966,6 @@
       "removeStartDate": "Remove start date",
       "removeEndDate": "Remove end date",
       "removeRepeat": "Remove repeat interval",
-      "removeAssignee": "Remove {user} as assignee",
-      "move": "Move task to a different project",
       "done": "Mark task done!",
       "undone": "Mark as undone",
       "created": "Created {0} by {1}",
@@ -1028,29 +994,20 @@
         "text2": "This will also remove all attachments, reminders and relations associated with this task and cannot be undone!"
       },
       "actions": {
-        "assign": "Assign to User",
         "label": "Add Labels",
-        "priority": "Set Priority",
         "dueDate": "Set Due Date",
         "startDate": "Set Start Date",
         "endDate": "Set End Date",
         "reminders": "Set Reminders",
         "repeatAfter": "Set Repeating Interval",
-        "percentDone": "Set Progress",
         "attachments": "Add Attachments",
         "timeTracking": "Track time",
         "relatedTasks": "Add Relation",
-        "moveProject": "Move",
         "duplicate": "Duplicate",
-        "color": "Set Color",
-        "delete": "Delete",
-        "favorite": "Add to Favorites",
-        "unfavorite": "Remove from Favorites"
+        "delete": "Delete"
       }
     },
     "attributes": {
-      "assignees": "Assignees",
-      "color": "Color",
       "created": "Created",
       "createdBy": "Created By",
       "description": "Description",
@@ -1058,8 +1015,6 @@
       "dueDate": "Due Date",
       "endDate": "End Date",
       "labels": "Labels",
-      "percentDone": "Progress",
-      "priority": "Priority",
       "project": "Project",
       "relatedTasks": "Related Tasks",
       "reminders": "Reminders",
@@ -1071,20 +1026,6 @@
       "title": "Title",
       "updated": "Updated",
       "doneAt": "Done At"
-    },
-    "subscription": {
-      "subscribedTaskThroughProject": "You are subscribed to this task through its project. Unsubscribing here only stops notifications for this task.",
-      "subscribedProjectThroughParentProject": "You are subscribed to this project through a parent project. Unsubscribing here stops notifications for this project and everything in it.",
-      "subscribedProject": "You are currently subscribed to this project and will receive notifications for changes.",
-      "notSubscribedProject": "You are not subscribed to this project and won't receive notifications for changes.",
-      "subscribedTask": "You are currently subscribed to this task and will receive notifications for changes.",
-      "notSubscribedTask": "You are not subscribed to this task and won't receive notifications for changes.",
-      "subscribe": "Subscribe",
-      "unsubscribe": "Unsubscribe",
-      "subscribeSuccessProject": "You are now subscribed to this project",
-      "unsubscribeSuccessProject": "You are now unsubscribed to this project",
-      "subscribeSuccessTask": "You are now subscribed to this task",
-      "unsubscribeSuccessTask": "You are now unsubscribed to this task"
     },
     "attachment": {
       "title": "Attachments",
@@ -1122,9 +1063,6 @@
       "jumpToOriginal": "Jump to original comment",
       "deletedComment": "deleted comment"
     },
-    "mention": {
-      "noUsersFound": "No users found"
-    },
     "deferDueDate": {
       "title": "Defer due date",
       "1day": "1 day",
@@ -1134,16 +1072,29 @@
     "description": {
       "placeholder": "Enter a description, hit '/' for more options…"
     },
-    "assignee": {
-      "placeholder": "Type to assign a user…",
-      "selectPlaceholder": "Assign this user",
-      "assignSuccess": "The user has been assigned successfully.",
-      "unassignSuccess": "The user has been unassigned successfully."
+    "delegation": {
+      "title": "Delegation",
+      "placeholder": "Type a name to delegate to…",
+      "changePlaceholder": "Change delegated person…",
+      "searchLabel": "Search for a person to delegate to",
+      "selectPlaceholder": "Delegate to this person",
+      "createPlaceholder": "Delegate to this person",
+      "assignTitle": "Assign this task to an external person",
+      "changeTitle": "Change delegated person",
+      "changeAction": "Change delegation",
+      "noResults": "No one found",
+      "currentlyDelegated": "Currently delegated to {name}",
+      "takeBack": "Take back",
+      "takeBackAriaLabel": "Take this task back",
+      "action": "Delegate",
+      "badgeLabel": "Delegated",
+      "badgeAriaLabel": "Task delegated to {name}",
+      "delegateSuccess": "The task was delegated to {name}.",
+      "clearSuccess": "The task has been assigned back to you."
     },
     "label": {
       "placeholder": "Type to add a label…",
       "createPlaceholder": "Add this as new label",
-      "linkShareCannotCreate": "New labels can't be created from a shared link. Only labels already used in this project can be added.",
       "removeLabel": "Remove label {label}",
       "addSuccess": "The label has been added successfully.",
       "removeSuccess": "The label has been removed successfully.",
@@ -1154,14 +1105,6 @@
         "text1": "Are you sure you want to delete this label?",
         "text2": "This will remove it from all tasks and cannot be restored."
       }
-    },
-    "priority": {
-      "unset": "Unset",
-      "low": "Low",
-      "medium": "Medium",
-      "high": "High",
-      "urgent": "Urgent",
-      "doNow": "DO NOW"
     },
     "relation": {
       "add": "Add a New Task Relation",
@@ -1217,7 +1160,7 @@
       "invalidAmount": "Please enter more than 0."
     },
     "quickAddMagic": {
-      "hint": "Use magic prefixes to define due dates, assignees and other task properties.",
+      "hint": "Use magic prefixes to define due dates, labels and other task properties.",
       "quickEntryHint": "Use magic prefixes for dates, labels & more. Open the main Vikunja app and check the tooltip on the task input for more details.",
       "title": "Quick Add Magic",
       "intro": "When creating a task, you can use special keywords to directly add attributes to the newly created task. This allows to add commonly used attributes to tasks much faster.",
@@ -1226,9 +1169,6 @@
       "label2": "Vikunja will first check if the label already exist and create it if not.",
       "label3": "To use spaces, simply add a \" or ' around the label name.",
       "label4": "For example: {prefix}\"Label with spaces\".",
-      "priority1": "To set a task's priority, add a number 1-5, prefixed with a {prefix}.",
-      "priority2": "The higher the number, the higher the priority.",
-      "assignees": "To directly assign the task to a user, add their username prefixed with {prefix} to the task.",
       "project1": "To set a project for the task to appear in, enter its name prefixed with {prefix}.",
       "project2": "This will return an error if the project does not exist.",
       "project3": "To use spaces, simply add a \" or ' around the project name.",
@@ -1260,13 +1200,9 @@
       "dueDate": "Change the due date of this task",
       "attachment": "Add an attachment to this task",
       "related": "Modify related tasks of this task",
-      "color": "Change the color of this task",
-      "move": "Move this task to another project",
       "reminder": "Manage reminders of this task",
       "description": "Toggle editing of the task description",
       "delete": "Delete this task",
-      "priority": "Change the priority of this task",
-      "favorite": "Mark this task as favorite / unfavorite",
       "openProject": "Open the project of this task",
       "save": "Save the current task",
       "copyIdentifier": "Copy task identifier to clipboard",
@@ -1315,7 +1251,6 @@
     "delete": "Delete",
     "unarchive": "Un-Archive",
     "setBackground": "Background settings",
-    "share": "Share",
     "createProject": "Create project",
     "cantArchiveIsDefault": "You cannot archive this because it is your default project.",
     "cantDeleteIsDefault": "You cannot delete this because it is your default project.",
@@ -1350,7 +1285,7 @@
     "notLoggedIn": "Please log in to the main Vikunja window first.",
     "commands": "Commands",
     "placeholder": "Type a command or search…",
-    "hint": "You can use {project} to limit the search to a project. Combine {project} or {label} (labels) with a search query to search for a task with these labels or on that project. Use {assignee} to search for users.",
+    "hint": "You can use {project} to limit the search to a project. Combine {project} or {label} (labels) with a search query to search for a task with these labels or on that project.",
     "tasks": "Tasks",
     "projects": "Projects",
     "labels": "Labels",
@@ -1502,8 +1437,7 @@
       "duration": "Duration"
     },
     "browse": {
-      "selectRange": "Select a range",
-      "userSearch": "Search for a user…"
+      "selectRange": "Select a range"
     }
   },
   "time": {
@@ -1523,9 +1457,6 @@
       "tasks": "Tasks"
     },
     "overview": {
-      "shares": "Shares",
-      "linkSharesShort": "link",
-      "userSharesShort": "user",
       "version": "Version",
       "license": "License",
       "licenseValidUntil": "Valid until",
@@ -1551,7 +1482,6 @@
       "statusDisabled": "Disabled",
       "statusLocked": "Account locked",
       "isAdminLabel": "Administrator",
-      "nameLabel": "Name",
       "saveButton": "Save changes",
       "updatedSuccess": "User {username} updated.",
       "deletedSuccess": "User {username} deleted.",

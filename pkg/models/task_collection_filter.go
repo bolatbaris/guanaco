@@ -500,19 +500,6 @@ func getNativeValueForTaskField(fieldName string, comparator taskFilterComparato
 
 	realFieldName := strings.ReplaceAll(strcase.ToCamel(fieldName), "Id", "ID")
 
-	if realFieldName == "Assignees" || realFieldName == "CreatedBy" {
-		vals := strings.Split(value, ",")
-		valueSlice := make([]string, 0, len(vals))
-		for _, val := range vals {
-			val = strings.TrimSpace(val)
-			if val == "" {
-				continue
-			}
-			valueSlice = append(valueSlice, val)
-		}
-		return nil, valueSlice, nil
-	}
-
 	field, ok := reflect.TypeOf(&Task{}).Elem().FieldByName(realFieldName)
 	if !ok {
 		return nil, nil, ErrInvalidTaskField{TaskField: fieldName}

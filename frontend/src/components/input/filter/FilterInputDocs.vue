@@ -21,14 +21,10 @@ const showDocs = ref(false)
 		<p>{{ $t('filters.query.help.intro') }}</p>
 		<ul>
 			<li><code>done</code>: {{ $t('filters.query.help.fields.done') }}</li>
-			<li><code>priority</code>: {{ $t('filters.query.help.fields.priority') }}</li>
-			<li><code>percentDone</code>: {{ $t('filters.query.help.fields.percentDone') }}</li>
 			<li><code>dueDate</code>: {{ $t('filters.query.help.fields.dueDate') }}</li>
 			<li><code>startDate</code>: {{ $t('filters.query.help.fields.startDate') }}</li>
 			<li><code>endDate</code>: {{ $t('filters.query.help.fields.endDate') }}</li>
 			<li><code>doneAt</code>: {{ $t('filters.query.help.fields.doneAt') }}</li>
-			<li><code>assignees</code>: {{ $t('filters.query.help.fields.assignees') }}</li>
-			<li><code>createdBy</code>: {{ $t('filters.query.help.fields.createdBy') }}</li>
 			<li><code>labels</code>: {{ $t('filters.query.help.fields.labels') }}</li>
 			<li><code>project</code>: {{ $t('filters.query.help.fields.project') }}</li>
 			<li><code>reminders</code>: {{ $t('filters.query.help.fields.reminders') }}</li>
@@ -56,18 +52,7 @@ const showDocs = ref(false)
 		</ul>
 		<p>{{ $t('filters.query.help.examples.intro') }}</p>
 		<ul>
-			<li><code>priority = 4</code>: {{ $t('filters.query.help.examples.priorityEqual') }}</li>
 			<li><code>dueDate &lt; now</code>: {{ $t('filters.query.help.examples.dueDatePast') }}</li>
-			<li>
-				<code>done = false &amp;&amp; priority &gt;= 3</code>:
-				{{ $t('filters.query.help.examples.undoneHighPriority') }}
-			</li>
-			<li><code>assignees in user1, user2</code>: {{ $t('filters.query.help.examples.assigneesIn') }}</li>
-			<li><code>createdBy = user1</code>: {{ $t('filters.query.help.examples.createdByEqual') }}</li>
-			<li>
-				<code>(priority = 1 || priority = 2) &amp;&amp; dueDate &lt;= now</code>:
-				{{ $t('filters.query.help.examples.priorityOneOrTwoPastDue') }}
-			</li>
 		</ul>
 	</Expandable>
 </template>

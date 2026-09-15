@@ -32,19 +32,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func setupMetrics(a *echo.Group) {
+func setupMetrics(e *echo.Echo) {
 	if !config.MetricsEnabled.GetBool() {
 		return
 	}
 
-	metrics.InitMetrics()
-
-	r := a.Group("/metrics")
-	if auth := metricsBasicAuth(); auth != nil {
-		r.Use(auth)
+	auth := metricsBasicAuth()
+	if auth == nil {
+		log.Warningf("Metrics are enabled but metrics.username and metrics.password are both required; /metrics is disabled")
+		return
 	}
 
-	r.GET("", echo.WrapHandler(promhttp.HandlerFor(metrics.GetRegistry(), promhttp.HandlerOpts{})))
+	metrics.InitMetrics()
+	e.GET("/metrics", echo.WrapHandler(promhttp.HandlerFor(metrics.GetRegistry(), promhttp.HandlerOpts{})), auth)
 }
 
 func metricsBasicAuth() echo.MiddlewareFunc {
@@ -68,10 +68,14 @@ func setupPprof(e *echo.Echo) {
 		return
 	}
 
-	r := e.Group("/debug/pprof")
-	if auth := metricsBasicAuth(); auth != nil {
-		r.Use(auth)
+	auth := metricsBasicAuth()
+	if auth == nil {
+		log.Warningf("Pprof is enabled but metrics.username and metrics.password are both required; /debug/pprof is disabled")
+		return
 	}
+
+	r := e.Group("/debug/pprof")
+	r.Use(auth)
 
 	r.GET("/cmdline", echo.WrapHandler(http.HandlerFunc(pprof.Cmdline)))
 	r.GET("/profile", echo.WrapHandler(http.HandlerFunc(pprof.Profile)))

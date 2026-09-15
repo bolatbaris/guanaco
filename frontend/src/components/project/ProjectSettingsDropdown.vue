@@ -71,12 +71,6 @@
 				{{ $t('menu.setBackground') }}
 			</DropdownItem>
 			<DropdownItem
-				:to="{ name: 'project.settings.share', params: { projectId: project.id } }"
-				icon="share-alt"
-			>
-				{{ $t('menu.share') }}
-			</DropdownItem>
-			<DropdownItem
 				:to="{ name: 'project.settings.duplicate', params: { projectId: project.id } }"
 				icon="paste"
 			>

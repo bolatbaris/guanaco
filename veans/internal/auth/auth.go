@@ -86,8 +86,8 @@ func (p *StdPrompter) ReadPassword(prompt string) (string, error) {
 type LoginOptions struct {
 	// Token short-circuits all flows. May be a JWT or a personal API token.
 	Token string
-	// UsePassword forces the legacy POST /login flow even when no password
-	// is set yet (the prompter will ask for it). Useful on instances where
+	// UsePassword forces the password-based POST /login flow even when no
+	// password is set yet (the prompter will ask for it). Useful on instances where
 	// OAuth is disabled or the user prefers entering a password.
 	UsePassword bool
 	// Username / Password / TOTP feed POST /login. If both Username and
@@ -128,7 +128,7 @@ func AcquireHumanToken(ctx context.Context, c *client.Client, opts LoginOptions,
 	return runOAuthFlow(ctx, c, p, w)
 }
 
-// loginWithPassword runs the legacy POST /login path. Kept for instances
+// loginWithPassword runs the password-based POST /login path for instances
 // that have OAuth disabled or for non-interactive `--username` + `--password`
 // invocations in CI.
 func loginWithPassword(ctx context.Context, c *client.Client, opts LoginOptions, p Prompter) (string, error) {

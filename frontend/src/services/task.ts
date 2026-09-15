@@ -3,7 +3,6 @@ import TaskModel from '@/models/task'
 import type {ITask} from '@/modelTypes/ITask'
 import AttachmentService from './attachment'
 
-import {colorFromHex} from '@/helpers/color/colorFromHex'
 import {SECONDS_A_DAY, SECONDS_A_HOUR, SECONDS_A_WEEK} from '@/constants/date'
 import {objectToSnakeCase} from '@/helpers/case'
 import {apiV2Url, AuthenticatedHTTPFactory} from '@/helpers/fetcher'
@@ -13,6 +12,10 @@ import {translatedError} from '@/message'
 
 // Mirrors models.MaxTasksPerBulkCreation on the backend.
 const MAX_TASKS_PER_BULK_CREATION = 100
+
+type ProcessedTaskPayload = Record<string, unknown> & {
+	reminders: {reminder: string | null, relative_period: number, relative_to: string | null}[],
+}
 
 /**
  * Tasks reaching processModel did not necessarily go through the TaskModel
@@ -56,14 +59,31 @@ export default class TaskService extends AbstractService<ITask> {
 	}
 
 	beforeUpdate(model) {
-		return this.processModel(model)
+		const processed = this.processTaskForWrite(model)
+		return {
+			title: processed.title,
+			description: processed.description,
+			done: processed.done,
+			due_date: processed.due_date,
+			start_date: processed.start_date,
+			end_date: processed.end_date,
+			repeat_after: processed.repeat_after,
+			repeat_mode: processed.repeat_mode,
+			bucket_id: processed.bucket_id,
+			cover_image_attachment_id: processed.cover_image_attachment_id,
+			reminders: processed.reminders.map(r => ({
+				reminder: r.reminder,
+				relative_period: r.relative_period,
+				relative_to: r.relative_to,
+			})),
+		}
 	}
 
 	beforeCreate(model) {
 		return this.processModel(model)
 	}
 
-	autoTransformBeforePost(): boolean {
+	autoTransformBeforePut(): boolean {
 		return false
 	}
 
@@ -80,7 +100,7 @@ export default class TaskService extends AbstractService<ITask> {
 	}
 
 	processModel(updatedModel) {
-		const model = {...updatedModel}
+		const model = {...updatedModel} as ITask & Record<string, unknown>
 
 		model.title = model.title?.trim()
 
@@ -107,8 +127,6 @@ export default class TaskService extends AbstractService<ITask> {
 		}
 
 		model.repeatAfter = repeatAfterToSeconds(model.repeatAfter)
-
-		model.hexColor = colorFromHex(model.hexColor ?? '')
 
 		// Do the same for all related tasks. `model` is only a shallow copy, so this
 		// has to build a new object - assigning into relatedTasks would replace the
@@ -140,13 +158,14 @@ export default class TaskService extends AbstractService<ITask> {
 	// The v2 endpoint validates strictly against the task schema and rejects the
 	// frontend-only properties (max_permission, reminder_dates, …) processModel
 	// adds, hence the allowlist.
+	private processTaskForWrite(task: ITask): ProcessedTaskPayload {
+		return this.processModel(task) as unknown as ProcessedTaskPayload
+	}
+
 	private toBulkCreatePayload(task: ITask) {
 		// processModel lies about its return type — it returns the snake_cased
 		// wire format, not an ITask.
-		const processed = this.processModel(task) as unknown as {
-			assignees: {id: number, username: string}[],
-			reminders: {reminder: string | null, relative_period: number, relative_to: string | null}[],
-		} & Record<string, unknown>
+		const processed = this.processTaskForWrite(task)
 		return {
 			title: processed.title,
 			description: processed.description,
@@ -154,17 +173,9 @@ export default class TaskService extends AbstractService<ITask> {
 			due_date: processed.due_date,
 			start_date: processed.start_date,
 			end_date: processed.end_date,
-			priority: processed.priority,
-			hex_color: processed.hex_color,
-			percent_done: processed.percent_done,
 			repeat_after: processed.repeat_after,
 			repeat_mode: processed.repeat_mode,
-			is_favorite: processed.is_favorite,
 			bucket_id: processed.bucket_id,
-			assignees: processed.assignees.map(a => ({
-				id: a.id,
-				username: a.username,
-			})),
 			reminders: processed.reminders.map(r => ({
 				reminder: r.reminder,
 				relative_period: r.relative_period,

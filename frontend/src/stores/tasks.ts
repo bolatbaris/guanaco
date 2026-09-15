@@ -3,19 +3,16 @@ import {acceptHMRUpdate, defineStore} from 'pinia'
 import router from '@/router'
 
 import TaskService from '@/services/task'
-import TaskAssigneeService from '@/services/taskAssignee'
 import TaskDuplicateService from '@/services/taskDuplicateService'
 import TaskDuplicateModel from '@/models/taskDuplicateModel'
 
-import {cleanupItemText, parseTaskText, PREFIXES} from '@/modules/quickAddMagic'
+import {parseTaskText} from '@/modules/quickAddMagic'
 
-import TaskAssigneeModel from '@/models/taskAssignee'
 import TaskModel from '@/models/task'
 import TaskReminderModel from '@/models/taskReminder'
 
 import type {ITask} from '@/modelTypes/ITask'
 import type {ITaskReminder} from '@/modelTypes/ITaskReminder'
-import type {IUser} from '@/modelTypes/IUser'
 import type {IAttachment} from '@/modelTypes/IAttachment'
 import type {IProject} from '@/modelTypes/IProject'
 
@@ -26,7 +23,6 @@ import {useConfigStore} from '@/stores/config'
 import {useProjectStore} from '@/stores/projects'
 import {useKanbanStore} from '@/stores/kanban'
 import {useBaseStore} from '@/stores/base'
-import ProjectUserService from '@/services/projectUsers'
 import {useAuthStore} from '@/stores/auth'
 import TaskCollectionService, {type TaskFilterParams} from '@/services/taskCollection'
 import {getRandomColorHex} from '@/helpers/color/randomColor'
@@ -44,10 +40,6 @@ import {
 	refreshLabels,
 } from '@/client/queries/labels'
 
-interface MatchedAssignee extends IUser {
-	match: string,
-}
-
 export function buildDefaultRemindersForQuickAdd(
 	defaults: readonly ITaskReminder[] | undefined,
 	dueDate: string | null,
@@ -63,37 +55,6 @@ export function buildDefaultRemindersForQuickAdd(
 		relativePeriod: d.relativePeriod,
 		relativeTo: REMINDER_PERIOD_RELATIVE_TO_TYPES.DUEDATE,
 	}))
-}
-
-// IDEA: maybe use a small fuzzy search here to prevent errors
-function findPropertyByValue(object, key, value, fuzzy = false) {
-	return Object.values(object).find(l => {
-		if (fuzzy) {
-			return l[key]?.toLowerCase().includes(value.toLowerCase())
-		}
-	
-		return l[key]?.toLowerCase() === value.toLowerCase()
-	})
-}
-
-// Check if the user exists in the search results
-function validateUser(
-	users: IUser[],
-	query: IUser['username'] | IUser['name'] | IUser['email'],
-) {
-	if (users.length === 1) {
-		return (
-			findPropertyByValue(users, 'username', query, true) ||
-			findPropertyByValue(users, 'name', query, true) ||
-			findPropertyByValue(users, 'email', query, true)
-		)
-	}
-	
-	return (
-		findPropertyByValue(users, 'username', query) ||
-		findPropertyByValue(users, 'name', query) ||
-		findPropertyByValue(users, 'email', query)
-	)
 }
 
 // Check if the label exists
@@ -114,25 +75,6 @@ async function addLabelToTask(task: ITask, label: Label) {
 	return data
 }
 
-async function findAssignees(parsedTaskAssignees: string[], projectId: number): Promise<MatchedAssignee[]> {
-	if (parsedTaskAssignees.length <= 0) {
-		return []
-	}
-
-	const userService = new ProjectUserService()
-	const assignees = parsedTaskAssignees.map(async a => {
-		const users = (await userService.getAll({projectId}, {s: a}))
-			.map(u => ({
-				...u,
-				match: a,
-			}))
-		return validateUser(users, a)
-	})
-
-	const validatedUsers = await Promise.all(assignees) 
-	return validatedUsers.filter((item) => Boolean(item))
-}
-
 export const useTaskStore = defineStore('task', () => {
 	const baseStore = useBaseStore()
 	const kanbanStore = useKanbanStore()
@@ -142,17 +84,12 @@ export const useTaskStore = defineStore('task', () => {
 
 	const tasks = ref<{ [id: ITask['id']]: ITask }>({}) // TODO: or is this ITask[]
 	const isLoading = ref(false)
-	const draggedTask = ref<ITask | null>(null)
 	const lastUpdatedTask = ref<ITask | null>(null)
 
 	const hasTasks = computed(() => Object.keys(tasks.value).length > 0)
 
 	function setIsLoading(newIsLoading: boolean) {
 		isLoading.value = newIsLoading
-	}
-
-	function setDraggedTask(task: ITask | null) {
-		draggedTask.value = task
 	}
 
 	function setTasks(newTasks: ITask[]) {
@@ -232,81 +169,6 @@ export const useTaskStore = defineStore('task', () => {
 			}
 			kanbanStore.setTaskInBucketByIndex(newTask)
 		}
-	}
-
-	async function addAssignee({
-		user,
-		taskId,
-	}: {
-		user: IUser,
-		taskId: ITask['id']
-	}) {
-		const cancel = setModuleLoading(setIsLoading)
-		
-		try {
-			const taskAssigneeService = new TaskAssigneeService()
-			const r = await taskAssigneeService.create(new TaskAssigneeModel({
-				userId: user.id,
-				taskId: taskId,
-			}))
-			const t = kanbanStore.getTaskById(taskId)
-			if (t.task === null) {
-				// Don't try further adding a label if the task is not in kanban
-				// Usually this means the kanban board hasn't been accessed until now.
-				// Vuex seems to have its difficulties with that, so we just log the error and fail silently.
-				console.debug('Could not add assignee to task in kanban, task not found', t)
-				return r
-			}
-
-			kanbanStore.setTaskInBucketByIndex({
-				...t,
-				task: {
-					...t.task,
-					assignees: [
-						...t.task.assignees,
-						user,
-					],
-				},
-			})
-
-			return r
-		} finally {
-			cancel()
-		}
-	}
-
-	async function removeAssignee({
-		user,
-		taskId,
-	}: {
-		user: IUser,
-		taskId: ITask['id']
-	}) {
-		const taskAssigneeService = new TaskAssigneeService()
-		const response = await taskAssigneeService.delete(new TaskAssigneeModel({
-			userId: user.id,
-			taskId: taskId,
-		}))
-		const t = kanbanStore.getTaskById(taskId)
-		if (t.task === null) {
-			// Don't try further adding a label if the task is not in kanban
-			// Usually this means the kanban board hasn't been accessed until now.
-			// Vuex seems to have its difficulties with that, so we just log the error and fail silently.
-			console.debug('Could not remove assignee from task in kanban, task not found', t)
-			return response
-		}
-
-		const assignees = t.task.assignees.filter(({ id }) => id !== user.id)
-
-		kanbanStore.setTaskInBucketByIndex({
-			...t,
-			task: {
-				...t.task,
-				assignees,
-			},
-		})
-		return response
-
 	}
 
 	async function addLabel({
@@ -506,26 +368,13 @@ export const useTaskStore = defineStore('task', () => {
 			throw new Error('NO_PROJECT')
 		}
 
-		const assignees = await findAssignees(parsedTask.assignees, foundProjectId)
-
-		// Only clean up those assignees from the task title which actually exist
-		let cleanedTitle = parsedTask.text
-		if (assignees.length > 0) {
-			const assigneePrefix = PREFIXES[quickAddMagicMode]?.assignee
-			if (assigneePrefix) {
-				cleanedTitle = cleanupItemText(cleanedTitle, assignees.map(a  => a.match), assigneePrefix)
-			}
-		}
-
 		// I don't know why, but it all goes up in flames when I just pass in the date normally.
 		const dueDate = toISOStringOrNull(parsedTask.date)
 
 		const task = new TaskModel({
-			title: cleanedTitle,
+			title: parsedTask.text,
 			projectId: foundProjectId,
 			dueDate,
-			priority: parsedTask.priority,
-			assignees,
 			bucketId: bucketId || 0,
 			position,
 		})
@@ -614,17 +463,6 @@ export const useTaskStore = defineStore('task', () => {
 		})
 	}
 	
-	async function toggleFavorite(task: ITask) {
-		const taskService = new TaskService()
-		task.isFavorite = !task.isFavorite
-		task = await taskService.update(task)
-		
-		// reloading the projects list so that the Favorites project shows up or is hidden when there are (or are not) favorite tasks
-		await projectStore.loadAllProjects() 
-		
-		return task
-	}
-
 	async function duplicateTask(taskId: ITask['id']) {
 		const cancel = setModuleLoading(setIsLoading)
 		try {
@@ -659,19 +497,15 @@ export const useTaskStore = defineStore('task', () => {
 	return {
 		tasks,
 		isLoading,
-		draggedTask,
 		lastUpdatedTask,
 
 		hasTasks,
 
 		setTasks,
-		setDraggedTask,
 		loadTasks,
 		update,
 		delete: deleteTask, // since delete is a reserved word we have to alias here
 		addTaskAttachment,
-		addAssignee,
-		removeAssignee,
 		addLabel,
 		removeLabel,
 		addLabelsToTask,
@@ -680,7 +514,6 @@ export const useTaskStore = defineStore('task', () => {
 		setCoverImage,
 		findProjectId,
 		ensureLabelsExist,
-		toggleFavorite,
 		duplicateTask,
 		markTaskAsRead,
 	}

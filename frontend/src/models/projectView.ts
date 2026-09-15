@@ -12,7 +12,7 @@ export default class ProjectViewModel extends AbstractModel<IProjectView> implem
 		order_by: [],
 		filter: '',
 		filter_include_nulls: true,
-		s: '',
+		q: '',
 	}
 	position = 0
 	
@@ -39,7 +39,7 @@ export default class ProjectViewModel extends AbstractModel<IProjectView> implem
 			order_by: ['asc', 'desc'],
 			filter: 'done = false',
 			filter_include_nulls: true,
-			s: '',
+			q: '',
 		}
 
 		const instance = new ProjectViewModel(data)

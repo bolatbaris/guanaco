@@ -76,8 +76,6 @@ func notificationUsers(n notifications.Notification) []*user.User {
 	switch n := n.(type) {
 	case *TaskCommentNotification:
 		return []*user.User{n.Doer}
-	case *TaskAssignedNotification:
-		return []*user.User{n.Doer, n.Assignee}
 	case *TaskDeletedNotification:
 		return []*user.User{n.Doer}
 	case *TaskCreatedNotification:

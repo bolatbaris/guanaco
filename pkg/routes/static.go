@@ -18,6 +18,7 @@ package routes
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -45,12 +47,32 @@ const (
 	cacheControlNone        = `public, max-age=0, s-maxage=0, must-revalidate`
 	configScriptTagTemplate = `
 <script>
-	window.SENTRY_ENABLED = {{ .SENTRY_ENABLED }}
-	window.SENTRY_DSN = '{{ .SENTRY_DSN }}'
-	window.CUSTOM_LOGO_URL = '{{ .CUSTOM_LOGO_URL }}'
-	window.CUSTOM_LOGO_URL_DARK = '{{ .CUSTOM_LOGO_URL_DARK }}'
+	window.SENTRY_ENABLED = {{ json .SENTRY_ENABLED }}
+	window.SENTRY_DSN = {{ json .SENTRY_DSN }}
+	window.SENTRY_ENVIRONMENT = {{ json .SENTRY_ENVIRONMENT }}
+	window.SENTRY_FRONTEND_TRACES_SAMPLE_RATE = {{ json .SENTRY_FRONTEND_TRACES_SAMPLE_RATE }}
+	window.SENTRY_FRONTEND_REPLAY_SESSION_SAMPLE_RATE = {{ json .SENTRY_FRONTEND_REPLAY_SESSION_SAMPLE_RATE }}
+	window.SENTRY_FRONTEND_REPLAY_ON_ERROR_SAMPLE_RATE = {{ json .SENTRY_FRONTEND_REPLAY_ON_ERROR_SAMPLE_RATE }}
+	window.CUSTOM_LOGO_URL = {{ json .CUSTOM_LOGO_URL }}
+	window.CUSTOM_LOGO_URL_DARK = {{ json .CUSTOM_LOGO_URL_DARK }}
 </script>`
 )
+
+func jsonConfigValue(value any) string {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return "null"
+	}
+	return string(encoded)
+}
+
+func configFloatValue(key config.Key) float64 {
+	value, err := strconv.ParseFloat(key.GetString(), 64)
+	if err != nil {
+		return 0
+	}
+	return value
+}
 
 // Because the files are embedded into the final binary, we can be absolutely sure the etag will never change
 // and we can cache its generation pretty heavily.
@@ -78,18 +100,26 @@ func serveIndexFile(c *echo.Context, assetFs http.FileSystem) (err error) {
 		defer scriptConfigStringLock.Unlock()
 
 		// replace config variables
-		tmpl, err := template.New("config").Parse(configScriptTagTemplate)
+		tmpl, err := template.New("config").Funcs(template.FuncMap{
+			"json": jsonConfigValue,
+		}).Parse(configScriptTagTemplate)
 		if err != nil {
 			return err
 		}
 		var tplOutput bytes.Buffer
-		data := make(map[string]string)
+		data := make(map[string]any)
 
-		data["SENTRY_ENABLED"] = "false"
-		if config.SentryFrontendEnabled.GetBool() {
-			data["SENTRY_ENABLED"] = "true"
+		frontendDsn := strings.TrimSpace(config.SentryFrontendDsn.GetString())
+		frontendSentryEnabled := config.SentryFrontendEnabled.GetBool() && frontendDsn != ""
+		data["SENTRY_ENABLED"] = frontendSentryEnabled
+		data["SENTRY_DSN"] = ""
+		if frontendSentryEnabled {
+			data["SENTRY_DSN"] = frontendDsn
 		}
-		data["SENTRY_DSN"] = config.SentryFrontendDsn.GetString()
+		data["SENTRY_ENVIRONMENT"] = config.SentryEnvironment.GetString()
+		data["SENTRY_FRONTEND_TRACES_SAMPLE_RATE"] = configFloatValue(config.SentryFrontendTracesSampleRate)
+		data["SENTRY_FRONTEND_REPLAY_SESSION_SAMPLE_RATE"] = configFloatValue(config.SentryFrontendReplaySessionSampleRate)
+		data["SENTRY_FRONTEND_REPLAY_ON_ERROR_SAMPLE_RATE"] = configFloatValue(config.SentryFrontendReplayOnErrorSampleRate)
 		data["CUSTOM_LOGO_URL"] = config.ServiceCustomLogoURL.GetString()
 		data["CUSTOM_LOGO_URL_DARK"] = config.ServiceCustomLogoURLDark.GetString()
 
@@ -112,7 +142,7 @@ func serveIndexFile(c *echo.Context, assetFs http.FileSystem) (err error) {
 			publicURL = "/"
 		}
 
-		scriptConfigString = strings.ReplaceAll(scriptConfigString, "'/api/v1'", "'"+publicURL+"api/v1'")
+		scriptConfigString = strings.ReplaceAll(scriptConfigString, "'/api/v2'", jsonConfigValue(publicURL+"api/v2"))
 	}
 
 	reader := strings.NewReader(scriptConfigString)

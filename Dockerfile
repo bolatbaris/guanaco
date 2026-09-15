@@ -10,11 +10,20 @@ RUN npm install -g corepack && corepack enable && \
     pnpm install --frozen-lockfile
 COPY frontend/ ./
 ARG RELEASE_VERSION=dev
-RUN echo "{\"VERSION\": \"${RELEASE_VERSION/-g/-}\"}" > src/version.json && pnpm run build
+ARG SENTRY_URL
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN,required=false \
+    echo "{\"VERSION\": \"${RELEASE_VERSION/-g/-}\"}" > src/version.json && \
+    RELEASE_VERSION="${RELEASE_VERSION}" \
+    SENTRY_URL="${SENTRY_URL}" \
+    SENTRY_ORG="${SENTRY_ORG}" \
+    SENTRY_PROJECT="${SENTRY_PROJECT}" \
+    pnpm run build
 
 FROM --platform=$BUILDPLATFORM ghcr.io/techknowlogick/xgo:go-1.27.x@sha256:8cc742b41f043a4fd45d2f63f1fcd12cb27949342df09efb5561f2aadfbe6da3 AS apibuilder
 
-RUN go install github.com/magefile/mage@latest && \
+RUN go install github.com/magefile/mage@v1.17.2 && \
     mv /go/bin/mage /usr/local/go/bin
 
 WORKDIR /go/src/code.vikunja.io/api
@@ -52,9 +61,17 @@ EXPOSE 3456
 COPY --from=apibuilder --chown=1000:1000 --chmod=1777 /tmp /tmp
 COPY --from=apibuilder --chown=1000:1000 --chmod=755 /tmp/vikunja-files /app/vikunja/files
 
+# Keep the default SQLite path and local file storage writable by the runtime UID.
+RUN mkdir -p /db && chown 1000:1000 /db
+VOLUME ["/db", "/app/vikunja/files"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
+    CMD wget --quiet --tries=1 --output-document=/dev/null http://127.0.0.1:3456/api/v2/health || exit 1
+
 USER 1000
 
 ENV VIKUNJA_SERVICE_ROOTPATH=/app/vikunja/
+ENV VIKUNJA_SERVICE_INTERFACE=0.0.0.0:3456
 ENV VIKUNJA_DATABASE_PATH=/db/vikunja.db
 
 COPY --from=apibuilder /build/vikunja-* vikunja

@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package shared holds helpers used by both the v1 and v2 route packages. It
-// sits above the auth/user modules in the import graph, so it can combine them
-// without creating a cycle.
+// Package shared holds transport-agnostic helpers used by the v2 route package.
+// It sits above the auth/user modules in the import graph, so it can combine
+// them without creating a cycle.
 package shared
 
 import (

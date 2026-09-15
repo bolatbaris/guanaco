@@ -27,6 +27,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"code.vikunja.io/api/pkg/config"
@@ -34,6 +35,8 @@ import (
 	"code.vikunja.io/api/pkg/initialize"
 	"code.vikunja.io/api/pkg/license"
 	"code.vikunja.io/api/pkg/log"
+	"code.vikunja.io/api/pkg/mail"
+	"code.vikunja.io/api/pkg/observability"
 	"code.vikunja.io/api/pkg/plugins"
 	"code.vikunja.io/api/pkg/routes"
 	"code.vikunja.io/api/pkg/utils"
@@ -138,7 +141,9 @@ var webCmd = &cobra.Command{
 	Use:   "web",
 	Short: "Starts the rest api web server",
 	PreRun: func(_ *cobra.Command, _ []string) {
-		initialize.FullInit()
+		if err := initialize.FullInitWithObservability(); err != nil {
+			log.Fatal("Could not initialize observability; check the Sentry configuration")
+		}
 	},
 	Run: func(_ *cobra.Command, _ []string) {
 
@@ -187,7 +192,8 @@ var webCmd = &cobra.Command{
 		// Wait for interrupt signal to gracefully shut down the server with
 		// a timeout of 10 seconds.
 		quit := make(chan os.Signal, 1)
-		signal.Notify(quit, os.Interrupt)
+		signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+		defer signal.Stop(quit)
 		<-quit
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -198,5 +204,9 @@ var webCmd = &cobra.Command{
 		cron.Stop()
 		license.Shutdown() // See the package comment in pkg/license/license.go before removing.
 		plugins.Shutdown()
+		mail.StopMailDaemon()
+		if !observability.Close() {
+			log.Error("Observability shutdown flush timed out; continuing shutdown")
+		}
 	},
 }

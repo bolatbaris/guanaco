@@ -29,6 +29,7 @@ import (
 	"code.vikunja.io/api/pkg/errorreport"
 	"code.vikunja.io/api/pkg/log"
 	vmetrics "code.vikunja.io/api/pkg/metrics"
+	"code.vikunja.io/api/pkg/observability"
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/components/metrics"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -50,7 +51,9 @@ type Event interface {
 const MetadataSkipErrorReporting = "skip_error_reporting"
 
 type messageHandleFailedError struct {
-	Metadata message.Metadata
+	Topic   string
+	Handler string
+	Reason  string
 }
 
 func shouldReportPoisonedMessage(meta message.Metadata) bool {
@@ -58,7 +61,7 @@ func shouldReportPoisonedMessage(meta message.Metadata) bool {
 }
 
 func (m *messageHandleFailedError) Error() string {
-	return fmt.Sprintf("Failed to handle message: %v", m.Metadata)
+	return "failed to handle poisoned message"
 }
 
 // InitEvents sets up everything needed to work with events
@@ -95,17 +98,23 @@ func InitEvents() (err error) {
 		// The payload is deliberately not logged: events can carry credentials and user data.
 		log.Errorf("Error while handling message %s, %s", msg.UUID, meta)
 
-		if config.SentryEnabled.GetBool() && shouldReportPoisonedMessage(msg.Metadata) {
-			failure := &messageHandleFailedError{Metadata: msg.Metadata}
-			sentry.WithScope(func(scope *sentry.Scope) {
+		if observability.Enabled() && shouldReportPoisonedMessage(msg.Metadata) {
+			failure := &messageHandleFailedError{
+				Topic:   errorreport.Normalize(msg.Metadata.Get(middleware.PoisonedTopicKey)),
+				Handler: errorreport.Normalize(msg.Metadata.Get(middleware.PoisonedHandlerKey)),
+				Reason:  errorreport.Normalize(msg.Metadata.Get(middleware.ReasonForPoisonedKey)),
+			}
+			hub := observability.HubFromContext(context.Background())
+			hub.WithScope(func(scope *sentry.Scope) {
 				// The wrapper error itself says nothing about the failure, so group by the handler
 				// that choked and why.
 				errorreport.ApplyFingerprint(scope, failure,
 					"message_handle_failed",
-					msg.Metadata.Get(middleware.PoisonedHandlerKey),
-					errorreport.Normalize(msg.Metadata.Get(middleware.ReasonForPoisonedKey)),
+					failure.Topic,
+					failure.Handler,
+					failure.Reason,
 				)
-				sentry.CaptureException(failure)
+				hub.CaptureException(failure)
 			})
 		}
 		return nil

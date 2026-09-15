@@ -5,9 +5,9 @@ import type { IAvatar } from '@/modelTypes/IAvatar'
 export default class AvatarService extends AbstractService<IAvatar> {
 	constructor() {
 		super({
-			get: '/user/settings/avatar',
-			update: '/user/settings/avatar',
-			create: '/user/settings/avatar/upload',
+			get: '/user/settings/avatar/provider',
+			update: '/user/settings/avatar/provider',
+			create: '/user/settings/avatar',
 		})
 	}
 
@@ -25,6 +25,7 @@ export default class AvatarService extends AbstractService<IAvatar> {
 			blob,
 			'avatar',
 			'avatar.jpg', // This fails without a file name
+			'PUT',
 		)
 	}
 }

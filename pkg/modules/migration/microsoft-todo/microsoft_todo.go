@@ -53,7 +53,6 @@ type apiTokenResponse struct {
 
 type task struct {
 	OdataEtag            string            `json:"@odata.etag"`
-	Importance           string            `json:"importance"`
 	IsReminderOn         bool              `json:"isReminderOn"`
 	Status               string            `json:"status"`
 	Title                string            `json:"title"`
@@ -314,18 +313,6 @@ func convertMicrosoftTodoData(todoData []*project) (vikunjsStructure []*models.P
 			// Description
 			if t.Body != nil && t.Body.ContentType == "text" {
 				task.Description = t.Body.Content
-			}
-
-			// Priority
-			switch t.Importance {
-			case "low":
-				task.Priority = 1
-			case "normal":
-				task.Priority = 2
-			case "high":
-				task.Priority = 3
-			default:
-				task.Priority = 0
 			}
 
 			// Reminders

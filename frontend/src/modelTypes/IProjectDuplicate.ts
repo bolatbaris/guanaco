@@ -5,5 +5,4 @@ export interface IProjectDuplicate extends IAbstract {
 	projectId: number
 	duplicatedProject: IProject | null
 	parentProjectId: IProject['id']
-	duplicateShares: boolean
 }

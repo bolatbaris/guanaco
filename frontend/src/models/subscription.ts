@@ -6,7 +6,7 @@ import type {IUser} from '@/modelTypes/IUser'
 
 export default class SubscriptionModel extends AbstractModel<ISubscription> implements ISubscription {
 	id = 0
-	entity = ''
+	entity = 'project' as const
 	entityId = 0
 	user: IUser = {}
 

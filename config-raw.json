@@ -70,8 +70,8 @@
                 },
                 {
                     "key": "enablelinksharing",
-                    "default_value": "true",
-                    "comment": "Enable sharing of project via a link"
+                    "default_value": "false",
+                    "comment": "Legacy link sharing is disabled in the single-user application"
                 },
                 {
                     "key": "enabletaskattachments",
@@ -155,18 +155,43 @@
                 },
                 {
                     "key": "dsn",
-                    "default_value": "https://440eedc957d545a795c17bbaf477497c@o1047380.ingest.sentry.io/4504254983634944",
-                    "comment": "Configure the Sentry dsn used for api error tracking. Only used when Sentry is enabled for the api."
+                    "default_value": "",
+                    "comment": "Configure the Sentry-compatible DSN used for API error tracking. Only used when Sentry is enabled. Leave empty unless an explicit GlitchTip project is configured."
                 },
                 {
                     "key": "frontendenabled",
                     "default_value": "false",
-                    "comment": "If set to true, enables anonymous error tracking of frontend errors via Sentry. This allows us to gather more\ninformation about errors in order to debug and fix it."
+                    "comment": "If set to true, enables frontend error tracking via the configured Sentry-compatible DSN."
                 },
                 {
                     "key": "frontenddsn",
-                    "default_value": "https://85694a2d757547cbbc90cd4b55c5a18d@o1047380.ingest.sentry.io/6024480",
-                    "comment": "Configure the Sentry dsn used for frontend error tracking. Only used when Sentry is enabled for the frontend."
+                    "default_value": "",
+                    "comment": "Configure the Sentry-compatible DSN used for frontend error tracking. Only used when frontend tracking is enabled. Leave empty unless an explicit GlitchTip project is configured."
+                },
+                {
+                    "key": "environment",
+                    "default_value": "",
+                    "comment": "Environment label attached to Sentry events, for example `beta`. Set explicitly per deployment."
+                },
+                {
+                    "key": "tracesamplerate",
+                    "default_value": "0.05",
+                    "comment": "Fraction of backend performance transactions to sample, from 0 to 1. Error events are not controlled by this setting."
+                },
+                {
+                    "key": "frontendtracesamplerate",
+                    "default_value": "0.05",
+                    "comment": "Fraction of frontend performance transactions to sample, from 0 to 1."
+                },
+                {
+                    "key": "frontendreplaysessionsamplerate",
+                    "default_value": "0",
+                    "comment": "Fraction of frontend sessions to record for replay, from 0 to 1. Keep at 0 until privacy masking and GlitchTip replay support are verified."
+                },
+                {
+                    "key": "frontendreplaysonerrorsamplerate",
+                    "default_value": "0",
+                    "comment": "Fraction of frontend sessions with an error to record for replay, from 0 to 1. Keep at 0 until privacy masking and GlitchTip replay support are verified."
                 }
             ]
         },
@@ -593,7 +618,7 @@
                         {
                             "key": "redirecturl",
                             "default_value": "\u003cservice.publicurl\u003e/migrate/todoist",
-                            "comment": "The url where clients are redirected after they authorized Vikunja to access their Todoist items.\nIn Todoist, this is called `OAuth redirect URL` and it needs to match the url you entered when registering\nyour Vikunja instance at the Todoist developer console.\nWhen using the official Vikunja frontend, set this to `\u003cservice.publicurl\u003e/migrate/todoist` (the default value).\nOtherwise, set this to an url which then makes a request to /api/v1/migration/todoist/migrate\nwith the code obtained from the Todoist api."
+                            "comment": "The url where clients are redirected after they authorized Vikunja to access their Todoist items.\nIn Todoist, this is called `OAuth redirect URL` and it needs to match the url you entered when registering\nyour Vikunja instance at the Todoist developer console.\nWhen using the official Vikunja frontend, set this to `\u003cservice.publicurl\u003e/migrate/todoist` (the default value).\nOtherwise, set this to an url which then makes a request to /api/v2/migration/todoist/migrate\nwith the code obtained from the Todoist api."
                         }
                     ]
                 },
@@ -613,7 +638,7 @@
                         {
                             "key": "redirecturl",
                             "default_value": "\u003cfrontend url\u003e/migrate/trello",
-                            "comment": "The url where clients are redirected after they authorized Vikunja to access their trello cards.\nThis needs to match the url you entered when registering your Vikunja instance at trello.\nWhen using the official Vikunja frontend, set this to `\u003cservice.publicurl\u003e/migrate/trello` (the default value).\nOtherwise, set this to an url which then makes a request to /api/v1/migration/trello/migrate\nwith the code obtained from the Trello api."
+                            "comment": "The url where clients are redirected after they authorized Vikunja to access their trello cards.\nThis needs to match the url you entered when registering your Vikunja instance at trello.\nWhen using the official Vikunja frontend, set this to `\u003cservice.publicurl\u003e/migrate/trello` (the default value).\nOtherwise, set this to an url which then makes a request to /api/v2/migration/trello/migrate\nwith the code obtained from the Trello api."
                         }
                     ]
                 },
@@ -638,7 +663,7 @@
                         {
                             "key": "redirecturl",
                             "default_value": "\u003cfrontend url\u003e/migrate/microsoft-todo",
-                            "comment": "The url where clients are redirected after they authorized Vikunja to access their Microsoft todo tasks.\nThis needs to match the url you entered when registering your Vikunja instance at Microsoft.\nWhen using the official Vikunja frontend, set this to `\u003cservice.publicurl\u003e/migrate/microsoft-todo` (the default value).\nOtherwise, set this to an url which then makes a request to /api/v1/migration/microsoft-todo/migrate\nwith the code obtained from the Microsoft Todo api."
+                            "comment": "The url where clients are redirected after they authorized Vikunja to access their Microsoft todo tasks.\nThis needs to match the url you entered when registering your Vikunja instance at Microsoft.\nWhen using the official Vikunja frontend, set this to `\u003cservice.publicurl\u003e/migrate/microsoft-todo` (the default value).\nOtherwise, set this to an url which then makes a request to /api/v2/migration/microsoft-todo/migrate\nwith the code obtained from the Microsoft Todo api."
                         }
                     ]
                 }
@@ -928,27 +953,27 @@
         },
         {
             "key": "metrics",
-            "comment": "Prometheus metrics endpoint",
+            "comment": "Prometheus metrics and Go profiler endpoints. When enabled, both username and password are required; if either is empty, the /metrics and /debug/pprof/ endpoints remain disabled.",
             "children": [
                 {
                     "key": "enabled",
                     "default_value": "false",
-                    "comment": "If set to true, enables a /metrics endpoint for prometheus to collect metrics about Vikunja. You can query it from `/api/v1/metrics`."
+                    "comment": "If set to true, enables the protected /metrics endpoint for Prometheus to collect metrics about Vikunja, but only when both username and password are non-empty. If either credential is missing, /metrics remains disabled."
                 },
                 {
                     "key": "username",
                     "default_value": "",
-                    "comment": "If set to a non-empty value the /metrics endpoint will require this as a username via basic auth in combination with the password below."
+                    "comment": "Required when metrics.enabled is true. The /metrics and /debug/pprof/ endpoints remain disabled unless this username and the password below are both non-empty."
                 },
                 {
                     "key": "password",
                     "default_value": "",
-                    "comment": "If set to a non-empty value the /metrics endpoint will require this as a password via basic auth in combination with the username below."
+                    "comment": "Required when metrics.enabled is true. The /metrics and /debug/pprof/ endpoints remain disabled unless this password and the username above are both non-empty."
                 },
                 {
                     "key": "pprof",
                     "default_value": "false",
-                    "comment": "If set to true (and metrics are enabled), exposes the Go runtime profiler at `/debug/pprof/`, protected by the same basic auth as the metrics endpoint when username and password are set. Profiles reveal internals of the running process; only enable it on instances that are not reachable from the internet."
+                    "comment": "If set to true, exposes the Go runtime profiler at `/debug/pprof/` only when metrics are enabled and both username and password are non-empty. Otherwise the profiler remains disabled. Profiles reveal internals of the running process; only enable it on instances that are not reachable from the internet."
                 }
             ]
         },

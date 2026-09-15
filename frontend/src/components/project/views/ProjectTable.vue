@@ -35,14 +35,11 @@
 							<FancyCheckbox v-model="activeColumns.title">
 								{{ $t('task.attributes.title') }}
 							</FancyCheckbox>
-							<FancyCheckbox v-model="activeColumns.priority">
-								{{ $t('task.attributes.priority') }}
-							</FancyCheckbox>
 							<FancyCheckbox v-model="activeColumns.labels">
 								{{ $t('task.attributes.labels') }}
 							</FancyCheckbox>
-							<FancyCheckbox v-model="activeColumns.assignees">
-								{{ $t('task.attributes.assignees') }}
+							<FancyCheckbox v-model="activeColumns.delegation">
+								{{ $t('task.delegation.title') }}
 							</FancyCheckbox>
 							<FancyCheckbox v-model="activeColumns.commentCount">
 								{{ $t('task.attributes.commentCount') }}
@@ -55,9 +52,6 @@
 							</FancyCheckbox>
 							<FancyCheckbox v-model="activeColumns.endDate">
 								{{ $t('task.attributes.endDate') }}
-							</FancyCheckbox>
-							<FancyCheckbox v-model="activeColumns.percentDone">
-								{{ $t('task.attributes.percentDone') }}
 							</FancyCheckbox>
 							<FancyCheckbox v-model="activeColumns.doneAt">
 								{{ $t('task.attributes.doneAt') }}
@@ -133,22 +127,11 @@
 											@click="sort('title', $event)"
 										/>
 									</th>
-									<th
-										v-if="activeColumns.priority"
-										:aria-sort="ariaSort(sortBy.priority)"
-									>
-										{{ $t('task.attributes.priority') }}
-										<Sort
-											:order="sortBy.priority"
-											:label="$t('task.attributes.priority')"
-											@click="sort('priority', $event)"
-										/>
-									</th>
 									<th v-if="activeColumns.labels">
 										{{ $t('task.attributes.labels') }}
 									</th>
-									<th v-if="activeColumns.assignees">
-										{{ $t('task.attributes.assignees') }}
+									<th v-if="activeColumns.delegation">
+										{{ $t('task.delegation.title') }}
 									</th>
 									<th
 										v-if="activeColumns.dueDate"
@@ -184,17 +167,6 @@
 											:order="sortBy.end_date"
 											:label="$t('task.attributes.endDate')"
 											@click="sort('end_date', $event)"
-										/>
-									</th>
-									<th
-										v-if="activeColumns.percentDone"
-										:aria-sort="ariaSort(sortBy.percent_done)"
-									>
-										{{ $t('task.attributes.percentDone') }}
-										<Sort
-											:order="sortBy.percent_done"
-											:label="$t('task.attributes.percentDone')"
-											@click="sort('percent_done', $event)"
 										/>
 									</th>
 									<th
@@ -266,23 +238,14 @@
 											</RouterLink>
 										</TaskGlanceTooltip>
 									</td>
-									<td v-if="activeColumns.priority">
-										<PriorityLabel
-											:priority="t.priority"
-											:done="t.done"
-											:show-all="true"
-										/>
-									</td>
 									<td v-if="activeColumns.labels">
 										<Labels :labels="t.labels" />
 									</td>
-									<td v-if="activeColumns.assignees">
-										<AssigneeList
-											v-if="t.assignees.length > 0"
-											:assignees="t.assignees"
-											:avatar-size="28"
-											class="mis-1"
-											:inline="true"
+									<td v-if="activeColumns.delegation">
+										<DelegationBadge
+											v-if="t.delegatedTo"
+											:name="t.delegatedTo"
+											:compact="true"
 										/>
 									</td>
 									<DateTableCell
@@ -300,9 +263,6 @@
 										v-if="activeColumns.endDate"
 										:date="t.endDate"
 									/>
-									<td v-if="activeColumns.percentDone">
-										{{ t.percentDone * 100 }}%
-									</td>
 									<DateTableCell
 										v-if="activeColumns.doneAt"
 										:date="t.doneAt"
@@ -345,7 +305,6 @@ import {useStorage} from '@vueuse/core'
 import ProjectWrapper from '@/components/project/ProjectWrapper.vue'
 import Done from '@/components/misc/Done.vue'
 import User from '@/components/misc/User.vue'
-import PriorityLabel from '@/components/tasks/partials/PriorityLabel.vue'
 import Labels from '@/components/tasks/partials/Labels.vue'
 import TaskGlanceTooltip from '@/components/tasks/partials/TaskGlanceTooltip.vue'
 import DateTableCell from '@/components/tasks/partials/DateTableCell.vue'
@@ -360,7 +319,7 @@ import type {SortBy} from '@/composables/useTaskList'
 import {useTaskList} from '@/composables/useTaskList'
 import type {ITask} from '@/modelTypes/ITask'
 import type {IProject} from '@/modelTypes/IProject'
-import AssigneeList from '@/components/tasks/partials/AssigneeList.vue'
+import DelegationBadge from '@/components/tasks/partials/DelegationBadge.vue'
 import type {IProjectView} from '@/modelTypes/IProjectView'
 import {getTaskIdentifier} from '@/models/task'
 import { camelCase } from 'change-case'
@@ -380,13 +339,11 @@ const ACTIVE_COLUMNS_DEFAULT = {
 	done: true,
 	project: false,
 	title: true,
-	priority: false,
 	labels: true,
-	assignees: true,
+	delegation: true,
 	dueDate: true,
 	startDate: false,
 	endDate: false,
-	percentDone: false,
 	created: false,
 	updated: false,
 	createdBy: false,

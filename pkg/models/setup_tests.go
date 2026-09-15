@@ -54,7 +54,6 @@ func SetupTests() {
 		"link_shares",
 		"projects",
 		"project_ancestors",
-		"task_assignees",
 		"task_attachments",
 		"task_comments",
 		"task_relations",

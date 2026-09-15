@@ -144,21 +144,7 @@ func (share *LinkSharing) toUser() *user.User {
 	}
 }
 
-// Create creates a new link share for a given project
-// @Summary Share a project via link
-// @Description Share a project via link. The user needs to have write-access to the project to be able do this.
-// @tags sharing
-// @Accept json
-// @Produce json
-// @Security JWTKeyAuth
-// @Param project path int true "Project ID"
-// @Param label body models.LinkSharing true "The new link share object"
-// @Success 201 {object} models.LinkSharing "The created link share object."
-// @Failure 400 {object} web.HTTPError "Invalid link share object provided."
-// @Failure 403 {object} web.HTTPError "Not allowed to add the project share."
-// @Failure 404 {object} web.HTTPError "The project does not exist."
-// @Failure 500 {object} models.Message "Internal error"
-// @Router /projects/{project}/shares [put]
+// Create creates a new link share for a given project.
 func (share *LinkSharing) Create(s *xorm.Session, a web.Auth) (err error) {
 
 	err = share.Permission.isValid()
@@ -190,20 +176,7 @@ func (share *LinkSharing) Create(s *xorm.Session, a web.Auth) (err error) {
 	return
 }
 
-// ReadOne returns one share
-// @Summary Get one link shares for a project
-// @Description Returns one link share by its ID.
-// @tags sharing
-// @Accept json
-// @Produce json
-// @Param project path int true "Project ID"
-// @Param share path int true "Share ID"
-// @Security JWTKeyAuth
-// @Success 200 {object} models.LinkSharing "The share links"
-// @Failure 403 {object} web.HTTPError "No access to the project"
-// @Failure 404 {object} web.HTTPError "Share Link not found."
-// @Failure 500 {object} models.Message "Internal error"
-// @Router /projects/{project}/shares/{share} [get]
+// ReadOne returns one share.
 func (share *LinkSharing) ReadOne(s *xorm.Session, _ web.Auth) (err error) {
 	query := s.Where("id = ?", share.ID)
 	if share.ProjectID != 0 {
@@ -226,20 +199,7 @@ func (share *LinkSharing) Update(_ *xorm.Session, _ web.Auth) error {
 	return ErrGenericForbidden{}
 }
 
-// ReadAll returns all shares for a given project
-// @Summary Get all link shares for a project
-// @Description Returns all link shares which exist for a given project
-// @tags sharing
-// @Accept json
-// @Produce json
-// @Param project path int true "Project ID"
-// @Param page query int false "The page number. Used for pagination. If not provided, the first page of results is returned."
-// @Param per_page query int false "The maximum number of items per page. Note this parameter is limited by the configured maximum of items per page."
-// @Param s query string false "Search shares by hash."
-// @Security JWTKeyAuth
-// @Success 200 {array} models.LinkSharing "The share links"
-// @Failure 500 {object} models.Message "Internal error"
-// @Router /projects/{project}/shares [get]
+// ReadAll returns all shares for a given project.
 func (share *LinkSharing) ReadAll(s *xorm.Session, a web.Auth, search string, page int, perPage int) (result interface{}, resultCount int, totalItems int64, err error) {
 	// Don't allow link share authenticated users to list link shares
 	if _, is := a.(*LinkSharing); is {
@@ -307,20 +267,7 @@ func (share *LinkSharing) ReadAll(s *xorm.Session, a web.Auth, search string, pa
 	return shares, len(shares), totalItems, err
 }
 
-// Delete removes a link share
-// @Summary Remove a link share
-// @Description Remove a link share. The user needs to have write-access to the project to be able do this.
-// @tags sharing
-// @Accept json
-// @Produce json
-// @Security JWTKeyAuth
-// @Param project path int true "Project ID"
-// @Param share path int true "Share Link ID"
-// @Success 200 {object} models.Message "The link was successfully removed."
-// @Failure 403 {object} web.HTTPError "Not allowed to remove the link."
-// @Failure 404 {object} web.HTTPError "Share Link not found."
-// @Failure 500 {object} models.Message "Internal error"
-// @Router /projects/{project}/shares/{share} [delete]
+// Delete removes a link share.
 func (share *LinkSharing) Delete(s *xorm.Session, _ web.Auth) (err error) {
 	_, err = s.Where("id = ? AND project_id = ?", share.ID, share.ProjectID).Delete(share)
 	return

@@ -37,7 +37,6 @@ type VikunjaInfos struct {
 	Version                    string            `json:"version" doc:"The Vikunja version this instance runs."`
 	FrontendURL                string            `json:"frontend_url" doc:"The publicly configured frontend URL of this instance."`
 	Motd                       string            `json:"motd" doc:"The message of the day, shown to all users."`
-	LinkSharingEnabled         bool              `json:"link_sharing_enabled" doc:"Whether sharing projects via public links is enabled."`
 	MaxFileSize                string            `json:"max_file_size" doc:"The maximum allowed upload size, as a human-readable string (e.g. 20MB)."`
 	MaxItemsPerPage            int               `json:"max_items_per_page" doc:"The maximum number of items a paginated endpoint returns per page."`
 	AvailableMigrators         []string          `json:"available_migrators" doc:"The migrators enabled on this instance."`
@@ -94,7 +93,6 @@ func BuildInfo() VikunjaInfos {
 		Version:                version.Version,
 		FrontendURL:            config.ServicePublicURL.GetString(),
 		Motd:                   config.ServiceMotd.GetString(),
-		LinkSharingEnabled:     config.ServiceEnableLinkSharing.GetBool(),
 		MaxFileSize:            config.FilesMaxSize.GetString(),
 		MaxItemsPerPage:        config.ServiceMaxItemsPerPage.GetInt(),
 		TaskAttachmentsEnabled: config.ServiceEnableTaskAttachments.GetBool(),

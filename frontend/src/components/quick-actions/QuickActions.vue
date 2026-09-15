@@ -235,14 +235,14 @@ function closeQuickActions() {
 }
 
 const foundProjects = computed(() => {
-	const {project, text, labels, assignees} = parsedQuery.value
+	const {project, text, labels} = parsedQuery.value
 
 	if (project !== null) {
 		return projectStore.searchProjectAndFilter(project ?? text)
 			.filter(p => Boolean(p))
 	}
 
-	if (labels.length > 0 || assignees.length > 0) {
+	if (labels.length > 0) {
 		return []
 	}
 
@@ -384,13 +384,12 @@ const searchMode = computed(() => {
 		return SEARCH_MODE.ALL
 	}
 
-	const {text, project, labels, assignees} = parsedQuery.value
-	if (assignees.length === 0 && text !== '') {
+	const {text, project, labels} = parsedQuery.value
+	if (text !== '') {
 		return SEARCH_MODE.TASKS
 	}
 
 	if (
-		assignees.length === 0 &&
 		project !== null &&
 		text === '' &&
 		labels.length === 0
@@ -449,7 +448,7 @@ function searchTasks() {
 	}
 
 	const params: Partial<TaskFilterParams> = {
-		s: text,
+		q: text,
 		// undone tasks first, most relevant first within each group (relevance is
 		// only honored on backends that can score the search, see the API docs)
 		sort_by: ['done', 'relevance'],

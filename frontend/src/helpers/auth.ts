@@ -1,11 +1,10 @@
-import {apiV2Url, HTTPFactory} from '@/helpers/fetcher'
+import {HTTPFactory} from '@/helpers/fetcher'
 import {isDesktopApp, refreshDesktopToken} from '@/helpers/desktopAuth'
 
 let savedToken: string | null = null
 
 /**
- * Saves a token while optionally saving it to lacal storage. This is used when viewing a link share:
- * It enables viewing multiple link shares indipendently from each in multiple tabs other without overriding any other open ones.
+ * Saves a token while optionally saving it to local storage.
  */
 export const saveToken = (token: string, persist: boolean) => {
 	savedToken = token
@@ -157,21 +156,7 @@ async function doRefresh(persist: boolean): Promise<void> {
 		// We hold the lock and no one else refreshed — make the API call.
 		const HTTP = HTTPFactory()
 		try {
-			let response
-			try {
-				response = await HTTP.post(apiV2Url('user/token/refresh'))
-			} catch (e) {
-				if ((e as {response?: {status?: number}})?.response?.status === 429) {
-					throw e
-				}
-				if (loggedOutSinceStart()) {
-					return
-				}
-				// Pre-v2 browsers only hold the v1-path cookie, and some deployments
-				// can't reach v2 at all; v1 re-seeds both cookies.
-				// Drop this fallback once pre-v2 clients have cycled out.
-				response = await HTTP.post('user/token/refresh')
-			}
+			const response = await HTTP.post('user/token/refresh')
 			if (loggedOutSinceStart()) {
 				return
 			}

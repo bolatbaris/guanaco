@@ -54,34 +54,30 @@ without breaking sessions in unrelated repos.
 2. Asks you to pick a project and a Kanban view.
 3. Bootstraps the canonical buckets if missing: `Todo`, `In Progress`,
    `In Review`, `Done`, `Scrapped`.
-4. Creates a `bot-<repo-name>` user (Vikunja bot user — no password, no
-   email, can't log in interactively).
-5. Shares the project with the bot at read+write.
-6. Mints a long-lived API token for the bot via `PUT /tokens` with
-   `owner_id`, scoped to the discovered route groups (tasks, comments,
-   labels, relations, assignees, etc.) the server actually exposes.
-7. Stores the token in your OS keychain (or
+4. Mints a long-lived, scoped API token for the authenticated user via
+   `POST /tokens`. The project and token have the same owner.
+5. Stores the token in your OS keychain (or
    `~/.config/veans/credentials.yml` if no keychain is available).
-8. Writes `.veans.yml` to the repo root.
+6. Writes `.veans.yml` to the repo root.
 
-The token stored is the bot's, not yours. The human's transient session is
-discarded as soon as init finishes — rotate or revoke the bot independently
-without affecting your own session.
+The token is used by veans as the authenticated user's automation credential.
+The transient session is discarded as soon as init finishes; rotate or revoke
+the automation token independently when needed.
 
 ## Commands
 
 ```
-veans init                     OAuth/login → create bot → mint token → write .veans.yml
+veans init                     OAuth/login → mint token → write .veans.yml
 veans prime                    emit system prompt for agents (silent if no .veans.yml)
-veans list                     filtered list (--ready, --mine, --branch, --filter, --status); emits JSON
+veans list                     filtered list (--ready, --branch, --filter, --status); emits JSON
 veans show <id>                view a task (JSON)
-veans create "title"           --description, --label, --status, --priority, --parent, --blocked-by
-veans update <id>              --status, --title, --priority, --label-add/remove,
+veans create "title"           --description, --label, --status, --parent, --blocked-by
+veans update <id>              --status, --title, --label-add/remove,
                                --description, --description-replace-old/new, --description-append,
                                --comment, --reason, --if-unchanged-since
-veans claim <id>               assign the bot, move to In Progress, tag with current branch label
+veans claim <id>               move to In Progress, tag with current branch label
 veans api METHOD PATH          raw REST passthrough — escape hatch for endpoints not wrapped here
-veans login                    re-mint the bot's token (rotation)
+veans login                    re-mint the automation token (rotation)
 veans version
 ```
 
@@ -90,8 +86,8 @@ Task IDs accept `PROJ-NN` (when the project has an identifier), `#NN`
 
 ## `.veans.yml`
 
-Committed to the repo root. The numeric IDs are the source of truth; cached
-identifiers and bot username are for human-readable output.
+Committed to the repo root. The numeric IDs are the source of truth; the
+account username is used to locate the automation token.
 
 ```yaml
 server: https://vikunja.example.com
@@ -104,9 +100,7 @@ buckets:
   in_review: 13
   done: 14
   scrapped: 15
-bot:
-  username: bot-myrepo
-  user_id: 99
+username: my-account
 ```
 
 ## Credentials
@@ -118,7 +112,7 @@ Resolved in order on every command:
 2. **`VEANS_TOKEN`** env var (read-only). Optionally pin to a server with
    `VEANS_SERVER`. Intended for CI / containers.
 3. **`~/.config/veans/credentials.yml`** (mode 0600) — automatic fallback
-   when the keychain is unavailable. Honors `XDG_CONFIG_HOME`.
+   when the keychain is unavailable.
 
 ## Mage targets
 

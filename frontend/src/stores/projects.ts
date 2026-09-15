@@ -41,7 +41,7 @@ export const useProjectStore = defineStore('project', () => {
 			p.parentProjectId === 0 || isOrphanedSubProject(p)
 		)))
 	const favoriteProjects = computed(() => projectsArray.value
-		.filter(p => !p.isArchived && p.isFavorite))
+		.filter(p => p.id !== -1 && !p.isArchived && p.isFavorite))
 	const savedFilterProjects = computed(() => projectsArray.value
 		.filter(p => !p.isArchived && p.id < -1)
 		.sort((a, b) => a.title.localeCompare(b.title)))
@@ -156,9 +156,8 @@ export const useProjectStore = defineStore('project', () => {
 	}
 
 	function toggleProjectFavorite(project: IProject) {
-		// The favorites pseudo project is always favorite
 		// Archived projects cannot be marked favorite
-		if (project.id === -1 || project.isArchived) {
+		if (project.isArchived) {
 			return
 		}
 
@@ -310,7 +309,6 @@ export const useProjectStore = defineStore('project', () => {
 		})
 	}
 
-	// Add method to ensure single project loading works for link shares
 	async function loadProject(projectId: number) {
 		const project = projects.value[projectId]
 		if (project) {
@@ -387,11 +385,10 @@ export function useProject(projectId: MaybeRefOrGetter<IProject['id']>) {
 		success({message: t('project.edit.success')})
 	}
 	
-	async function duplicateProject(parentProjectId: IProject['id'], duplicateShares: boolean = false) {
+	async function duplicateProject(parentProjectId: IProject['id']) {
 		const projectDuplicate = new ProjectDuplicateModel({
 			projectId: Number(toValue(projectId)),
 			parentProjectId,
-			duplicateShares,
 		})
 
 		const duplicate = await projectDuplicateService.create(projectDuplicate)

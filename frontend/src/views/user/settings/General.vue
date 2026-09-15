@@ -48,15 +48,6 @@
 				/>
 			</FormField>
 			<FormField
-				:label="$t('user.settings.general.minimumPriority')"
-				layout="two-col"
-			>
-				<FormSelect
-					v-model="settings.frontendSettings.minimumPriority"
-					:options="minimumPriorityOptions"
-				/>
-			</FormField>
-			<FormField
 				:label="$t('user.settings.general.defaultDueTime')"
 				layout="two-col"
 			>
@@ -330,7 +321,6 @@ import {useConfigStore} from '@/stores/config'
 import type {IUserSettings} from '@/modelTypes/IUserSettings'
 import {isSavedFilter} from '@/services/savedFilter'
 import {DEFAULT_PROJECT_VIEW_SETTINGS} from '@/modelTypes/IProjectView'
-import {PRIORITIES} from '@/constants/priorities'
 import {DATE_DISPLAY} from '@/constants/dateDisplay'
 import {TIME_FORMAT} from '@/constants/timeFormat'
 import {PRO_FEATURE} from '@/constants/proFeatures'
@@ -355,14 +345,6 @@ const defaultViewOptions = computed(() =>
 		label: t(`project.${view}.title`),
 	})),
 )
-
-const minimumPriorityOptions = computed(() => [
-	{value: PRIORITIES.LOW, label: t('task.priority.low')},
-	{value: PRIORITIES.MEDIUM, label: t('task.priority.medium')},
-	{value: PRIORITIES.HIGH, label: t('task.priority.high')},
-	{value: PRIORITIES.URGENT, label: t('task.priority.urgent')},
-	{value: PRIORITIES.DO_NOW, label: t('task.priority.doNow')},
-])
 
 const weekStartOptions = computed(() => [
 	{value: 0, label: t('user.settings.general.weekStartSunday')},
@@ -429,8 +411,6 @@ const settings = ref<IUserSettings>({
 		...authStore.settings.frontendSettings,
 		// Add fallback for old settings that don't have the default view set
 		defaultView: authStore.settings.frontendSettings.defaultView ?? DEFAULT_PROJECT_VIEW_SETTINGS.FIRST,
-		// Add fallback for old settings that don't have the minimum priority set
-		minimumPriority: authStore.settings.frontendSettings.minimumPriority ?? PRIORITIES.MEDIUM,
 		// Add fallback for old settings that don't have the logo change setting set
 		allowIconChanges: authStore.settings.frontendSettings.allowIconChanges ?? true,
 		dateDisplay: authStore.settings.frontendSettings.dateDisplay ?? DATE_DISPLAY.RELATIVE,

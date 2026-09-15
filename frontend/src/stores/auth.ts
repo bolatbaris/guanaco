@@ -106,16 +106,7 @@ export const useAuthStore = defineStore('auth', () => {
 		)
 	})
 
-	const authLinkShare = computed(() => {
-		return authenticated.value && (
-			info.value &&
-			info.value.type === AUTH_TYPES.LINK_SHARE
-		)
-	})
-
 	const userDisplayName = computed(() => info.value ? getDisplayName(info.value) : undefined)
-	
-	const isLinkShareAuth = computed(() => info.value?.type === AUTH_TYPES.LINK_SHARE)
 
 	// Identity-bound caches survive same-user object replacements.
 	watch(() => [info.value?.id ?? null, info.value?.type ?? null] as const, ([id, type], [prevId, prevType]) => {
@@ -137,7 +128,7 @@ export const useAuthStore = defineStore('auth', () => {
 		// checkAuth() calls this on every navigation; only drop the avatar cache on an actual account change.
 		const userChanged = info.value?.username !== newUser?.username
 		info.value = newUser
-		if (newUser !== null && !isLinkShareAuth.value) {
+		if (newUser !== null) {
 			if (userChanged) {
 				invalidateAvatar()
 			}
@@ -157,6 +148,8 @@ export const useAuthStore = defineStore('auth', () => {
 	}
 	
 	function loadSettings(newSettings: IUserSettings) {
+		const frontendSettings = {...newSettings.frontendSettings}
+
 		settings.value = new UserSettingsModel({
 			...newSettings,
 			frontendSettings: {
@@ -174,7 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
 				commentSortOrder: 'asc',
 				desktopQuickEntryShortcut: 'CmdOrCtrl+Shift+A',
 				defaultDueTime: undefined,
-				...newSettings.frontendSettings,
+				...frontendSettings,
 			},
 		})
 
@@ -276,19 +269,6 @@ export const useAuthStore = defineStore('auth', () => {
 		}
 	}
 
-	async function linkShareAuth({hash, password}) {
-		const HTTP = HTTPFactory()
-		const response = await HTTP.post('/shares/' + hash + '/auth', {
-			password: password,
-		})
-		saveToken(response.data.token, false)
-		// Reset the debounce so checkAuth() actually parses the new link share
-		// JWT instead of silently returning due to the 1-minute throttle.
-		lastUserInfoRefresh.value = null
-		await checkAuth()
-		return response.data
-	}
-
 	/**
 	 * Populates user information from jwt token saved in local storage in store
 	 */
@@ -306,7 +286,6 @@ export const useAuthStore = defineStore('auth', () => {
 
 		const jwt = getToken()
 		let isAuthenticated = false
-		let jwtUserType: number | undefined
 		if (jwt) {
 			try {
 				const base64 = jwt
@@ -315,7 +294,6 @@ export const useAuthStore = defineStore('auth', () => {
 					.replace(/_/g, '/')
 				const payload = JSON.parse(atob(base64))
 				const jwtUser = new UserModel(payload)
-				jwtUserType = jwtUser.type
 				const ts = Math.round((new Date()).getTime() / MILLISECONDS_A_SECOND)
 
 				isAuthenticated = jwtUser.exp >= ts
@@ -326,13 +304,6 @@ export const useAuthStore = defineStore('auth', () => {
 					// user with the same ID *and* type. The JWT lacks fields like
 					// `name`, so overwriting a complete user object causes a visible
 					// flash where the display name briefly reverts to the username.
-					// Comparing on type as well is essential: regular users and link
-					// shares share the same numeric ID space, so a USER and a
-					// LINK_SHARE can have the same `id`. Without the type check, a
-					// logged-in user opening a link share whose id collides with
-					// their user id would keep the USER `info.value` and never flip
-					// `authLinkShare` to true, causing the router guard to bounce
-					// between /share/:hash/auth and the project view forever.
 					if (
 						info.value === null ||
 						info.value.id !== jwtUser.id ||
@@ -370,7 +341,7 @@ export const useAuthStore = defineStore('auth', () => {
 				logout()
 			}
 
-			if (isAuthenticated && jwtUserType !== AUTH_TYPES.LINK_SHARE) {
+			if (isAuthenticated) {
 				const user = await refreshUserInfo()
 				if (!user) {
 					// refreshUserInfo() did not return a user — either the
@@ -502,15 +473,7 @@ export const useAuthStore = defineStore('auth', () => {
 		}
 
 		try {
-			if (isLinkShareAuth.value) {
-				// Link shares renew via the dedicated link-share endpoint (JWT-based).
-				const HTTP = AuthenticatedHTTPFactory()
-				const response = await HTTP.post('user/token')
-				saveToken(response.data.token, false)
-			} else {
-				// User sessions renew via the refresh-token cookie.
-				await refreshTokenWithRetry(true)
-			}
+			await refreshTokenWithRetry(true)
 			await checkAuth()
 		} catch (e) {
 			// Only logout if the JWT has actually expired and we can't refresh.
@@ -578,9 +541,7 @@ export const useAuthStore = defineStore('auth', () => {
 		lastUserInfoRefresh: readonly(lastUserInfoRefresh),
 
 		authUser,
-		authLinkShare,
 		userDisplayName,
-		isLinkShareAuth,
 
 		isLoading: readonly(isLoading),
 		setIsLoading,
@@ -599,7 +560,6 @@ export const useAuthStore = defineStore('auth', () => {
 		login,
 		openIdAuth,
 		handleDesktopOAuthTokens,
-		linkShareAuth,
 		checkAuth,
 		refreshUserInfo,
 		verifyEmail,

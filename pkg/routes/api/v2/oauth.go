@@ -104,8 +104,7 @@ func oauthAuthorize(ctx context.Context, in *struct{ Body oauth2server.Authorize
 
 // requestClientInfo pulls the user agent and client IP off the underlying Echo
 // request so the authorization_code grant (and login) can record them on the
-// session they create, mirroring v1. Both fall back to "" when the context is
-// unavailable.
+// session they create. Both fall back to "" when the context is unavailable.
 func requestClientInfo(ctx context.Context) (deviceInfo, ipAddress string) {
 	ec := echoContextFromCtx(ctx)
 	if ec == nil {

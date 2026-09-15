@@ -45,8 +45,8 @@ type SavedFilter struct {
 	// The user who owns this filter
 	Owner *user.User `xorm:"-" json:"owner" valid:"-" readOnly:"true" doc:"The user who owns this filter; set by the server."`
 
-	// True if the filter is a favorite. Favorite filters show up in a separate parent project together with favorite projects.
-	IsFavorite bool `xorm:"default false" json:"is_favorite" doc:"If true, the filter shows up in the Favorites pseudo-project alongside favorite projects."`
+	// True if the filter is a favorite.
+	IsFavorite bool `xorm:"default false" json:"is_favorite" doc:"Whether this saved filter is marked as a favorite."`
 
 	// A timestamp when this filter was created. You cannot change this value.
 	Created time.Time `xorm:"created not null" json:"created" readOnly:"true" doc:"A timestamp when this filter was created. You cannot change this value."`

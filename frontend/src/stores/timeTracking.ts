@@ -3,7 +3,6 @@ import {acceptHMRUpdate, defineStore} from 'pinia'
 
 import {useWebSocket} from '@/composables/useWebSocket'
 import {useTimeEntryService, parseTimeEntry} from '@/services/timeEntry'
-import {useAuthStore} from '@/stores/auth'
 
 import type {ITimeEntry} from '@/modelTypes/ITimeEntry'
 
@@ -62,14 +61,8 @@ export const useTimeTrackingStore = defineStore('timeTracking', () => {
 
 	// Source of truth on (re)connect: the caller's own running timer, if any.
 	async function hydrateActiveTimer() {
-		const userId = useAuthStore().info?.id
-		if (userId === undefined) {
-			activeTimer.value = null
-			return
-		}
-
 		const {items} = await useTimeEntryService().getAll({
-			filter: `user_id = ${userId} && end_time = null`,
+			filter: 'end_time = null',
 			perPage: 1,
 		})
 		activeTimer.value = items[0] ?? null

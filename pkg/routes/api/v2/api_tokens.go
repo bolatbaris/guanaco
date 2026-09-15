@@ -37,7 +37,7 @@ func RegisterAPITokenRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "tokens-list",
 		Summary:     "List api tokens",
-		Description: "Returns the api tokens owned by the authenticated user. Pass owner_id to list a bot's tokens instead — only bots owned by the caller are allowed.",
+		Description: "Returns the api tokens owned by the authenticated user.",
 		Method:      http.MethodGet,
 		Path:        "/tokens",
 		Tags:        tags,
@@ -46,7 +46,7 @@ func RegisterAPITokenRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "tokens-create",
 		Summary:     "Create an api token",
-		Description: "Creates an api token for the authenticated user, or for a bot they own when owner_id is set. The cleartext token is returned once in this response and is never readable again.",
+		Description: "Creates an api token for the authenticated user. The cleartext token is returned once in this response and is never readable again.",
 		Method:      http.MethodPost,
 		Path:        "/tokens",
 		Tags:        tags,
@@ -55,7 +55,7 @@ func RegisterAPITokenRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "tokens-delete",
 		Summary:     "Delete an api token",
-		Description: "Deletes an api token. The caller may delete their own tokens and tokens belonging to bots they own.",
+		Description: "Deletes one of the authenticated user's api tokens.",
 		Method:      http.MethodDelete,
 		Path:        "/tokens/{id}",
 		Tags:        tags,
@@ -64,15 +64,12 @@ func RegisterAPITokenRoutes(api huma.API) {
 
 func init() { AddRouteRegistrar(RegisterAPITokenRoutes) }
 
-func apiTokensList(ctx context.Context, in *struct {
-	ListParams
-	OwnerID int64 `query:"owner_id" doc:"List tokens of this owner instead of the caller. Must be a bot owned by the authenticated user."`
-}) (*apiTokenListBody, error) {
+func apiTokensList(ctx context.Context, in *ListParams) (*apiTokenListBody, error) {
 	a, err := authFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	result, _, total, err := handler.DoReadAll(ctx, &models.APIToken{OwnerID: in.OwnerID}, a, in.Q, in.Page, in.PerPage)
+	result, _, total, err := handler.DoReadAll(ctx, &models.APIToken{}, a, in.Q, in.Page, in.PerPage)
 	if err != nil {
 		return nil, translateDomainError(err)
 	}

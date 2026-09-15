@@ -1,7 +1,6 @@
 <template>
 	<div
 		:data-task-id="task.id"
-		:data-project-id="task.projectId"
 	>
 		<div
 			ref="taskRoot"
@@ -41,23 +40,10 @@
 						v-tooltip="$t('task.detail.belongsToProject', {project: project.title})"
 						:to="{ name: 'project.index', params: { projectId: task.projectId } }"
 						class="task-project mie-1"
-						:class="{'mie-2': task.hexColor !== ''}"
 						@click.stop
 					>
 						{{ project.title }}
 					</RouterLink>
-
-					<ColorBubble
-						v-if="task.hexColor !== ''"
-						:color="getHexColor(task.hexColor)"
-						class="mie-1"
-					/>
-	
-					<PriorityLabel
-						:priority="task.priority"
-						:done="task.done"
-						class="pis-2 mie-1"
-					/>
 
 					<TaskGlanceTooltip :task="task">
 						<RouterLink
@@ -76,12 +62,11 @@
 					:labels="task.labels"
 				/>
 
-				<AssigneeList
-					v-if="task.assignees.length > 0"
-					:assignees="task.assignees"
-					:avatar-size="25"
+				<DelegationBadge
+					v-if="task.delegatedTo"
+					:name="task.delegatedTo"
+					compact
 					class="mis-1"
-					:inline="true"
 				/>
 
 				<Popup
@@ -141,12 +126,6 @@
 				<ChecklistSummary :task="task" />
 			</div>
 
-			<ProgressBar
-				v-if="task.percentDone > 0"
-				:value="task.percentDone * 100"
-				is-small
-			/>
-
 			<ColorBubble
 				v-if="showProjectSeparately && projectColor !== '' && currentProject?.id !== task.projectId"
 				:color="projectColor"
@@ -163,21 +142,6 @@
 				{{ project.title }}
 			</RouterLink>
 
-			<BaseButton
-				:class="{'is-favorite': task.isFavorite}"
-				class="favorite"
-				@click.stop="toggleFavorite"
-			>
-				<span class="is-sr-only">{{ task.isFavorite ? $t('task.detail.actions.unfavorite') : $t('task.detail.actions.favorite') }}</span>
-				<Icon
-					v-if="task.isFavorite"
-					icon="star"
-				/>
-				<Icon
-					v-else
-					:icon="['far', 'star']"
-				/>
-			</BaseButton>
 			<slot />
 		</div>
 		<template v-if="typeof task.relatedTasks?.subtask !== 'undefined'">
@@ -201,17 +165,15 @@
 import {ref, watch, shallowReactive, onMounted, computed} from 'vue'
 import {useI18n} from 'vue-i18n'
 
-import TaskModel, {getHexColor} from '@/models/task'
+import TaskModel from '@/models/task'
 import type {ITask} from '@/modelTypes/ITask'
 
-import PriorityLabel from '@/components/tasks/partials/PriorityLabel.vue'
 import Labels from '@/components/tasks/partials/Labels.vue'
 import TaskGlanceTooltip from '@/components/tasks/partials/TaskGlanceTooltip.vue'
 import DeferTask from '@/components/tasks/partials/DeferTask.vue'
 import ChecklistSummary from '@/components/tasks/partials/ChecklistSummary.vue'
 import CommentCount from '@/components/tasks/partials/CommentCount.vue'
 
-import ProgressBar from '@/components/misc/ProgressBar.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import FancyCheckbox from '@/components/input/FancyCheckbox.vue'
 import ColorBubble from '@/components/misc/ColorBubble.vue'
@@ -225,7 +187,7 @@ import {success} from '@/message'
 import {useProjectStore} from '@/stores/projects'
 import {useBaseStore} from '@/stores/base'
 import {useTaskStore} from '@/stores/tasks'
-import AssigneeList from '@/components/tasks/partials/AssigneeList.vue'
+import DelegationBadge from '@/components/tasks/partials/DelegationBadge.vue'
 import {useIntervalFn} from '@vueuse/core'
 import {playPopSound} from '@/helpers/playPop'
 import {isEditorContentEmpty} from '@/helpers/editorContentEmpty'
@@ -377,11 +339,6 @@ function undoDone(checked: boolean) {
 	markAsDone(!checked, true)
 }
 
-async function toggleFavorite() {
-	task.value = await taskStore.toggleFavorite(task.value)
-	emit('taskUpdated', task.value)
-}
-
 const taskRoot = ref<HTMLElement | null>(null)
 const taskLinkRef = ref<HTMLElement | null>(null)
 
@@ -392,7 +349,7 @@ function hasTextSelected() {
 
 function openTaskDetail(event: MouseEvent | KeyboardEvent) {
 	if (event.target instanceof HTMLElement) {
-		const isInteractiveElement = event.target.closest('a, button, label, input[type="checkbox"], .favorite, [role="button"]')
+		const isInteractiveElement = event.target.closest('a, button, label, input[type="checkbox"], [role="button"]')
 		if (isInteractiveElement || hasTextSelected()) {
 			return
 		}
@@ -480,7 +437,6 @@ defineExpose({
 		white-space: nowrap;
 	}
 
-	.tasktext :deep(.color-bubble),
 	.tasktext :deep(.avatar-wrapper),
 	.tasktext :deep(.labels .tag) {
 		vertical-align: middle;
@@ -511,37 +467,6 @@ defineExpose({
 		&:hover {
 			color: var(--grey-900);
 		}
-	}
-
-	.favorite {
-		opacity: 1;
-		text-align: center;
-		inline-size: 27px;
-		transition: opacity $transition, color $transition;
-		border-radius: $radius;
-
-		&:hover {
-			color: var(--warning);
-		}
-
-		&.is-favorite {
-			opacity: 1;
-			color: var(--warning);
-		}
-	}
-
-	@media(hover: hover) and (pointer: fine) {
-		& .favorite {
-			opacity: 0;
-		}
-
-		&:hover .favorite {
-			opacity: 1;
-		}
-	}
-
-	.favorite:focus {
-		opacity: 1;
 	}
 
 	:deep(.fancy-checkbox) {

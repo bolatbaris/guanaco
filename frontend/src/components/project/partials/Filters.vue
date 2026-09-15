@@ -104,16 +104,16 @@ const params = ref<TaskFilterParams>({
 	order_by: [],
 	filter: '',
 	filter_include_nulls: false,
-	s: '',
+	q: '',
 })
 
 const filterQuery = ref('')
 watch(
-	() => [params.value.filter, params.value.s],
+	() => [params.value.filter, params.value.q],
 	() => {
 		const filter = params.value.filter || ''
-		const s = params.value.s || ''
-		filterQuery.value = filter || s
+		const q = params.value.q || ''
+		filterQuery.value = filter || q
 	},
 )
 
@@ -159,17 +159,17 @@ function change(event: 'blur' | 'modelValue' | 'always') {
 		},
 	)
 
-	let s = ''
+	let q = ''
 
 	// When the filter does not contain any filter tokens, assume a simple search and redirect the input
 	if (!hasFilterQuery(filter)) {
-		s = filter
+		q = filter
 	}
 
 	const newParams = {
 		...params.value,
-		filter: s === '' ? filter : '',
-		s,
+		filter: q === '' ? filter : '',
+		q,
 	}
 
 	if (JSON.stringify(props.modelValue) === JSON.stringify(newParams)) {

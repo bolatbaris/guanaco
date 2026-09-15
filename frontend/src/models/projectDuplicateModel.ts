@@ -8,7 +8,6 @@ export default class ProjectDuplicateModel extends AbstractModel<IProjectDuplica
 	projectId = 0
 	duplicatedProject: IProject | null = null
 	parentProjectId = 0
-	duplicateShares = false
 
 	constructor(data : Partial<IProjectDuplicate>) {
 		super()

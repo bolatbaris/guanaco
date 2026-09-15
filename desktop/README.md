@@ -22,7 +22,7 @@ Then, copy the frontend to this directory:
 ```
 cd desktop
 cp -r ../frontend/dist frontend/
-sed -i 's/\/api\/v1//g' frontend/index.html # Make sure to trigger the "enter the Vikunja url" prompt
+sed -i 's/\/api\/v2//g' frontend/index.html # Make sure to trigger the "enter the Vikunja url" prompt
 ```
 
 Then you can run the desktop app like this:

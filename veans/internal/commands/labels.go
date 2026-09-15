@@ -42,7 +42,7 @@ func normalizeLabelTitle(raw string) string {
 // getOrCreateLabelByTitle returns the ID of the label with the given title,
 // creating it under the current user if it doesn't exist. Labels are global
 // per user in Vikunja, so this only finds labels visible to whoever the
-// `c` client is authenticated as (i.e. the bot when called from veans).
+// `c` client is authenticated as the configured user.
 func getOrCreateLabelByTitle(ctx context.Context, c *client.Client, title string) (*client.Label, error) {
 	existing, err := c.ListLabels(ctx, title)
 	if err != nil {

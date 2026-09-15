@@ -35,8 +35,8 @@ type notificationListBody struct {
 	Body Paginated[*notifications.DatabaseNotification]
 }
 
-// markAllReadBody mirrors v1's {"message":"success"}: the action has no
-// resource to return, so it confirms with a status body, not emptyBody.
+// markAllReadBody confirms the action because marking all notifications has no
+// resource to return.
 type markAllReadBody struct {
 	Body struct {
 		Message string `json:"message" readOnly:"true" doc:"A confirmation message."`
@@ -50,7 +50,7 @@ func RegisterNotificationRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "notifications-list",
 		Summary:     "List notifications",
-		Description: "Returns the authenticated user's own notifications, newest first. Notifications about a project the caller can no longer read are omitted; the filtering happens in the query, so pages come back full and total and total_pages count the visible notifications only. Link shares have no notifications and are refused.",
+		Description: "Returns the authenticated user's own notifications, newest first. Notifications about a project the caller can no longer read are omitted; the filtering happens in the query, so pages come back full and total and total_pages count the visible notifications only.",
 		Method:      http.MethodGet,
 		Path:        "/notifications",
 		Tags:        tags,
@@ -68,7 +68,7 @@ func RegisterNotificationRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "notifications-mark-all-read",
 		Summary:     "Mark all notifications as read",
-		Description: "Marks every notification of the authenticated user as read. Link shares have no notifications and are refused.",
+		Description: "Marks every notification of the authenticated user as read.",
 		Method:      http.MethodPost,
 		Path:        "/notifications",
 		// Override the wrapper's POST→201 create default: this action creates nothing.
@@ -79,7 +79,7 @@ func RegisterNotificationRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "notifications-delete-all",
 		Summary:     "Delete all notifications",
-		Description: "Deletes every notification of the authenticated user. Only the caller's own notifications are affected; link shares have no notifications and are refused.",
+		Description: "Deletes every notification of the authenticated user. Only the caller's own notifications are affected.",
 		Method:      http.MethodDelete,
 		Path:        "/notifications",
 		Tags:        tags,
@@ -121,16 +121,12 @@ func notificationsMarkRead(ctx context.Context, in *struct {
 }
 
 // notificationsMarkAllRead is a custom action: no CRUDable Do* exists for a bulk
-// mark, so the handler owns the link-share guard, session and commit itself.
+// mark, so the handler owns the session and commit itself.
 func notificationsMarkAllRead(ctx context.Context, _ *struct{}) (*markAllReadBody, error) {
 	a, err := authFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if _, is := a.(*models.LinkSharing); is {
-		return nil, huma.Error403Forbidden("link shares cannot have notifications")
-	}
-
 	s := db.NewSession()
 	defer s.Close()
 

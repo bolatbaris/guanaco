@@ -26,12 +26,11 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-// {entity} stays a string: Can{Create,Delete} derive the numeric EntityType
-// from it and reject unknown kinds (412). The enum tag makes Huma reject
-// anything else with a 422 before the handler runs.
+// {entity} stays a string so Can{Create,Delete} can derive the numeric entity
+// type from it. The enum tag makes Huma reject anything other than project.
 type subscriptionPathParams struct {
-	Entity   string `path:"entity" enum:"project,task" doc:"The kind of entity to (un)subscribe from. Either project or task."`
-	EntityID int64  `path:"entityID" doc:"The numeric id of the entity to (un)subscribe from."`
+	Entity   string `path:"entity" enum:"project" doc:"The project to (un)subscribe from."`
+	EntityID int64  `path:"entityID" doc:"The numeric id of the project to (un)subscribe from."`
 }
 
 func RegisterSubscriptionRoutes(api huma.API) {
@@ -39,8 +38,8 @@ func RegisterSubscriptionRoutes(api huma.API) {
 
 	Register(api, huma.Operation{
 		OperationID: "subscriptions-create",
-		Summary:     "Subscribe to an entity",
-		Description: "Subscribes the authenticated user to a project or task so they receive its notifications. The user needs read access to the entity. Fails if the user is already subscribed, directly or through a parent project. Subscribing again after an opt-out lifts it.",
+		Summary:     "Subscribe to a project",
+		Description: "Subscribes the authenticated user to a project so they receive its notifications. The user needs read access to the project. Fails if the user is already subscribed, directly or through a parent project. Subscribing again after an opt-out lifts it.",
 		Method:      http.MethodPost,
 		Path:        "/subscriptions/{entity}/{entityID}",
 		Tags:        tags,
@@ -48,8 +47,8 @@ func RegisterSubscriptionRoutes(api huma.API) {
 
 	Register(api, huma.Operation{
 		OperationID: "subscriptions-delete",
-		Summary:     "Unsubscribe from an entity",
-		Description: "Stops notifications about a project or task for the authenticated user. If the subscription was inherited from a parent project, the opt-out is recorded for this entity instead, leaving the parent subscription in place. Only affects the caller's subscription, not other users'.",
+		Summary:     "Unsubscribe from a project",
+		Description: "Stops notifications about a project for the authenticated user. If the subscription was inherited from a parent project, the opt-out is recorded for this project instead, leaving the parent subscription in place. Only affects the caller's subscription, not other users'.",
 		Method:      http.MethodDelete,
 		Path:        "/subscriptions/{entity}/{entityID}",
 		Tags:        tags,

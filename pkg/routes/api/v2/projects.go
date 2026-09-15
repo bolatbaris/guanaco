@@ -49,7 +49,7 @@ func RegisterProjectRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "projects-read",
 		Summary:     "Get a project",
-		Description: "Returns a single project the caller can read, including its views, the caller's favorite/subscription state and the caller's max_permission. Resolves the Favorites pseudo-project and saved-filter-backed projects. Served fresh on every call (no conditional/ETag) because the response carries user-scoped state that changes without bumping the project's updated timestamp.",
+		Description: "Returns a single project the caller can read, including its views, the caller's project favorite/subscription state and the caller's max_permission. Resolves saved-filter-backed projects. Served fresh on every call (no conditional/ETag) because the response carries user-scoped state that changes without bumping the project's updated timestamp.",
 		Method:      http.MethodGet,
 		Path:        "/projects/{id}",
 		Tags:        tags,
@@ -114,8 +114,8 @@ func projectsList(ctx context.Context, in *struct {
 }
 
 // projectReadBody is the read shape. Unlike labels/views, models.Project
-// already carries a max_permission field (v1 surfaces it via expand on the
-// list route), so the embed just reuses it rather than declaring a sibling.
+// already carries a max_permission field, so the embed just reuses it rather
+// than declaring a sibling.
 type projectReadBody struct {
 	models.Project
 }
@@ -134,7 +134,7 @@ func projectsRead(ctx context.Context, in *struct {
 		return nil, translateDomainError(err)
 	}
 	// CanRead returns a real permission for every readable project (including
-	// the Favorites pseudo-project and saved-filter-backed ones), so the field
+	// saved-filter-backed ones), so the field
 	// is always meaningful here — surfaced unconditionally like labels/views.
 	project.MaxPermission = models.Ptr(models.Permission(maxPermission))
 	body := &projectReadBody{Project: *project}

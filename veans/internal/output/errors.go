@@ -29,14 +29,13 @@ import (
 type Code string
 
 const (
-	CodeNotFound            Code = "NOT_FOUND"
-	CodeConflict            Code = "CONFLICT"
-	CodeValidation          Code = "VALIDATION_ERROR"
-	CodeAuth                Code = "AUTH_ERROR"
-	CodeRateLimited         Code = "RATE_LIMITED"
-	CodeBotUsersUnavailable Code = "BOT_USERS_UNAVAILABLE"
-	CodeNotConfigured       Code = "NOT_CONFIGURED"
-	CodeUnknown             Code = "UNKNOWN"
+	CodeNotFound      Code = "NOT_FOUND"
+	CodeConflict      Code = "CONFLICT"
+	CodeValidation    Code = "VALIDATION_ERROR"
+	CodeAuth          Code = "AUTH_ERROR"
+	CodeRateLimited   Code = "RATE_LIMITED"
+	CodeNotConfigured Code = "NOT_CONFIGURED"
+	CodeUnknown       Code = "UNKNOWN"
 )
 
 // Error is the structured error type used for both internal flow and the

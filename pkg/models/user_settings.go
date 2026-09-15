@@ -23,11 +23,11 @@ import (
 	"xorm.io/xorm"
 )
 
-// UserGeneralSettings is the single user-settings wire struct shared by v1 and
-// v2 — both the update request body and the nested settings on GET /user. A
+// UserGeneralSettings is the user-settings wire struct used by the v2 update
+// request body and the nested settings on GET /user. A
 // dedicated struct (not user.User) is required: user.User's settings fields are
 // json:"-" so they don't leak when it is embedded in other responses
-// (assignees, created_by, members …).
+// (created_by, members …).
 type UserGeneralSettings struct {
 	Name                         string `json:"name" doc:"The full name of the user."`
 	EmailRemindersEnabled        bool   `json:"email_reminders_enabled" doc:"If enabled, sends email reminders of tasks to the user."`
@@ -45,7 +45,7 @@ type UserGeneralSettings struct {
 }
 
 // NewUserGeneralSettings projects a user's stored settings into the shared wire
-// struct for GET /user. Used by both the v1 and v2 user-show handlers.
+// struct for GET /user.
 func NewUserGeneralSettings(u *user.User) *UserGeneralSettings {
 	return &UserGeneralSettings{
 		Name:                         u.Name,

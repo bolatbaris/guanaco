@@ -172,7 +172,7 @@ async function searchUsers(query: string) {
 	}
 	userSearchLoading.value = true
 	try {
-		userResults.value = await adminUserService.getAll(new AdminUserModel(), {s: query})
+		userResults.value = await adminUserService.getAll(new AdminUserModel(), {q: query})
 	} catch (e) {
 		error(e)
 	} finally {
@@ -204,4 +204,3 @@ onMounted(load)
 	overflow: visible;
 }
 </style>
-

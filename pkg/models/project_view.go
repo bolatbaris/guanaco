@@ -689,7 +689,7 @@ func (pv *ProjectView) Update(s *xorm.Session, a web.Auth) (err error) {
 }
 
 func syncManualKanbanBuckets(s *xorm.Session, a web.Auth, pv, oldView *ProjectView) (err error) {
-	// Pseudo views like favorites only exist in memory, seeding would write
+	// Saved-filter views only exist in memory, seeding would write
 	// buckets on a view id shared by every user.
 	becameManualKanban := pv.ID > 0 &&
 		pv.ViewKind == ProjectViewKindKanban &&
@@ -764,18 +764,6 @@ func existingBucketID(s *xorm.Session, viewID, bucketID int64) (int64, error) {
 }
 
 func GetProjectViewByIDAndProject(s *xorm.Session, viewID, projectID int64) (view *ProjectView, err error) {
-	if projectID == FavoritesPseudoProjectID && viewID < 0 {
-		for _, v := range FavoritesPseudoProject.Views {
-			if v.ID == viewID {
-				return v, nil
-			}
-		}
-
-		return nil, &ErrProjectViewDoesNotExist{
-			ProjectViewID: viewID,
-		}
-	}
-
 	view = &ProjectView{}
 	exists, err := s.
 		Where("id = ? AND project_id = ?", viewID, projectID).

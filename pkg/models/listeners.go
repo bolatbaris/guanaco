@@ -37,7 +37,6 @@ import (
 // RegisterListeners registers all event listeners
 func RegisterListeners() {
 	events.RegisterListener((&TaskCommentCreatedEvent{}).Name(), &SendTaskCommentNotification{})
-	events.RegisterListener((&TaskAssigneeCreatedEvent{}).Name(), &SendTaskAssignedNotification{})
 	events.RegisterListener((&TaskCreatedEvent{}).Name(), &SendTaskCreatedNotification{})
 	events.RegisterListener((&TaskDeletedEvent{}).Name(), &SendTaskDeletedNotification{})
 	events.RegisterListener((&ProjectCreatedEvent{}).Name(), &SendProjectCreatedNotification{})
@@ -48,8 +47,6 @@ func RegisterListeners() {
 	events.RegisterListener((&TaskCommentCreatedEvent{}).Name(), &HandleTaskUpdateLastUpdated{})
 	events.RegisterListener((&TaskCommentUpdatedEvent{}).Name(), &HandleTaskUpdateLastUpdated{})
 	events.RegisterListener((&TaskCommentDeletedEvent{}).Name(), &HandleTaskUpdateLastUpdated{})
-	events.RegisterListener((&TaskAssigneeCreatedEvent{}).Name(), &HandleTaskUpdateLastUpdated{})
-	events.RegisterListener((&TaskAssigneeDeletedEvent{}).Name(), &HandleTaskUpdateLastUpdated{})
 	events.RegisterListener((&TaskAttachmentCreatedEvent{}).Name(), &HandleTaskUpdateLastUpdated{})
 	events.RegisterListener((&TaskAttachmentDeletedEvent{}).Name(), &HandleTaskUpdateLastUpdated{})
 	events.RegisterListener((&TaskRelationCreatedEvent{}).Name(), &HandleTaskUpdateLastUpdated{})
@@ -61,8 +58,6 @@ func RegisterListeners() {
 		RegisterEventForWebhook(&TaskCreatedEvent{})
 		RegisterEventForWebhook(&TaskUpdatedEvent{})
 		RegisterEventForWebhook(&TaskDeletedEvent{})
-		RegisterEventForWebhook(&TaskAssigneeCreatedEvent{})
-		RegisterEventForWebhook(&TaskAssigneeDeletedEvent{})
 		RegisterEventForWebhook(&TaskCommentCreatedEvent{})
 		RegisterEventForWebhook(&TaskCommentUpdatedEvent{})
 		RegisterEventForWebhook(&TaskCommentDeletedEvent{})
@@ -179,22 +174,6 @@ func registerEventsForAuditLogging() {
 			Action: audit.ActionTaskDeleted,
 			Actor:  auditActorFromUser(e.Doer),
 			Target: audit.TaskTarget(e.Task.ID),
-		}
-	})
-	audit.RegisterEventForAudit(func(e *TaskAssigneeCreatedEvent) *audit.Entry {
-		return &audit.Entry{
-			Action:   audit.ActionTaskAssigneeAdded,
-			Actor:    auditActorFromUser(e.Doer),
-			Target:   audit.TaskTarget(e.Task.ID),
-			Metadata: map[string]any{"assignee_id": e.Assignee.ID},
-		}
-	})
-	audit.RegisterEventForAudit(func(e *TaskAssigneeDeletedEvent) *audit.Entry {
-		return &audit.Entry{
-			Action:   audit.ActionTaskAssigneeRemoved,
-			Actor:    auditActorFromUser(e.Doer),
-			Target:   audit.TaskTarget(e.Task.ID),
-			Metadata: map[string]any{"assignee_id": e.Assignee.ID},
 		}
 	})
 	audit.RegisterEventForAudit(func(e *TaskCommentCreatedEvent) *audit.Entry {
@@ -497,12 +476,12 @@ func (s *SendTaskCommentNotification) Handle(msg *message.Message) (err error) {
 		mentionedUsers[u.ID] = u
 	}
 
-	subscribers, err := GetSubscriptionsForEntity(sess, SubscriptionEntityTask, event.Task.ID)
+	subscribers, err := GetSubscriptionsForEntity(sess, SubscriptionEntityProject, project.ID)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Sending task comment notifications to %d subscribers for task %d", len(subscribers), event.Task.ID)
+	log.Debugf("Sending task comment notifications to %d project subscribers for task %d", len(subscribers), event.Task.ID)
 
 	for _, subscriber := range subscribers {
 		if subscriber.UserID == event.Doer.ID {
@@ -576,76 +555,6 @@ func (s *HandleTaskCommentEditMentions) Handle(msg *message.Message) (err error)
 	return sess.Commit()
 }
 
-// SendTaskAssignedNotification  represents a listener
-type SendTaskAssignedNotification struct {
-}
-
-// Name defines the name for the SendTaskAssignedNotification listener
-func (s *SendTaskAssignedNotification) Name() string {
-	return "task.assigned.notification.send"
-}
-
-// Handle is executed when the event SendTaskAssignedNotification listens on is fired
-func (s *SendTaskAssignedNotification) Handle(msg *message.Message) (err error) {
-	event := &TaskAssigneeCreatedEvent{}
-	err = json.Unmarshal(msg.Payload, event)
-	if err != nil {
-		return err
-	}
-
-	sess := db.NewSession()
-	defer sess.Close()
-
-	subscribers, err := GetSubscriptionsForEntity(sess, SubscriptionEntityTask, event.Task.ID)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("Sending task assigned notifications to %d subscribers for task %d", len(subscribers), event.Task.ID)
-
-	task, err := GetTaskByIDSimple(sess, event.Task.ID)
-	if err != nil {
-		return err
-	}
-
-	project, err := GetProjectSimpleByID(sess, task.ProjectID)
-	if err != nil {
-		return err
-	}
-
-	task.setIdentifier(project)
-
-	notifiedUsers := make(map[int64]bool)
-
-	for _, subscriber := range subscribers {
-		if subscriber.UserID == event.Doer.ID {
-			continue
-		}
-
-		if notifiedUsers[subscriber.UserID] {
-			// Users may be subscribed to the task and the project itself, which leads to double notifications
-			continue
-		}
-
-		n := &TaskAssignedNotification{
-			Doer:     event.Doer,
-			Task:     &task,
-			Assignee: event.Assignee,
-			Target:   subscriber.User,
-			Project:  project,
-		}
-		err = notifications.Notify(subscriber.User, n, sess)
-		if err != nil {
-			_ = sess.Rollback()
-			return err
-		}
-
-		notifiedUsers[subscriber.UserID] = true
-	}
-
-	return sess.Commit()
-}
-
 // SendTaskCreatedNotification  represents a listener
 type SendTaskCreatedNotification struct {
 }
@@ -677,14 +586,12 @@ func (s *SendTaskCreatedNotification) Handle(msg *message.Message) (err error) {
 
 	event.Task.setIdentifier(project)
 
-	// A task can only be subscribed to through its project at this point, but going
-	// through the task resolves the whole project hierarchy for us.
-	subscribers, err := GetSubscriptionsForEntity(sess, SubscriptionEntityTask, event.Task.ID)
+	subscribers, err := GetSubscriptionsForEntity(sess, SubscriptionEntityProject, project.ID)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Sending task created notifications to %d subscribers for task %d", len(subscribers), event.Task.ID)
+	log.Debugf("Sending task created notifications to %d project subscribers for task %d", len(subscribers), event.Task.ID)
 
 	// HandleTaskCreateMentions notifies these separately for the same event
 	mentioned, err := FindMentionedUsersInText(sess, event.Task.Description)
@@ -746,7 +653,7 @@ func (s *SendTaskDeletedNotification) Handle(msg *message.Message) (err error) {
 	sess := db.NewSession()
 	defer sess.Close()
 
-	subscribers, err := GetSubscriptionsForDeletedTask(sess, event.Task)
+	subscribers, err := GetSubscriptionsForEntity(sess, SubscriptionEntityProject, event.Task.ProjectID)
 	if err != nil {
 		return err
 	}
@@ -755,7 +662,7 @@ func (s *SendTaskDeletedNotification) Handle(msg *message.Message) (err error) {
 		return err
 	}
 
-	log.Debugf("Sending task deleted notifications to %d subscribers for task %d", len(subscribers), event.Task.ID)
+	log.Debugf("Sending task deleted notifications to %d project subscribers for task %d", len(subscribers), event.Task.ID)
 
 	for _, subscriber := range subscribers {
 		if subscriber.UserID == event.Doer.ID {
@@ -921,7 +828,7 @@ func (s *HandleTaskUpdateLastUpdated) Handle(msg *message.Message) (err error) {
 	}
 
 	// Also bump the project so the CalDAV ctag advances on changes to
-	// task sub-entities (relations, comments, attachments, assignees).
+	// task sub-entities (relations, comments, attachments).
 	fullTask, err := GetTaskByIDSimple(sess, taskIDInt)
 	if err != nil {
 		if IsErrTaskDoesNotExist(err) {
@@ -1344,33 +1251,6 @@ func reloadProjectInEvent(s *xorm.Session, event map[string]interface{}, project
 	return nil
 }
 
-func reloadAssigneeInEvent(s *xorm.Session, event map[string]interface{}) error {
-	assignee, has := event["assignee"]
-	if !has || assignee == nil {
-		return nil
-	}
-
-	a, ok := assignee.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-
-	assigneeID := getIDAsInt64(a["id"])
-	if assigneeID <= 0 {
-		return nil
-	}
-
-	fullAssignee, err := user.GetUserByID(s, assigneeID)
-	if err != nil && !user.IsErrUserDoesNotExist(err) {
-		return err
-	}
-	if err == nil {
-		event["assignee"] = fullAssignee
-	}
-
-	return nil
-}
-
 func reloadUserInEvent(s *xorm.Session, event map[string]interface{}) error {
 	u, has := event["user"]
 	if !has || u == nil {
@@ -1412,11 +1292,6 @@ func reloadEventData(s *xorm.Session, event map[string]interface{}, projectID in
 	}
 
 	err = reloadProjectInEvent(s, event, projectID, doerID)
-	if err != nil {
-		return nil, doerID, err
-	}
-
-	err = reloadAssigneeInEvent(s, event)
 	if err != nil {
 		return nil, doerID, err
 	}

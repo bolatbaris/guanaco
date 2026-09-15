@@ -2,10 +2,6 @@
 	<div class="heading">
 		<div class="tw:flex tw:items-center md:tw:items-stretch tw:flex-col tw:gap-1 task-properties">
 			<div class="tw:flex tw:items-center tw:gap-2">
-				<ColorBubble
-					v-if="task.hexColor !== ''"
-					:color="getHexColor(task.hexColor)"
-				/>
 				<BaseButton @click="copyUrl">
 					<span class="title task-id">
 						{{ textIdentifier }}
@@ -76,14 +72,13 @@ import {useI18n} from 'vue-i18n'
 import {error} from '@/message'
 import BaseButton from '@/components/base/BaseButton.vue'
 import CustomTransition from '@/components/misc/CustomTransition.vue'
-import ColorBubble from '@/components/misc/ColorBubble.vue'
 import Done from '@/components/misc/Done.vue'
 
 import {useCopyToClipboard} from '@/composables/useCopyToClipboard'
 import {useTaskStore} from '@/stores/tasks'
 
 import type {ITask} from '@/modelTypes/ITask'
-import {getHexColor, getTaskIdentifier} from '@/models/task'
+import {getTaskIdentifier} from '@/models/task'
 
 const props = defineProps<{
 	task: ITask,

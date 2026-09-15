@@ -73,7 +73,7 @@
 							>
 								{{ getDisplayName(n.notification.doer) }}
 							</span>
-							{{ n.toText(userInfo) }}
+							{{ n.toText() }}
 						</div>
 						<span
 							v-tooltip="formatDateLong(n.created)"
@@ -118,7 +118,6 @@ import {NOTIFICATION_NAMES as names, type INotification} from '@/modelTypes/INot
 import {closeWhenClickedOutside} from '@/helpers/closeWhenClickedOutside'
 import {formatDateLong, formatDisplayDate} from '@/helpers/time/formatDate'
 import {getDisplayName} from '@/models/user'
-import {useAuthStore} from '@/stores/auth'
 import {useWebSocket} from '@/composables/useWebSocket'
 import XButton from '@/components/input/Button.vue'
 import {success} from '@/message'
@@ -126,7 +125,6 @@ import {useI18n} from 'vue-i18n'
 
 const {subscribe, connected: wsConnected} = useWebSocket()
 
-const authStore = useAuthStore()
 const router = useRouter()
 const {t} = useI18n()
 
@@ -140,8 +138,6 @@ const unreadNotifications = computed(() => {
 const notifications = computed(() => {
 	return allNotifications.value ? allNotifications.value.filter(n => n.name !== '') : []
 })
-const userInfo = computed(() => authStore.info)
-
 let unsubscribeWs: (() => void) | null = null
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
@@ -217,7 +213,6 @@ function hidePopup(e) {
 function getNotificationRoute(n: INotification): RouteLocationRaw | null {
 	switch (n.name) {
 		case names.TASK_COMMENT:
-		case names.TASK_ASSIGNED:
 		case names.TASK_REMINDER:
 		case names.TASK_MENTIONED:
 		case names.TASK_CREATED:

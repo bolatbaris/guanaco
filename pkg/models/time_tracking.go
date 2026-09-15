@@ -32,7 +32,7 @@ import (
 // project — exactly one of TaskID / ProjectID is set (XOR). A running live
 // timer is just an entry whose EndTime is still null.
 //
-// v2-only: doc: tags are the schema's source of truth (no v1 swaggo), and it
+// v2-only: doc: tags are the schema's source of truth (no legacy Swagger), and it
 // implements CRUDable + Permissions because the shared handler.Do* pipeline needs them.
 type TimeEntry struct {
 	ID int64 `xorm:"bigint autoincr not null unique pk" json:"id" param:"timeentry" readOnly:"true" doc:"The unique, numeric id of this time entry."`

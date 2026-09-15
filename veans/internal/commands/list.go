@@ -30,7 +30,6 @@ import (
 
 type listFlags struct {
 	ready    bool
-	mine     bool
 	branch   string
 	filter   string
 	statuses []string
@@ -47,7 +46,6 @@ func newListCmd() *cobra.Command {
 Filters can be combined; they're AND-ed together:
   --ready          ready to start: in Todo, not done, and no incomplete
                    "blocked" relation
-  --mine           only tasks assigned to the veans bot
   --branch [name]  only tasks tagged 'veans:branch:<name>' (defaults to the
                    current git branch when used without a value)
   --filter <expr>  raw Vikunja filter expression (see Vikunja docs); applied
@@ -67,7 +65,6 @@ Filters can be combined; they're AND-ed together:
 		},
 	}
 	cmd.Flags().BoolVar(&f.ready, "ready", false, "only ready-to-start tasks (Todo bucket, not done)")
-	cmd.Flags().BoolVar(&f.mine, "mine", false, "only tasks assigned to the veans bot")
 	cmd.Flags().StringVar(&f.branch, "branch", "", "only tasks tagged 'veans:branch:<name>' (omit value for current branch)")
 	cmd.Flags().Lookup("branch").NoOptDefVal = "__auto__"
 	cmd.Flags().StringVar(&f.filter, "filter", "", "raw Vikunja filter expression, applied server-side")
@@ -95,11 +92,6 @@ func runList(cmd *cobra.Command, rt *runtime, f *listFlags) ([]*client.Task, err
 		taskBucket := t.CurrentBucketID(rt.cfg.ViewID)
 		if f.ready && !isReady(t, rt.cfg.Buckets.Todo, rt.cfg.ViewID) {
 			continue
-		}
-		if f.mine {
-			if !taskAssignedTo(t, rt.cfg.Bot.UserID) {
-				continue
-			}
 		}
 		if f.branch != "" {
 			want := f.branch
@@ -150,15 +142,6 @@ func isReady(t *client.Task, todoBucket, viewID int64) bool {
 		}
 	}
 	return true
-}
-
-func taskAssignedTo(t *client.Task, userID int64) bool {
-	for _, a := range t.Assignees {
-		if a != nil && a.ID == userID {
-			return true
-		}
-	}
-	return false
 }
 
 func taskHasLabel(t *client.Task, title string) bool {

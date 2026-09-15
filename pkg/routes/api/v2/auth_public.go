@@ -40,32 +40,14 @@ type messageBody struct {
 	}
 }
 
-// linkShareTokenBody wraps the issued link-share auth token and its share.
-type linkShareTokenBody struct {
-	Body *shared.LinkShareToken
-}
-
 func init() { AddRouteRegistrar(RegisterPublicAuthRoutes) }
 
-// RegisterPublicAuthRoutes wires the unauthenticated email confirmation and
-// link-share auth endpoints. Public account creation is intentionally absent;
-// the configured single user is provisioned during startup.
+// RegisterPublicAuthRoutes wires the unauthenticated email confirmation
+// endpoint. Public account creation is intentionally absent; the configured
+// single user is provisioned during startup.
 func RegisterPublicAuthRoutes(api huma.API) {
 	if config.AuthLocalEnabled.GetBool() {
 		registerEmailConfirmationRoute(api)
-	}
-
-	if config.ServiceEnableLinkSharing.GetBool() {
-		Register(api, huma.Operation{
-			OperationID:   "auth-link-share",
-			Summary:       "Get an auth token for a link share",
-			Description:   "Exchanges a link share's public hash (and password, for password-protected shares) for a JWT auth token scoped to the shared project.",
-			Method:        http.MethodPost,
-			Path:          "/shares/{share}/auth",
-			DefaultStatus: http.StatusOK,
-			Tags:          []string{"sharing"},
-			Security:      publicSecurity,
-		}, authLinkShare)
 	}
 }
 
@@ -91,24 +73,4 @@ func authConfirmEmail(_ context.Context, in *struct{ Body user.EmailConfirm }) (
 	out := &messageBody{}
 	out.Body.Message = "The email was confirmed successfully."
 	return out, nil
-}
-
-func authLinkShare(_ context.Context, in *struct {
-	Share string `path:"share" doc:"The public hash of the link share."`
-	// Pointer so the body is optional: shares without a password are
-	// authenticated with no body at all.
-	Body *struct {
-		Password string `json:"password" doc:"The password for password-protected link shares. Ignored for shares without a password."`
-	}
-}) (*linkShareTokenBody, error) {
-	var password string
-	if in.Body != nil {
-		password = in.Body.Password
-	}
-
-	token, err := shared.AuthenticateLinkShare(in.Share, password)
-	if err != nil {
-		return nil, translateDomainError(err)
-	}
-	return &linkShareTokenBody{Body: token}, nil
 }

@@ -66,7 +66,6 @@
 						:delay-on-touch-only="!isTouchDevice"
 						:delay="isTouchDevice ? 0 : 1000"
 						ghost-class="task-ghost"
-						@start="handleDragStart"
 						@end="saveTaskPosition"
 					>
 						<template #item="{element: t, index}">
@@ -113,7 +112,6 @@ import Pagination from '@/components/misc/Pagination.vue'
 import SortPopup from '@/components/project/partials/SortPopup.vue'
 
 import {useTaskList} from '@/composables/useTaskList'
-import {useTaskDragToProject} from '@/composables/useTaskDragToProject'
 import {shouldShowTaskInListView} from '@/composables/useTaskListFiltering'
 import {PERMISSIONS as Permissions} from '@/constants/permissions'
 import {calculateItemPosition} from '@/helpers/calculateItemPosition'
@@ -121,7 +119,6 @@ import type {ITask} from '@/modelTypes/ITask'
 import {isSavedFilter, useSavedFilter} from '@/services/savedFilter'
 
 import {useBaseStore} from '@/stores/base'
-import {useTaskStore} from '@/stores/tasks'
 
 import type {IProject} from '@/modelTypes/IProject'
 import type {IProjectView} from '@/modelTypes/IProjectView'
@@ -140,8 +137,6 @@ defineOptions({name: 'List'})
 
 const ctaVisible = ref(false)
 
-const drag = ref(false)
-
 const {
 	tasks: allTasks,
 	loading,
@@ -154,9 +149,7 @@ const {
 	() => projectId.value,
 	() => props.viewId,
 	{position: 'asc'},
-	() => projectId.value === -1
-		? ['comment_count', 'is_unread']
-		: ['subtasks', 'comment_count', 'is_unread'],
+	() => ['subtasks', 'comment_count', 'is_unread'],
 )
 
 const taskPositionService = ref(new TaskPositionService())
@@ -175,15 +168,13 @@ watch(
 const isPositionSorting = computed(() => 'position' in sortByParam.value)
 
 const baseStore = useBaseStore()
-const taskStore = useTaskStore()
-const {handleTaskDropToProject} = useTaskDragToProject()
 const project = computed(() => baseStore.currentProject)
 
 const canWrite = computed(() => {
 	return project.value?.maxPermission > Permissions.READ && project.value?.id > 0
 })
 
-const isPseudoProject = computed(() => (project.value && isSavedFilter(project.value)) || project.value?.id === -1)
+const isPseudoProject = computed(() => isSavedFilter(project.value))
 
 onMounted(async () => {
 	await nextTick()
@@ -219,7 +210,7 @@ function updateTaskList(newTasks: ITask[]) {
 }
 
 function updateTasks(updatedTask: ITask) {
-	if (projectId.value < 0) {
+	if (isSavedFilter(project.value)) {
 		// Reload tasks to keep saved filter results in sync
 		loadTasks(false)
 		return
@@ -233,28 +224,7 @@ function updateTasks(updatedTask: ITask) {
 	}
 }
 
-function handleDragStart(e: { item: HTMLElement }) {
-	drag.value = true
-	const taskId = parseInt(e.item.dataset.taskId ?? '', 10)
-	const task = tasks.value.find(t => t.id === taskId)
-
-	if (task) {
-		taskStore.setDraggedTask(task)
-	}
-}
-
-async function saveTaskPosition(e: { originalEvent?: MouseEvent, to: HTMLElement, from: HTMLElement, item: HTMLElement, newIndex: number }) {
-	drag.value = false
-
-	// Check if dropped on a sidebar project
-	const {moved} = await handleTaskDropToProject(e, (task) => {
-		tasks.value = tasks.value.filter(t => t.id !== task.id)
-	})
-
-	if (moved) {
-		return
-	}
-
+async function saveTaskPosition(e: { to: HTMLElement, from: HTMLElement, item: HTMLElement, newIndex: number }) {
 	// If dropped outside this list
 	if (e.to !== e.from) {
 		return

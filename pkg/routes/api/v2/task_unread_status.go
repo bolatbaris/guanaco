@@ -37,7 +37,7 @@ type taskReadBody struct {
 // RegisterTaskUnreadStatusRoutes wires the mark-task-as-read action onto the Huma API.
 //
 // Marking a task read clears the caller's unread entry for it, which is what
-// drives the per-task "unread" dot shown for mentions and other notifications.
+// drives the per-task "unread" dot shown for task notifications.
 // The model's Update deletes that entry, so the action is idempotent — PUT, not
 // POST. It is also unconditional: there is no read entry to clear for a task the
 // caller cannot see, so it succeeds as a no-op rather than refusing.
@@ -47,7 +47,7 @@ func RegisterTaskUnreadStatusRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "tasks-mark-read",
 		Summary:     "Mark a task as read",
-		Description: "Clears the authenticated user's unread status for a task, dismissing the unread indicator raised by mentions and other task notifications. Idempotent: marking an already-read or inaccessible task succeeds as a no-op.",
+		Description: "Clears the authenticated user's unread status for a task, dismissing its unread indicator. Idempotent: marking an already-read or inaccessible task succeeds as a no-op.",
 		Method:      http.MethodPut,
 		Path:        "/tasks/{projecttask}/read",
 		Tags:        tags,

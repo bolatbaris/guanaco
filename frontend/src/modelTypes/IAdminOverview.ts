@@ -1,10 +1,5 @@
 import type {IAbstract} from './IAbstract'
 
-export interface IAdminOverviewShares {
-	linkShares: number
-	userShares: number
-}
-
 export interface IAdminOverviewLicense {
 	licensed: boolean
 	instanceId: string
@@ -19,6 +14,5 @@ export interface IAdminOverview extends IAbstract {
 	users: number
 	projects: number
 	tasks: number
-	shares: IAdminOverviewShares
 	license: IAdminOverviewLicense
 }

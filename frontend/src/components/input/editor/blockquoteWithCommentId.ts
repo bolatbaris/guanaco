@@ -7,7 +7,7 @@ import BlockquoteCommentView from './BlockquoteCommentView.vue'
  * Blockquote extension that preserves `data-comment-id` across parse/serialize.
  * Used as the canonical reply marker: a comment that quotes another comment
  * stores the referenced comment's id on the wrapping blockquote, so both the
- * backend (for implicit-mention notifications) and the frontend (for the
+ * backend and the frontend (for the
  * jump-to-original chevron) can find it without a separate schema field.
  *
  * A Vue NodeView renders the in-app header + chevron when the surrounding

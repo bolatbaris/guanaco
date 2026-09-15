@@ -23,7 +23,6 @@ import (
 	"io"
 	"io/fs"
 	"math"
-	"strings"
 	"time"
 
 	"xorm.io/xorm"
@@ -64,8 +63,8 @@ func insertFromStructureWithFileProvider(str []*models.ProjectWithTasksAndBucket
 	s := db.NewSession()
 	defer s.Close()
 
-	// Callers may pass a user built from jwt claims; load the stored one so
-	// assignee matching sees the current email/username.
+	// Callers may pass a user built from JWT claims; load the stored user before
+	// creating imported tasks and related entities.
 	importer, err := user.GetUserWithEmail(s, &user.User{ID: u.ID})
 	if err != nil {
 		return err
@@ -130,10 +129,6 @@ func insertFromStructure(s *xorm.Session, str []*models.ProjectWithTasksAndBucke
 	projectsByOldID := make(map[int64]*models.Project) // old id is the key
 	// Create all projects
 	for i, p := range str {
-		if p.ID == models.FavoritesPseudoProjectID {
-			continue
-		}
-
 		oldID := p.ID
 
 		if p.ParentProjectID != nil && *p.ParentProjectID != 0 {
@@ -456,7 +451,6 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 		t.ProjectID = project.ID
 		originalBucketID := t.BucketID
 		t.BucketID = 0
-		t.Assignees = remapAssignees(t.Assignees, user)
 		err = t.Create(s, user)
 		if err != nil {
 			if models.IsErrTaskCannotBeEmpty(err) {
@@ -495,8 +489,6 @@ func createProjectWithEverything(s *xorm.Session, project *models.ProjectWithTas
 					rt.ProjectID = t.ProjectID
 					originalBucketID := rt.BucketID
 					rt.BucketID = 0
-					rt.Assignees = remapAssignees(rt.Assignees, user)
-
 					err = rt.Create(s, user)
 					if err != nil {
 						log.Debugf("[creating structure] Error while creating related task %d: %s", rt.ID, err.Error())
@@ -765,21 +757,6 @@ func createAttachmentFromProvider(s *xorm.Session, t *models.TaskWithComments, a
 		err = t.Update(s, user)
 		if err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-// Foreign assignee IDs are invalid; only the importer can be matched by email or username.
-func remapAssignees(assignees []*user.User, importer *user.User) []*user.User {
-	for _, a := range assignees {
-		if a == nil {
-			continue
-		}
-		emailMatch := a.Email != "" && importer.Email != "" && strings.EqualFold(a.Email, importer.Email)
-		usernameMatch := a.Username != "" && strings.EqualFold(a.Username, importer.Username)
-		if emailMatch || usernameMatch {
-			return []*user.User{importer}
 		}
 	}
 	return nil

@@ -2488,7 +2488,7 @@ func (err ErrInvalidTimeEntryFilterField) HTTPError() web.HTTPError {
 	return web.HTTPError{
 		HTTPCode: http.StatusBadRequest,
 		Code:     ErrCodeInvalidTimeEntryFilterField,
-		Message:  fmt.Sprintf("The time entry filter field '%s' is invalid. Filterable fields are user_id, task_id, project_id, start_time and end_time.", err.Field),
+		Message:  fmt.Sprintf("The time entry filter field '%s' is invalid. Filterable fields are task_id, project_id, start_time and end_time.", err.Field),
 	}
 }
 

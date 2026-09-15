@@ -28,7 +28,7 @@ import (
 // CanWrite return whether the user can write on that project or not
 func (p *Project) CanWrite(s *xorm.Session, a web.Auth) (bool, error) {
 
-	// Favorites and saved filters aggregate tasks from real projects, they have no row of their own to write to.
+	// Saved filters aggregate tasks from real projects, so they have no row of their own to write to.
 	if p.ID < 1 {
 		return false, nil
 	}
@@ -91,24 +91,10 @@ func checkReadPermissionsForProjects(s *xorm.Session, a web.Auth, projectIDs []i
 		return permissions, nil
 	}
 
-	// Resolve pseudo ids before the instance admin branch below: they have no row to look up.
+	// Resolve saved-filter ids before the instance admin branch below: they have no row to look up.
 	projectIDsWithRow := make([]int64, 0, len(projectIDs))
 	for _, projectID := range projectIDs {
-		switch {
-		case projectID == FavoritesPseudoProject.ID:
-			owner, err := user.GetFromAuth(a)
-			if err != nil {
-				return nil, err
-			}
-
-			favorites := FavoritesPseudoProject
-			favorites.Owner = owner
-			permissions[projectID] = &projectReadPermission{
-				canRead:       true,
-				maxPermission: int(PermissionRead),
-				project:       &favorites,
-			}
-		case GetSavedFilterIDFromProjectID(projectID) > 0:
+		if GetSavedFilterIDFromProjectID(projectID) > 0 {
 			sf := &SavedFilter{ID: GetSavedFilterIDFromProjectID(projectID)}
 			canRead, maxPermission, err := sf.CanRead(s, a)
 			if err != nil {
@@ -119,9 +105,9 @@ func checkReadPermissionsForProjects(s *xorm.Session, a web.Auth, projectIDs []i
 				canRead:       canRead,
 				maxPermission: maxPermission,
 			}
-		default:
-			projectIDsWithRow = append(projectIDsWithRow, projectID)
+			continue
 		}
+		projectIDsWithRow = append(projectIDsWithRow, projectID)
 	}
 
 	if len(projectIDsWithRow) == 0 {
@@ -211,11 +197,6 @@ func (p *Project) CanRead(s *xorm.Session, a web.Auth) (bool, int, error) {
 
 // CanUpdate checks if the user can update a project
 func (p *Project) CanUpdate(s *xorm.Session, a web.Auth) (canUpdate bool, err error) {
-	// The favorite project can't be edited
-	if p.ID == FavoritesPseudoProject.ID {
-		return false, nil
-	}
-
 	// Ahead of the admin bypass: a filter's pseudo project is the filter, and only its owner may update it.
 	fid := GetSavedFilterIDFromProjectID(p.ID)
 	if fid > 0 {

@@ -33,7 +33,7 @@ import type { IconProp } from '@fortawesome/fontawesome-svg-core'
 
 const props = withDefaults(defineProps<{
 	modelValue: ISubscription | null,
-	entity: ISubscription['entity'],
+	entity: 'project',
 	entityId: number,
 	type?: 'button' | 'dropdown',
 }>(), {
@@ -53,26 +53,15 @@ const isInherited = computed(() => props.modelValue !== null &&
 
 const tooltipText = computed(() => {
 	if (isInherited.value) {
-		return props.entity === 'task'
-			? t('task.subscription.subscribedTaskThroughProject')
-			: t('task.subscription.subscribedProjectThroughParentProject')
+		return t('project.subscription.subscribedThroughParentProject')
 	}
 
-	switch (props.entity) {
-		case 'project':
-			return props.modelValue !== null ?
-				t('task.subscription.subscribedProject') :
-				t('task.subscription.notSubscribedProject')
-		case 'task':
-			return props.modelValue !== null ?
-				t('task.subscription.subscribedTask') :
-				t('task.subscription.notSubscribedTask')
-	}
-
-	return ''
+	return props.modelValue !== null ?
+		t('project.subscription.subscribed') :
+		t('project.subscription.notSubscribed')
 })
 
-const buttonText = computed(() => props.modelValue ? t('task.subscription.unsubscribe') : t('task.subscription.subscribe'))
+const buttonText = computed(() => props.modelValue ? t('project.subscription.unsubscribe') : t('project.subscription.subscribe'))
 const iconName = computed<IconProp>(() => props.modelValue ? ['far', 'bell-slash'] : 'bell')
 
 function changeSubscription() {
@@ -89,16 +78,7 @@ async function subscribe() {
 	await subscriptionService.create(subscription)
 	emit('update:modelValue', subscription)
 
-	let message = ''
-	switch (props.entity) {
-		case 'project':
-			message = t('task.subscription.subscribeSuccessProject')
-			break
-		case 'task':
-			message = t('task.subscription.subscribeSuccessTask')
-			break
-	}
-	success({message})
+	success({message: t('project.subscription.subscribeSuccess')})
 }
 
 async function unsubscribe() {
@@ -109,15 +89,6 @@ async function unsubscribe() {
 	await subscriptionService.delete(subscription)
 	emit('update:modelValue', null)
 
-	let message = ''
-	switch (props.entity) {
-		case 'project':
-			message = t('task.subscription.unsubscribeSuccessProject')
-			break
-		case 'task':
-			message = t('task.subscription.unsubscribeSuccessTask')
-			break
-	}
-	success({message})
+	success({message: t('project.subscription.unsubscribeSuccess')})
 }
 </script>

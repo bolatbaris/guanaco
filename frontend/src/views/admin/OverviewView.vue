@@ -32,19 +32,6 @@
 						{{ data.tasks }}
 					</p>
 				</div>
-				<div class="admin-overview__card">
-					<h2 class="admin-overview__card-title">
-						{{ $t('admin.overview.shares') }}
-					</h2>
-					<p class="admin-overview__card-value">
-						{{ totalShares }}
-					</p>
-					<p class="admin-overview__hint admin-overview__shares-breakdown">
-						{{ data.shares.linkShares }} {{ $t('admin.overview.linkSharesShort') }}
-						<span aria-hidden="true">·</span>
-						{{ data.shares.userShares }} {{ $t('admin.overview.userSharesShort') }}
-					</p>
-				</div>
 				<div class="admin-overview__card admin-overview__card--version">
 					<h2 class="admin-overview__card-title">
 						{{ $t('admin.overview.version') }}
@@ -131,12 +118,6 @@ const expiresInDays = computed<number | null>(() => {
 	const expiresAt = data.value?.license?.expiresAt
 	if (!expiresAt) return null
 	return Math.max(0, dayjs(expiresAt).diff(dayjs(), 'day'))
-})
-
-const totalShares = computed<number>(() => {
-	const shares = data.value?.shares
-	if (!shares) return 0
-	return shares.linkShares + shares.userShares
 })
 
 onMounted(async () => {

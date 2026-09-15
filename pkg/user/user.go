@@ -86,14 +86,14 @@ const (
 // User holds information about an user
 type User struct {
 	// The unique, numeric id of this user.
-	ID int64 `xorm:"bigint autoincr not null unique pk" json:"id" param:"bot" readOnly:"true" doc:"The unique, numeric id of this user."`
+	ID int64 `xorm:"bigint autoincr not null unique pk" json:"id" param:"user" readOnly:"true" doc:"The unique, numeric id of this user."`
 	// The full name of the user.
 	Name string `xorm:"text null" json:"name" doc:"The full name of the user."`
 	// The username of the user. Is always unique.
-	Username string `xorm:"varchar(250) not null unique" json:"username" valid:"length(1|250)" minLength:"1" maxLength:"250" doc:"The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix."`
+	Username string `xorm:"varchar(250) not null unique" json:"username" valid:"length(1|250)" minLength:"1" maxLength:"250" doc:"The username of the user. Is always unique."`
 	Password string `xorm:"varchar(250) null" json:"-"`
 	// The user's email address.
-	Email string `xorm:"varchar(250) null" json:"email,omitempty" valid:"email,length(0|250)" maxLength:"250" doc:"The user's email address. Always empty for bot users."`
+	Email string `xorm:"varchar(250) null" json:"email,omitempty" valid:"email,length(0|250)" maxLength:"250" doc:"The user's email address."`
 	// New address awaiting confirmation; only becomes Email once the confirm token is used.
 	PendingEmail string `xorm:"varchar(250) null" json:"-"`
 
@@ -114,9 +114,9 @@ type User struct {
 	OverdueTasksRemindersEnabled bool   `xorm:"bool default true index" json:"-"`
 	OverdueTasksRemindersTime    string `xorm:"varchar(5) not null default '09:00'" json:"-"`
 	DefaultProjectID             int64  `xorm:"bigint null index" json:"-"`
-	// BotOwnerID is the ID of the owning (human) user if this user is a bot.
-	// A non-zero value means this user is a bot and cannot authenticate via password.
-	BotOwnerID int64  `xorm:"bigint null index" json:"bot_owner_id,omitempty" readOnly:"true" doc:"The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot."`
+	// BotOwnerID remains internal so legacy automation identities cannot leak into
+	// the single-user API contract.
+	BotOwnerID int64  `xorm:"bigint null index" json:"-"`
 	WeekStart  int    `xorm:"null" json:"-"`
 	Language   string `xorm:"varchar(50) null" json:"-" valid:"language"`
 	Timezone   string `xorm:"varchar(255) null" json:"-"`

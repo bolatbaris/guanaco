@@ -3,8 +3,8 @@ import type {IUser} from './IUser'
 
 export interface ISubscription extends IAbstract {
 	id: number
-	entity: string // FIXME: correct type?
-	entityId: number // FIXME: correct type?
+	entity: 'project'
+	entityId: number
 	user: IUser
 
 	created: Date

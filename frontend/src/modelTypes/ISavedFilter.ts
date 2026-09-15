@@ -7,7 +7,7 @@ export interface IFilters {
 	order_by: ('asc' | 'desc')[],
 	filter: string,
 	filter_include_nulls: boolean,
-	s: string,
+	q: string,
 }
 
 export interface ISavedFilter extends IAbstract {

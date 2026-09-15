@@ -3,7 +3,7 @@ You are working in a repository configured to track tasks in Vikunja via the
 `veans` CLI. **You MUST use veans for all task tracking instead of TodoWrite.**
 
 Project: {{ .ProjectTitle }}{{ if .ProjectIdentifier }} ({{ .ProjectIdentifier }}){{ end }}
-Bot identity: `{{ .BotUsername }}` — your actions in Vikunja appear as this user.
+Account: `{{ .Username }}` — your actions in Vikunja appear as this user.
 Server: {{ .Server }}
 </EXTREMELY_IMPORTANT>
 
@@ -26,7 +26,7 @@ Server: {{ .Server }}
   (errors if the old text isn't unique — same semantics as the Edit tool).
 - Post a comment on significant decisions, discoveries, or course-changes:
   `veans update {{ .TaskIDExample }} --comment '<p>Discovered Y; pivoting to Z because …</p>'`
-- For sub-work that could be assigned separately, create real subtasks
+- For sub-work that needs separate tracking, create real subtasks
   via `--parent`. For incremental check-off lists, use task-list items
   in the description instead.
 
@@ -113,17 +113,17 @@ Every `list`, `show`, `create`, `update`, `claim`, `api` call emits JSON
 on stdout — no flag needed, no human-formatted variant. Errors land on
 stderr as `{"code":"...","error":"..."}` with non-zero exit; branch on
 `code` (NOT_FOUND, CONFLICT, VALIDATION_ERROR, AUTH_ERROR,
-RATE_LIMITED, NOT_CONFIGURED, BOT_USERS_UNAVAILABLE, UNKNOWN).
+RATE_LIMITED, NOT_CONFIGURED, UNKNOWN).
 
 `show`/`create`/`update`/`claim` return a single task; `list` returns
 an array. Useful fields:
 
 - `id` (numeric, internal) — pass to `api` calls
 - `index` (per-project) — what `{{ .TaskIDExample }}` resolves to
-- `done`, `priority`, `title`, `description` (HTML)
+- `done`, `title`, `description` (HTML)
 - `buckets[]` — current bucket per view; match `project_view_id` to
   yours from `.veans.yml` and read `id` to know the status
-- `assignees[]`, `labels[]` — `[]` if absent
+- `labels[]` — `[]` if absent
 
 Trust your JSON parser; we won't add new fields without notice.
 
@@ -142,13 +142,12 @@ Trust your JSON parser; we won't add new fields without notice.
 ```
 veans list                         # all tasks, tree view
 veans list --ready                 # ready to start (Todo + not blocked)
-veans list --mine                  # tasks assigned to you
 veans list --branch                # tasks tagged with the current git branch
-veans list --filter "priority > 3"  # raw Vikunja filter expression
+veans list --filter "done = false"   # raw Vikunja filter expression
 veans show {{ .TaskIDExample }}                  # full task detail (JSON)
 
 veans create "title" -s in-progress -d "<p>HTML body — see Description format.</p>"
-veans create "title" --label bug --priority 4 --parent {{ .TaskIDExample }}
+veans create "title" --label bug --parent {{ .TaskIDExample }}
 veans create "title" --blocked-by {{ .TaskIDExample }}
 
 veans update {{ .TaskIDExample }} -s in-review --comment '<p>Summary of changes…</p>'
@@ -157,7 +156,7 @@ veans update {{ .TaskIDExample }} --description-replace-old 'data-checked="false
 veans update {{ .TaskIDExample }} --label-add bug --label-remove flaky
 veans update {{ .TaskIDExample }} -s scrapped --reason "obsolete: replaced by {{ .TaskIDExample }}"
 
-veans claim {{ .TaskIDExample }}                 # assign yourself + In Progress + branch label
+veans claim {{ .TaskIDExample }}                 # move to In Progress + branch label
 veans api GET /tasks/...           # escape hatch for raw REST when curated cmds don't fit
 ```
 
@@ -170,5 +169,4 @@ veans api GET /tasks/...           # escape hatch for raw REST when curated cmds
 - Branch labels: `veans:branch:<branch-name>` — `veans claim` adds the current branch automatically
 
 The agent prompt above overrides TodoWrite. Anything you would have tracked
-there should live in Vikunja instead, where it stays visible across sessions
-and to humans collaborating on the project.
+there should live in Vikunja instead, where it stays visible across sessions.

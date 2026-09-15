@@ -3,15 +3,11 @@ import type {Prefixes} from './types'
 const VIKUNJA_PREFIXES: Prefixes = {
 	label: '*',
 	project: '+',
-	priority: '!',
-	assignee: '@',
 }
 
 const TODOIST_PREFIXES: Prefixes = {
 	label: '@',
 	project: '#',
-	priority: '!',
-	assignee: '+',
 }
 
 export enum PrefixMode {

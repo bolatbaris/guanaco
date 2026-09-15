@@ -20,7 +20,6 @@
 				<AppHeader />
 				<ContentAuth />
 			</template>
-			<ContentLinkShare v-else-if="authStore.authLinkShare" />
 			<NoAuthWrapper
 				v-else
 				show-api-config
@@ -52,7 +51,6 @@ import KeyboardShortcuts from '@/components/misc/keyboard-shortcuts/index.vue'
 
 import AppHeader from '@/components/home/AppHeader.vue'
 import ContentAuth from '@/components/home/ContentAuth.vue'
-import ContentLinkShare from '@/components/home/ContentLinkShare.vue'
 import NoAuthWrapper from '@/components/misc/NoAuthWrapper.vue'
 import Ready from '@/components/misc/Ready.vue'
 

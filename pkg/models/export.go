@@ -131,18 +131,9 @@ func getRawTasksForExport(s *xorm.Session, projectIDs []int64, a web.Auth) (task
 		}},
 	}
 
-	hasFavoritesProject := false
-	for _, id := range projectIDs {
-		if id == FavoritesPseudoProject.ID {
-			hasFavoritesProject = true
-			break
-		}
-	}
-
 	var dbSearcher taskSearcher = &dbTaskSearcher{
-		s:                   s,
-		a:                   a,
-		hasFavoritesProject: hasFavoritesProject,
+		s: s,
+		a: a,
 	}
 
 	tasks, _, err = dbSearcher.Search(opts)

@@ -22,7 +22,6 @@ import (
 	"errors"
 	"io"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -84,7 +83,6 @@ const (
 	AttrStartDate   TaskAttribute = "start_date"
 	AttrEndDate     TaskAttribute = "end_date"
 	AttrDone        TaskAttribute = "done"
-	AttrPriority    TaskAttribute = "priority"
 	AttrLabels      TaskAttribute = "labels"
 	AttrProject     TaskAttribute = "project"
 	AttrReminder    TaskAttribute = "reminder"
@@ -99,7 +97,6 @@ var AllTaskAttributes = []TaskAttribute{
 	AttrStartDate,
 	AttrEndDate,
 	AttrDone,
-	AttrPriority,
 	AttrLabels,
 	AttrProject,
 	AttrReminder,
@@ -110,7 +107,7 @@ var AllTaskAttributes = []TaskAttribute{
 type ColumnMapping struct {
 	ColumnIndex int           `json:"column_index" doc:"The zero-based index of the CSV column this mapping applies to."`
 	ColumnName  string        `json:"column_name" doc:"The header name of the CSV column, for display."`
-	Attribute   TaskAttribute `json:"attribute" enum:"title,description,due_date,start_date,end_date,done,priority,labels,project,reminder,ignore" doc:"The task attribute the column maps to. Use \"ignore\" to drop the column."`
+	Attribute   TaskAttribute `json:"attribute" enum:"title,description,due_date,start_date,end_date,done,labels,project,reminder,ignore" doc:"The task attribute the column maps to. Use \"ignore\" to drop the column."`
 }
 
 // DetectionResult contains the auto-detected CSV structure
@@ -140,7 +137,6 @@ type PreviewTask struct {
 	StartDate   string   `json:"start_date,omitempty"`
 	EndDate     string   `json:"end_date,omitempty"`
 	Done        bool     `json:"done"`
-	Priority    int      `json:"priority"`
 	Labels      []string `json:"labels,omitempty"`
 	Project     string   `json:"project,omitempty"`
 }
@@ -243,7 +239,6 @@ func suggestMapping(columns []string) []ColumnMapping {
 		AttrStartDate:   {"start", "start_date", "startdate", "begin", "start date"},
 		AttrEndDate:     {"end", "end_date", "enddate", "finish", "end date"},
 		AttrDone:        {"done", "completed", "complete", "finished", "status", "is_done"},
-		AttrPriority:    {"priority", "importance", "urgent", "prio"},
 		AttrLabels:      {"labels", "tags", "categories", "category", "label", "tag"},
 		AttrProject:     {"project", "list", "folder", "group", "project_name", "list_name"},
 		AttrReminder:    {"reminder", "remind", "alert", "notification"},
@@ -485,8 +480,6 @@ func rowToPreviewTask(row []string, config *ImportConfig) PreviewTask {
 			task.EndDate = value
 		case AttrDone:
 			task.Done = parseBool(value)
-		case AttrPriority:
-			task.Priority = parsePriority(value)
 		case AttrLabels:
 			task.Labels = parseLabels(value)
 		case AttrProject:
@@ -505,38 +498,6 @@ func rowToPreviewTask(row []string, config *ImportConfig) PreviewTask {
 func parseBool(value string) bool {
 	lower := strings.ToLower(strings.TrimSpace(value))
 	return lower == "true" || lower == "yes" || lower == "1" || lower == "done" || lower == "completed"
-}
-
-// parsePriority parses priority value
-func parsePriority(value string) int {
-	// Try to parse as number
-	if p, err := strconv.Atoi(strings.TrimSpace(value)); err == nil {
-		// Vikunja uses 0-5 priority (0=unset, 1=low, 5=urgent)
-		if p < 0 {
-			return 0
-		}
-		if p > 5 {
-			return 5
-		}
-		return p
-	}
-
-	// Try to parse text priority
-	lower := strings.ToLower(strings.TrimSpace(value))
-	switch {
-	case strings.Contains(lower, "urgent") || strings.Contains(lower, "highest"):
-		return 5
-	case strings.Contains(lower, "high"):
-		return 4
-	case strings.Contains(lower, "medium") || strings.Contains(lower, "normal"):
-		return 3
-	case strings.Contains(lower, "lowest"):
-		return 1
-	case strings.Contains(lower, "low"):
-		return 2
-	}
-
-	return 0
 }
 
 // parseLabels parses comma-separated labels
@@ -772,8 +733,6 @@ func rowToTask(row []string, config *ImportConfig, taskID int64) models.Task {
 			if task.Done {
 				task.DoneAt = time.Now()
 			}
-		case AttrPriority:
-			task.Priority = int64(parsePriority(value))
 		case AttrLabels:
 			labels := parseLabels(value)
 			for _, labelTitle := range labels {

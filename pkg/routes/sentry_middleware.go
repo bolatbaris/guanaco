@@ -33,9 +33,14 @@ type SentryOptions struct {
 	Repanic bool
 }
 
-// SentryMiddleware returns a middleware that captures panics and reports them to Sentry.
-// It also attaches a Sentry hub to the request context.
+// SentryMiddleware attaches a request-scoped Sentry hub to the request context.
+// Panic reporting remains centralized in Echo's HTTP error handler so a panic is
+// not reported once here and again after middleware.Recover converts it to an error.
 func SentryMiddleware(options SentryOptions) echo.MiddlewareFunc {
+	// Keep the option in the exported API for callers compiled against the old
+	// middleware contract. Panic recovery is intentionally owned by Echo now.
+	_ = options
+
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
 			hub := sentry.GetHubFromContext(c.Request().Context())
@@ -50,18 +55,6 @@ func SentryMiddleware(options SentryOptions) echo.MiddlewareFunc {
 			// Store hub in context
 			ctx := context.WithValue(c.Request().Context(), sentryHubKey{}, hub)
 			c.SetRequest(c.Request().WithContext(ctx))
-
-			defer func() {
-				if err := recover(); err != nil {
-					eventID := hub.RecoverWithContext(
-						context.WithValue(c.Request().Context(), sentry.RequestContextKey, c.Request()),
-						err,
-					)
-					if eventID != nil && options.Repanic {
-						panic(err)
-					}
-				}
-			}()
 
 			return next(c)
 		}

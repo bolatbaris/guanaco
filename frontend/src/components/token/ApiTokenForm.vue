@@ -16,12 +16,10 @@ import {useTimeFormat} from '@/composables/useTimeFormat'
 import {TIME_FORMAT} from '@/constants/timeFormat'
 
 const props = withDefaults(defineProps<{
-	ownerId?: number,
 	loading?: boolean,
 	initialTitle?: string,
 	initialScopes?: string,
 }>(), {
-	ownerId: 0,
 	loading: false,
 	initialTitle: '',
 	initialScopes: '',
@@ -67,8 +65,8 @@ const presets: TokenPreset[] = [
 		id: 'tasks',
 		groups: {
 			'tasks': '*',
+			'delegation': '*',
 			'tasks_attachments': '*',
-			'tasks_assignees': '*',
 			'tasks_labels': '*',
 			'tasks_comments': '*',
 			'tasks_relations': '*',
@@ -83,8 +81,6 @@ const presets: TokenPreset[] = [
 		groups: {
 			'projects': '*',
 			'projects_views': '*',
-			'projects_users': '*',
-			'projects_shares': '*',
 			'projects_webhooks': '*',
 			'projects_buckets': '*',
 			'projects_views_tasks': '*',
@@ -266,10 +262,6 @@ async function createToken() {
 		newToken.value.expiresAt = new Date((+new Date()) + expiry * MILLISECONDS_A_DAY)
 	} else {
 		newToken.value.expiresAt = new Date(newTokenExpiryCustom.value)
-	}
-
-	if (props.ownerId > 0) {
-		(newToken.value as IApiToken & {ownerId: number}).ownerId = props.ownerId
 	}
 
 	const token = await service.create(newToken.value)

@@ -70,10 +70,15 @@ const (
 	ServiceIPExtractionMethod    Key = `service.ipextractionmethod`
 	ServiceTrustedProxies        Key = `service.trustedproxies`
 
-	SentryEnabled         Key = `sentry.enabled`
-	SentryDsn             Key = `sentry.dsn`
-	SentryFrontendEnabled Key = `sentry.frontendenabled`
-	SentryFrontendDsn     Key = `sentry.frontenddsn`
+	SentryEnabled                         Key = `sentry.enabled`
+	SentryDsn                             Key = `sentry.dsn`
+	SentryFrontendEnabled                 Key = `sentry.frontendenabled`
+	SentryFrontendDsn                     Key = `sentry.frontenddsn`
+	SentryEnvironment                     Key = `sentry.environment`
+	SentryTracesSampleRate                Key = `sentry.tracesamplerate`
+	SentryFrontendTracesSampleRate        Key = `sentry.frontendtracesamplerate`
+	SentryFrontendReplaySessionSampleRate Key = `sentry.frontendreplaysessionsamplerate`
+	SentryFrontendReplayOnErrorSampleRate Key = `sentry.frontendreplaysonerrorsamplerate`
 
 	AuthLocalEnabled       Key = `auth.local.enabled`
 	AuthOpenIDEnabled      Key = `auth.openid.enabled`
@@ -374,7 +379,7 @@ func initDefaultConfig() {
 	ServiceRootpath.setDefault(getRootpathLocation())
 	ServiceMaxItemsPerPage.setDefault(50)
 	ServiceMotd.setDefault("")
-	ServiceEnableLinkSharing.setDefault(true)
+	ServiceEnableLinkSharing.setDefault(false)
 	ServiceEnableTaskAttachments.setDefault(true)
 	ServiceTimeZone.setDefault("GMT")
 	ServiceEnableTaskComments.setDefault(true)
@@ -387,9 +392,16 @@ func initDefaultConfig() {
 	ServiceIPExtractionMethod.setDefault("direct")
 	ServiceTrustedProxies.setDefault("")
 
-	// Sentry
-	SentryDsn.setDefault("https://440eedc957d545a795c17bbaf477497c@o1047380.ingest.sentry.io/4504254983634944")
-	SentryFrontendDsn.setDefault("https://85694a2d757547cbbc90cd4b55c5a18d@o1047380.ingest.sentry.io/6024480")
+	// Sentry. DSNs stay empty unless explicitly configured for the deployment.
+	SentryEnabled.setDefault(false)
+	SentryDsn.setDefault("")
+	SentryFrontendEnabled.setDefault(false)
+	SentryFrontendDsn.setDefault("")
+	SentryEnvironment.setDefault("")
+	SentryTracesSampleRate.setDefault(0.05)
+	SentryFrontendTracesSampleRate.setDefault(0.05)
+	SentryFrontendReplaySessionSampleRate.setDefault(0)
+	SentryFrontendReplayOnErrorSampleRate.setDefault(0)
 
 	// Auth
 	AuthLocalEnabled.setDefault(true)

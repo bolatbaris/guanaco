@@ -7,6 +7,7 @@ import App from './App.vue'
 import {error, success} from './message'
 import {configureApiClient} from './client/http'
 import {queryClient} from './client/queryClient'
+import {normalizeApiUrl} from './helpers/fetcher'
 
 // Notifications
 import Notifications from '@kyvg/vue3-notification'
@@ -22,6 +23,10 @@ declare global {
 		API_URL: string;
 		SENTRY_ENABLED?: boolean;
 		SENTRY_DSN?: string;
+		SENTRY_ENVIRONMENT?: string;
+		SENTRY_FRONTEND_TRACES_SAMPLE_RATE?: number | string;
+		SENTRY_FRONTEND_REPLAY_SESSION_SAMPLE_RATE?: number | string;
+		SENTRY_FRONTEND_REPLAY_ON_ERROR_SAMPLE_RATE?: number | string;
 		CUSTOM_LOGO_URL?: string;
 		CUSTOM_LOGO_URL_DARK?: string;
 	}
@@ -33,9 +38,16 @@ if (apiUrlFromStorage !== null) {
 	window.API_URL = apiUrlFromStorage
 }
 
+// Migrate persisted server URLs from the removed v1 API before any request is created.
+window.API_URL = normalizeApiUrl(window.API_URL)
+
 // Make sure the api url does not contain a / at the end
 if (window.API_URL.endsWith('/')) {
 	window.API_URL = window.API_URL.slice(0, -1)
+}
+
+if (apiUrlFromStorage !== null && apiUrlFromStorage !== window.API_URL) {
+	localStorage.setItem('API_URL', window.API_URL)
 }
 
 configureApiClient()
@@ -61,28 +73,8 @@ handleChunkLoadErrors()
 // We're loading the language before creating the app so that it won't fail to load when the user's 
 // language file is not yet loaded.
 const browserLanguage = getBrowserLanguage()
-setLanguage(browserLanguage).then(() => {
+setLanguage(browserLanguage).then(async () => {
 	const app = createApp(App)
-
-	if (window.SENTRY_ENABLED) {
-		try {
-			import('./sentry').then(sentry => sentry.default(app, router))
-		} catch (e) {
-			console.error('Could not enable Sentry tracking', e)
-		}
-	}
-
-	app.use(Notifications)
-	app.use(VueQueryPlugin, {queryClient})
-
-	app.directive('focus', focus)
-	app.directive('tooltip', tooltip)
-	app.directive('shortcut', shortcut)
-
-	app.component('Icon', FontAwesomeIcon)
-	app.component('XButton', Button)
-	app.component('Modal', Modal)
-	app.component('Card', Card)
 
 	app.config.errorHandler = (err, vm, info) => {
 		if (import.meta.env.DEV) {
@@ -111,6 +103,33 @@ setLanguage(browserLanguage).then(() => {
 			throw err
 		})
 	}
+
+	const sentryEnabled = typeof window.SENTRY_ENABLED === 'boolean'
+		? window.SENTRY_ENABLED
+		: typeof import.meta.env.VITE_SENTRY_ENABLED === 'string'
+			? import.meta.env.VITE_SENTRY_ENABLED === 'true'
+			: Boolean(import.meta.env.VITE_SENTRY_DSN?.trim())
+
+	if (sentryEnabled) {
+		try {
+			const sentry = await import('./sentry')
+			await sentry.default(app, router)
+		} catch (e) {
+			console.error('Could not enable Sentry tracking', e)
+		}
+	}
+
+	app.use(Notifications)
+	app.use(VueQueryPlugin, {queryClient})
+
+	app.directive('focus', focus)
+	app.directive('tooltip', tooltip)
+	app.directive('shortcut', shortcut)
+
+	app.component('Icon', FontAwesomeIcon)
+	app.component('XButton', Button)
+	app.component('Modal', Modal)
+	app.component('Card', Card)
 
 	app.config.globalProperties.$message = {
 		error,

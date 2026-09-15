@@ -57,18 +57,6 @@ var subTableFilters = SubTableFilters{
 		FilterableField: "reminder",
 		AllowNullCheck:  true,
 	},
-	"assignees": {
-		Table:           "task_assignees",
-		BaseFilter:      "tasks.id = task_id",
-		FilterableField: "username",
-		AllowNullCheck:  true,
-	},
-	"created_by": {
-		Table:           "users",
-		BaseFilter:      "tasks.created_by_id = users.id",
-		FilterableField: "username",
-		AllowNullCheck:  false,
-	},
 	"parent_project": {
 		Table:           "projects",
 		BaseFilter:      "tasks.project_id = id",
@@ -105,9 +93,8 @@ type taskSearcher interface {
 }
 
 type dbTaskSearcher struct {
-	s                   *xorm.Session
-	a                   web.Auth
-	hasFavoritesProject bool
+	s *xorm.Session
+	a web.Auth
 }
 
 func (sf *SubTableFilter) ToBaseSubQuery(taskAlias string) *builder.Builder {
@@ -120,11 +107,6 @@ func (sf *SubTableFilter) ToBaseSubQuery(taskAlias string) *builder.Builder {
 		Select("1").
 		From(sf.Table).
 		Where(builder.Expr(baseFilter))
-
-	// little hack to add users table for assignees filter
-	if sf.Table == "task_assignees" {
-		cond.Join("INNER", "users", "users.id = user_id")
-	}
 
 	return cond
 }
@@ -211,9 +193,6 @@ func convertFiltersToDBFilterCondWithAlias(rawFilters []*taskFilter, includeNull
 
 		subTableFilterParams, ok := subTableFilters[f.field]
 		if ok {
-			if (f.field == "assignees" || f.field == "created_by") && (f.comparator == taskFilterComparatorLike) {
-				continue
-			}
 
 			// Collect all consecutive AND-joined range filters targeting the same sub-table.
 			// Only range comparators (>, >=, <, <=) are merged because they express
@@ -386,29 +365,11 @@ func stripBucketIDFilters(filters []*taskFilter) []*taskFilter {
 // logic from dropping the child: a NULL predicate inside EXISTS yields no row, so
 // the whole thing collapses to a clean FALSE and the child stays a root.
 func (d *dbTaskSearcher) buildSubtaskRootCondition(opts *taskSearchOptions) (builder.Cond, error) {
-	// The base result set is (projectIDCond OR favoritesCond); mirror both so the
-	// parent is considered "in scope" exactly when it could appear as a result row.
-	scopes := make([]builder.Cond, 0, 2)
+	// Mirror the project scope so the parent is considered "in scope" exactly
+	// when it could appear as a result row.
+	scopes := make([]builder.Cond, 0, 1)
 	if len(opts.projectIDs) > 0 {
 		scopes = append(scopes, builder.In("parent_tasks.project_id", opts.projectIDs))
-	}
-	if d.hasFavoritesProject {
-		favCond := builder.
-			Select("entity_id").
-			From("favorites").
-			Where(builder.And(
-				builder.Eq{"user_id": d.a.GetID()},
-				builder.Eq{"kind": FavoriteKindTask},
-			))
-		// Inaccessible favorites must not hide readable children from the roots.
-		accessible, err := accessibleProjectIDsCond(d.s, d.a, "parent_tasks.project_id")
-		if err != nil {
-			return nil, err
-		}
-		scopes = append(scopes, builder.And(
-			builder.In("parent_tasks.id", favCond),
-			accessible,
-		))
 	}
 
 	predicates := []builder.Cond{
@@ -573,67 +534,14 @@ func (d *dbTaskSearcher) Search(opts *taskSearchOptions) (tasks []*Task, totalCo
 		(!opts.userProvidedSort || relevanceSortRequested)
 
 	var projectIDCond builder.Cond
-	var favoritesCond builder.Cond
 	if len(opts.projectIDs) > 0 {
 		projectIDCond = builder.In("tasks.project_id", opts.projectIDs)
 	}
 
-	if d.hasFavoritesProject {
-		// Favorites outlive project access, so this arm needs its own access check.
-		favoritesAccessible, err := accessibleProjectIDsCond(d.s, d.a, "tasks.project_id")
-		if err != nil {
-			return nil, 0, err
-		}
-
-		addFavoritesCond := true
-		if wantsRelevanceRanking && len(opts.projectIDs) > 0 {
-			// pdb.score also rejects the favorites arm (`OR tasks.id IN (<subquery>)`).
-			// On an all-projects scope that arm is usually redundant — every favorited
-			// task already lives in one of the user's projects — so drop it and keep
-			// relevance ranking. Only favorites outside the scope (e.g. in projects the
-			// user lost access to) need the arm and keep the default, unranked ordering.
-			var hasOutOfScopeFavorites bool
-			hasOutOfScopeFavorites, err = d.s.
-				Table("favorites").
-				Join("INNER", "tasks", "tasks.id = favorites.entity_id").
-				Where(builder.And(
-					builder.Eq{"favorites.user_id": d.a.GetID()},
-					builder.Eq{"favorites.kind": FavoriteKindTask},
-					builder.NotIn("tasks.project_id", opts.projectIDs),
-					taskNotDeletedCond("tasks"),
-					favoritesAccessible,
-				)).
-				Exist()
-			if err != nil {
-				return nil, 0, err
-			}
-			addFavoritesCond = hasOutOfScopeFavorites
-		}
-
-		if addFavoritesCond {
-			// All favorite tasks for that user
-			favCond := builder.
-				Select("entity_id").
-				From("favorites").
-				Where(
-					builder.And(
-						builder.Eq{"user_id": d.a.GetID()},
-						builder.Eq{"kind": FavoriteKindTask},
-					))
-
-			favoritesCond = builder.And(
-				builder.In("tasks.id", favCond),
-				favoritesAccessible,
-			)
-		}
-	}
-
 	limit, start := getLimitFromPageIndex(opts.page, opts.perPage)
-	cond := builder.And(builder.Or(projectIDCond, favoritesCond), where, filterCond)
+	cond := builder.And(projectIDCond, where, filterCond)
 
-	// When the favorites arm is still part of the query (Favorites view, or
-	// out-of-scope favorites exist), its shape is unsupported — stay unranked.
-	rankByRelevance := wantsRelevanceRanking && favoritesCond == nil
+	rankByRelevance := wantsRelevanceRanking
 
 	if rankByRelevance && !relevanceSortRequested {
 		opts.sortby = append([]*sortParam{{sortBy: taskPropertyRelevance, orderBy: orderDescending}}, opts.sortby...)

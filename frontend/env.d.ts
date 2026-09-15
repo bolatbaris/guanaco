@@ -7,8 +7,10 @@ interface ImportMetaEnv {
 	readonly VIKUNJA_HTTP_PORT?: number
 	readonly VIKUNJA_HTTPS_PORT?: number
 
-	readonly VIKUNJA_SENTRY_ENABLED?: boolean
-	readonly VIKUNJA_SENTRY_DSN?: string
+	readonly VITE_SENTRY_ENABLED?: string
+	readonly VITE_SENTRY_DSN?: string
+	readonly VITE_SENTRY_ENVIRONMENT?: string
+	readonly VITE_SENTRY_TRACES_SAMPLE_RATE?: string
 
 	readonly SENTRY_AUTH_TOKEN?: string
 	readonly SENTRY_ORG?: string

@@ -3,7 +3,6 @@
 		class="list-menu loader-container is-loading-small"
 		:class="{
 			'is-loading': isLoading,
-			'is-drop-target': isDropTarget,
 		}"
 		:data-project-id="project.id"
 	>
@@ -91,10 +90,9 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, onUnmounted, watch} from 'vue'
+import {computed} from 'vue'
 import {useProjectStore} from '@/stores/projects'
 import {useBaseStore} from '@/stores/base'
-import {useTaskStore} from '@/stores/tasks'
 import {useStorage} from '@vueuse/core'
 
 import type {IProject} from '@/modelTypes/IProject'
@@ -113,60 +111,6 @@ const props = defineProps<{
 	canCollapse?: boolean,
 	canEditOrder?: boolean,
 }>()
-
-const taskStore = useTaskStore()
-const isHoveredDuringDrag = ref(false)
-
-// Track mouse position during drag to detect hover (mouseenter doesn't fire during drag)
-function handleMouseMove(e: MouseEvent) {
-	if (!taskStore.draggedTask) {
-		isHoveredDuringDrag.value = false
-		return
-	}
-
-	// Synthetic drag events carry no pointer position, and elementsFromPoint throws on NaN
-	if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) {
-		return
-	}
-
-	const elementsUnderMouse = document.elementsFromPoint(e.clientX, e.clientY)
-	const isOverThisProject = elementsUnderMouse.some(el => {
-		const projectId = (el as HTMLElement).dataset?.projectId
-		return projectId && parseInt(projectId, 10) === props.project.id
-	})
-
-	isHoveredDuringDrag.value = isOverThisProject
-}
-
-// Only add the listener when a task is being dragged
-// Use capture phase to receive events before Sortable.js can prevent them
-watch(() => taskStore.draggedTask, (draggedTask) => {
-	if (draggedTask) {
-		document.addEventListener('mousemove', handleMouseMove, true)
-		document.addEventListener('dragover', handleMouseMove, true)
-	} else {
-		document.removeEventListener('mousemove', handleMouseMove, true)
-		document.removeEventListener('dragover', handleMouseMove, true)
-		isHoveredDuringDrag.value = false
-	}
-}, {immediate: true})
-
-onUnmounted(() => {
-	document.removeEventListener('mousemove', handleMouseMove, true)
-	document.removeEventListener('dragover', handleMouseMove, true)
-})
-
-// Show drop target highlight when a task is being dragged and this project is hovered
-const isDropTarget = computed(() => {
-	if (!taskStore.draggedTask || !isHoveredDuringDrag.value) {
-		return false
-	}
-	// Highlight any valid project (not a pseudo project, has write permission)
-	// The actual drop logic will handle the case when it's the same project (no-op)
-	return props.project.id > 0
-		&& props.project.maxPermission !== null
-		&& props.project.maxPermission > PERMISSIONS.READ
-})
 
 const projectStore = useProjectStore()
 const baseStore = useBaseStore()
@@ -195,11 +139,10 @@ const canToggleFavorite = computed(() => {
 	// Allow favorite toggle for:
 	// 1. Regular projects (id > 0) with write permission
 	// 2. Saved filters (id < -1) - user owns their own filters
-	if (props.project.id === -1) return false  // Favorites pseudo-project
 	if (props.project.id > 0) {
 		return props.project.maxPermission !== null && props.project.maxPermission > PERMISSIONS.READ
 	}
-	// Saved filters (negative IDs except -1)
+	// Saved filters use negative project ids.
 	return isSavedFilter(props.project)
 })
 </script>
@@ -309,14 +252,4 @@ const canToggleFavorite = computed(() => {
 	box-shadow: none;
 }
 
-.is-drop-target {
-	background-color: hsla(var(--primary-hsl), 0.15);
-	border-radius: $radius;
-
-	.navigation-item {
-		background-color: hsla(var(--primary-hsl), 0.1);
-		box-shadow: inset 0 0 0 2px var(--primary);
-		border-radius: $radius;
-	}
-}
 </style>

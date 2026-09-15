@@ -40,17 +40,16 @@ func newLoginCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Mint a fresh API token for the bot user (rotation)",
-		Long: `Re-authenticates as you (the bot's owner) and mints a new API token
-for the bot configured in .veans.yml. The new token replaces the
-existing one in the credential store.
+		Short: "Mint a fresh API token for the configured user (rotation)",
+		Long: `Re-authenticates as the configured user and mints a new scoped API
+token. The new token replaces the existing one in the credential store.
 
 The default flow is OAuth 2.0 Authorization Code + PKCE — open the
 URL veans prints, sign in, and paste the callback URL back. Use
 --token to paste in a personal API token, or --use-password / --username
 to force POST /login instead.
 
-Use this after revoking the bot's token in Vikunja's UI, or any time
+Use this after revoking the automation token in Vikunja's UI, or any time
 you want to rotate.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, err := config.Find("")
@@ -84,7 +83,7 @@ you want to rotate.`,
 			if err != nil {
 				return output.Wrap(output.CodeUnknown, err, "fetch /routes: %v", err)
 			}
-			perms := client.PermissionsForBot(routes)
+			perms := client.PermissionsForAutomation(routes)
 			if len(perms) == 0 {
 				return output.New(output.CodeUnknown, "no API token permissions available")
 			}
@@ -93,7 +92,6 @@ you want to rotate.`,
 				Title:       "veans (rotated)",
 				Permissions: perms,
 				ExpiresAt:   client.FarFuture,
-				OwnerID:     cfg.Bot.UserID,
 			})
 			if err != nil {
 				return err
@@ -102,11 +100,11 @@ you want to rotate.`,
 				return output.New(output.CodeUnknown, "POST /tokens did not return token plaintext")
 			}
 
-			if err := credentials.Default().Set(cfg.Server, cfg.Bot.Username, minted.Token); err != nil {
+			if err := credentials.Default().Set(cfg.Server, cfg.Username, minted.Token); err != nil {
 				return err
 			}
 
-			fmt.Fprintf(os.Stderr, "Rotated token for %s on %s\n", cfg.Bot.Username, cfg.Server)
+			fmt.Fprintf(os.Stderr, "Rotated token for %s on %s\n", cfg.Username, cfg.Server)
 			return nil
 		},
 	}

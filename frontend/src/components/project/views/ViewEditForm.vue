@@ -52,20 +52,20 @@ const transformFilterFromApi = (filterInput?: IFilters): IFilters => {
 		order_by: filterInput?.order_by ?? camelCaseFilter?.orderBy ?? [],
 		filter: '',
 		filter_include_nulls: false,
-		s: '',
+		q: '',
 	}
 	if (hasFilterQuery(filterString)) {
 		filter.filter = filterString
 	} else {
-		filter.s = filterString
+		filter.q = filterString
 	}
 
-	if (filter.s === '') {
-		filter.s = filterInput?.s ?? ''
+	if (filter.q === '') {
+		filter.q = filterInput?.q ?? ''
 	}
 
 	if (filter.filter === '') {
-		filter.filter = filter.s
+		filter.filter = filter.q
 	}
 
 	filter.filter_include_nulls = filterInput?.filter_include_nulls
@@ -160,12 +160,12 @@ function save() {
 			order_by: filterInput?.order_by ?? [],
 			filter: '',
 			filter_include_nulls: filterInput?.filter_include_nulls ?? false,
-			s: '',
+			q: '',
 		}
 		if (hasFilterQuery(filterString)) {
 			filter.filter = filterString
 		} else {
-			filter.s = filterString
+			filter.q = filterString
 		}
 
 		return filter

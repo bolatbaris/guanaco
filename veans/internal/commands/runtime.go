@@ -52,11 +52,11 @@ func loadRuntime() (*runtime, error) {
 		return nil, err
 	}
 	store := credentials.Default()
-	tok, err := store.Get(cfg.Server, cfg.Bot.Username)
+	tok, err := store.Get(cfg.Server, cfg.Username)
 	if err != nil {
 		return nil, output.Wrap(output.CodeAuth, err,
 			"no token for %s on %s — run `veans login` to mint a fresh one",
-			cfg.Bot.Username, cfg.Server)
+			cfg.Username, cfg.Server)
 	}
 	c := client.New(cfg.Server, tok)
 	if cfg.HTTPTimeout > 0 {

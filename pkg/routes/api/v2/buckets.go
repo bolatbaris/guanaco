@@ -37,8 +37,8 @@ type bucketListBody struct {
 // Buckets live under /projects/{project}/views/{view}/buckets; every operation
 // binds {project} → ProjectID and {view} → ProjectViewID, the write operations
 // additionally {bucket} → ID. There is intentionally no read-one route
-// (mirroring v1: the Bucket model has no ReadOne/CanRead), so AutoPatch
-// synthesises no PATCH either.
+// (the Bucket model has no ReadOne/CanRead), so AutoPatch synthesises no PATCH
+// either.
 func RegisterBucketRoutes(api huma.API) {
 	tags := []string{"projects"}
 

@@ -23,7 +23,7 @@ const router = useRouter()
 const route = useRoute()
 
 // Checked at click time: node views are not re-rendered when the editor
-// toggles editable. In edit mode the pill only selects, like a mention.
+// toggles editable. In edit mode the pill only selects.
 function open(task: ITask) {
 	if (props.editor.isEditable) {
 		return

@@ -29,21 +29,6 @@ type User struct {
 	Email    string `json:"email,omitempty"`
 }
 
-// BotUser is what `POST /user/bots` returns.
-type BotUser struct {
-	ID       int64     `json:"id"`
-	Username string    `json:"username"`
-	Name     string    `json:"name,omitempty"`
-	Status   int       `json:"status,omitempty"`
-	Created  time.Time `json:"created,omitempty"`
-}
-
-// BotUserCreate is the request body for POST /user/bots.
-type BotUserCreate struct {
-	Username string `json:"username"`
-	Name     string `json:"name,omitempty"`
-}
-
 // Project mirrors pkg/models/project.Project.
 type Project struct {
 	ID              int64   `json:"id"`
@@ -93,7 +78,6 @@ type Task struct {
 	Description string     `json:"description,omitempty"`
 	Done        bool       `json:"done"`
 	DoneAt      *time.Time `json:"done_at,omitempty"`
-	Priority    int64      `json:"priority,omitempty"`
 	ProjectID   int64      `json:"project_id"`
 	Index       int64      `json:"index,omitempty"`
 	Identifier  string     `json:"identifier,omitempty"`
@@ -104,10 +88,9 @@ type Task struct {
 	// side endpoint (e.g. the bucket-move POST); reads return it as 0.
 	// The current bucket(s) — one per Kanban view — are exposed via
 	// ?expand=buckets in the Buckets slice.
-	BucketID  int64     `json:"bucket_id,omitempty"`
-	Buckets   []*Bucket `json:"buckets,omitempty"`
-	Assignees []*User   `json:"assignees,omitempty"`
-	Labels    []*Label  `json:"labels,omitempty"`
+	BucketID int64     `json:"bucket_id,omitempty"`
+	Buckets  []*Bucket `json:"buckets,omitempty"`
+	Labels   []*Label  `json:"labels,omitempty"`
 	// RelatedTasks groups other tasks by relation kind ("blocking",
 	// "blocked", "parenttask", "subtask", "related", ...). Vikunja
 	// populates this on every task read; the nested tasks have their
@@ -116,21 +99,16 @@ type Task struct {
 	StartDate    *time.Time         `json:"start_date,omitempty"`
 	DueDate      *time.Time         `json:"due_date,omitempty"`
 	EndDate      *time.Time         `json:"end_date,omitempty"`
-	PercentDone  float64            `json:"percent_done,omitempty"`
 }
 
 // TaskPatch is the JSON Merge Patch body for UpdateTask (PATCH /tasks/{id}).
 // Every field is a pointer with omitempty so only the fields the caller sets
-// are serialized; absent fields are left untouched server-side. This is the
-// fix for issue #2962 — a status-only update no longer zeroes description or
-// priority the way the old whole-object write did. A non-nil pointer to a zero
-// value (e.g. *Priority = 0, *Done = false) still serializes, which is how an
-// explicit "clear priority" or "reopen" reaches the server.
+// are serialized; absent fields are left untouched server-side. This keeps a
+// status-only update from zeroing unrelated task fields.
 type TaskPatch struct {
 	Title       *string `json:"title,omitempty"`
 	Description *string `json:"description,omitempty"`
 	Done        *bool   `json:"done,omitempty"`
-	Priority    *int64  `json:"priority,omitempty"`
 }
 
 // TaskComment matches pkg/models/task_comments.TaskComment.
@@ -166,25 +144,6 @@ type TaskRelation struct {
 	RelationKind string `json:"relation_kind"`
 }
 
-// TaskAssignee is the body for `POST /tasks/{id}/assignees`.
-type TaskAssignee struct {
-	UserID int64 `json:"user_id"`
-}
-
-// ProjectUser is the body and response for `POST /projects/{id}/users`.
-type ProjectUser struct {
-	ID         int64  `json:"id,omitempty"`
-	Username   string `json:"username"`
-	Permission int    `json:"permission"`
-}
-
-// Permission constants for project sharing.
-const (
-	PermissionRead      = 0
-	PermissionReadWrite = 1
-	PermissionAdmin     = 2
-)
-
 // APIToken is the request and response shape for `POST /tokens`. The plaintext
 // `Token` field is only populated on creation. Vikunja requires ExpiresAt;
 // callers that want a long-lived token use FarFuture (year 9999).
@@ -194,7 +153,6 @@ type APIToken struct {
 	Token       string              `json:"token,omitempty"`
 	Permissions map[string][]string `json:"permissions"`
 	ExpiresAt   time.Time           `json:"expires_at"`
-	OwnerID     int64               `json:"owner_id,omitempty"`
 	Created     time.Time           `json:"created,omitempty"`
 }
 
@@ -205,11 +163,10 @@ var FarFuture = time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
 
 // Info is the parsed shape of `GET /info`.
 type Info struct {
-	Version            string `json:"version"`
-	FrontendURL        string `json:"frontend_url"`
-	MOTD               string `json:"motd,omitempty"`
-	LinkSharingEnabled bool   `json:"link_sharing_enabled"`
-	Auth               struct {
+	Version     string `json:"version"`
+	FrontendURL string `json:"frontend_url"`
+	MOTD        string `json:"motd,omitempty"`
+	Auth        struct {
 		Local struct {
 			Enabled bool `json:"enabled"`
 		} `json:"local"`

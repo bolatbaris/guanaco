@@ -15,15 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // @title Vikunja API
-// @description This is the documentation for the [Vikunja](https://vikunja.io) API. Vikunja is a cross-platform To-do-application with a lot of features, such as sharing projects with users. <!-- ReDoc-Inject: <security-definitions> -->
+// @description This is the documentation for the single-user productivity API. <!-- ReDoc-Inject: <security-definitions> -->
 
 // @description # Pagination
-// @description Every endpoint capable of pagination will return two headers:
-// @description * `x-pagination-total-pages`: The total number of available pages for this request
-// @description * `x-pagination-result-count`: The number of items returned for this request.
+// @description Paginated v2 responses use the standard `{items, total, page, per_page, total_pages}` envelope.
 // @description # Permissions
-// @description All endpoints which return a single item (project, task, etc.) - no array - will also return a `x-max-permission` header with the max permission the user has on this item as an int where `0` is `Read Only`, `1` is `Read & Write` and `2` is `Admin`.
-// @description This can be used to show or hide ui elements based on the permissions the user has.
+// @description Resource responses expose `max_permission` when permission data is requested. The value is `0` for `Read Only`, `1` for `Read & Write` and `2` for `Admin`.
+// @description This can be used to show or hide UI elements based on the permissions the user has.
 // @description # Errors
 // @description All errors have an error code and a human-readable error message in addition to the http status code. You should always check for the status code in the response, not only the http status code.
 // @description Due to limitations in the swagger library we're using for this document, only one error per http status code is documented here. Make sure to check the [error docs](https://vikunja.io/docs/errors/) in Vikunja's documentation for a full list of available error codes.
@@ -34,7 +32,7 @@
 // @description
 // @description **BasicAuth:** Only used when requesting tasks via CalDAV.
 // @description <!-- ReDoc-Inject: <security-definitions> -->
-// @BasePath /api/v1
+// @BasePath /api/v2
 
 // @license.url https://code.vikunja.io/api/src/branch/main/LICENSE
 // @license.name AGPL-3.0-or-later
@@ -55,40 +53,19 @@ import (
 	"context"
 	"log/slog"
 	"strings"
-	"time"
 
 	"code.vikunja.io/api/pkg/config"
 	"code.vikunja.io/api/pkg/license"
 	"code.vikunja.io/api/pkg/log"
 	"code.vikunja.io/api/pkg/models"
 	"code.vikunja.io/api/pkg/modules/auth"
-	"code.vikunja.io/api/pkg/modules/auth/oauth2server"
-	"code.vikunja.io/api/pkg/modules/auth/openid"
-	"code.vikunja.io/api/pkg/modules/background"
-	backgroundHandler "code.vikunja.io/api/pkg/modules/background/handler"
-	"code.vikunja.io/api/pkg/modules/background/unsplash"
-	"code.vikunja.io/api/pkg/modules/background/upload"
-	"code.vikunja.io/api/pkg/modules/migration"
-	csvmigrator "code.vikunja.io/api/pkg/modules/migration/csv"
-	migrationHandler "code.vikunja.io/api/pkg/modules/migration/handler"
-	microsofttodo "code.vikunja.io/api/pkg/modules/migration/microsoft-todo"
-	"code.vikunja.io/api/pkg/modules/migration/ticktick"
-	"code.vikunja.io/api/pkg/modules/migration/todoist"
-	"code.vikunja.io/api/pkg/modules/migration/trello"
-	vikunja_file "code.vikunja.io/api/pkg/modules/migration/vikunja-file"
-	"code.vikunja.io/api/pkg/modules/migration/wekan"
-	"code.vikunja.io/api/pkg/plugins"
-	apiv1 "code.vikunja.io/api/pkg/routes/api/v1"
-	adminapi "code.vikunja.io/api/pkg/routes/api/v1/admin"
+	"code.vikunja.io/api/pkg/observability"
 	apiv2 "code.vikunja.io/api/pkg/routes/api/v2"
 	"code.vikunja.io/api/pkg/routes/caldav"
 	"code.vikunja.io/api/pkg/routes/feeds"
 	vmiddleware "code.vikunja.io/api/pkg/routes/middleware"
-	"code.vikunja.io/api/pkg/version"
-	"code.vikunja.io/api/pkg/web/handler"
 	ws "code.vikunja.io/api/pkg/websocket"
 
-	"github.com/getsentry/sentry-go"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )
@@ -134,7 +111,7 @@ func NewEcho() *echo.Echo {
 		}),
 		// Since echo v5.3.0 groups implicitly register 404 routes when middleware
 		// is added. Our route setup creates multiple groups with the same prefix
-		// (e.g. rate-limit subgroups of /api/v1), which would panic as duplicates.
+		// (e.g. rate-limit subgroups of /api/v2), which would panic as duplicates.
 		NoGroupAutoRegister404Routes: true,
 	})
 
@@ -157,6 +134,7 @@ func NewEcho() *echo.Echo {
 			LogLatency:   true,
 			LogRemoteIP:  true,
 			LogUserAgent: true,
+			LogRequestID: true,
 			HandleError:  true,
 			LogValuesFunc: func(_ *echo.Context, v middleware.RequestLoggerValues) error {
 				attrs := []slog.Attr{
@@ -166,6 +144,9 @@ func NewEcho() *echo.Echo {
 					slog.Int("status", v.Status),
 					slog.Duration("latency", v.Latency),
 					slog.String("user_agent", v.UserAgent),
+				}
+				if v.RequestID != "" {
+					attrs = append(attrs, slog.String("request_id", v.RequestID))
 				}
 				if v.Error != nil {
 					attrs = append(attrs, slog.String("err", v.Error.Error()))
@@ -180,7 +161,7 @@ func NewEcho() *echo.Echo {
 	e.Use(middleware.Recover())
 
 	// Normalize PHP-style `foo[]=...` query params to `foo=...` before any
-	// handler binds them. Runs globally so both /api/v1 and /api/v2 benefit.
+	// handler binds them. Runs globally so every API request benefits.
 	e.Use(vmiddleware.NormalizeArrayParams())
 
 	if config.AuditEnabled.GetBool() {
@@ -199,24 +180,19 @@ func NewEcho() *echo.Echo {
 	e.Use(middleware.BodyLimit((int64(maxFileSize) + 2) * 1024 * 1024))
 
 	// Set up centralized error handler
-	e.HTTPErrorHandler = CreateHTTPErrorHandler(e, config.SentryEnabled.GetBool())
+	e.HTTPErrorHandler = CreateHTTPErrorHandler(e, observability.Enabled())
 
 	return e
 }
 
 func setupSentry(e *echo.Echo) {
-	if !config.SentryEnabled.GetBool() {
+	if err := observability.Init(); err != nil {
+		log.Criticalf("Sentry init failed: %s", err)
 		return
 	}
-
-	if err := sentry.Init(sentry.ClientOptions{
-		Dsn:              config.SentryDsn.GetString(),
-		AttachStacktrace: true,
-		Release:          version.Version,
-	}); err != nil {
-		log.Criticalf("Sentry init failed: %s", err)
+	if !observability.Enabled() {
+		return
 	}
-	defer sentry.Flush(5 * time.Second)
 
 	e.Use(SentryMiddleware(SentryOptions{
 		Repanic: true,
@@ -281,16 +257,13 @@ func RegisterRoutes(e *echo.Echo) {
 		}))
 	}
 
-	// API Routes
-	a := e.Group("/api/v1")
-	registerAPIRoutes(a, noAuthRateLimit, refreshRateLimit)
-	setupPprof(e)
-
-	// /api/v2 — Huma-backed API, scaffolded alongside /api/v1.
+	// API Routes. The Huma-backed v2 contract is the only public API surface.
 	a2 := e.Group("/api/v2")
 	// Share the BasicAuth failure budget with CalDAV and feeds.
 	a2.Use(pathScoped(func(p string) bool { return p == "/api/v2/notifications.atom" }, basicAuthRateLimit))
 	registerAPIRoutesV2(e, a2, noAuthRateLimit, refreshRateLimit)
+	setupMetrics(e)
+	setupPprof(e)
 
 	// Collect routes for API token permissions
 	// In Echo v5, we collect routes after registration using e.Router().Routes()
@@ -299,18 +272,6 @@ func RegisterRoutes(e *echo.Echo) {
 
 // unauthenticatedAPIPaths contains paths that don't require JWT authentication
 var unauthenticatedAPIPaths = map[string]bool{
-	"/api/v1/user/confirm":                   true,
-	"/api/v1/login":                          true,
-	auth.RefreshTokenPathV1:                  true,
-	"/api/v1/auth/openid/:provider/callback": true,
-	"/api/v1/info":                           true,
-	"/api/v1/shares/:share/auth":             true,
-	"/api/v1/docs.json":                      true,
-	"/api/v1/docs":                           true,
-	"/api/v1/docs/redoc.standalone.js":       true,
-	"/api/v1/metrics":                        true,
-	"/api/v1/oauth/token":                    true,
-
 	"/api/v2/openapi.json":              true,
 	"/api/v2/openapi.yaml":              true,
 	"/api/v2/openapi-3.0.json":          true,
@@ -321,10 +282,9 @@ var unauthenticatedAPIPaths = map[string]bool{
 	"/api/v2/info":                      true,
 
 	"/api/v2/user/confirm":                   true,
-	"/api/v2/shares/:share/auth":             true,
 	"/api/v2/oauth/token":                    true,
 	"/api/v2/login":                          true,
-	auth.RefreshTokenPathV2:                  true,
+	auth.RefreshTokenPath:                    true,
 	"/api/v2/auth/openid/:provider/callback": true,
 
 	// Public infra healthcheck (a Huma op that opts out of the global auth).
@@ -345,8 +305,8 @@ func collectRoutesForAPITokens(e *echo.Echo) {
 	routeList := e.Router().Routes()
 	log.Debugf("Collecting %d routes for API token usage", len(routeList))
 	for _, route := range routeList {
-		// Only process API routes
-		if !strings.HasPrefix(route.Path, "/api/v1") && !strings.HasPrefix(route.Path, "/api/v2") {
+		// Only process the public API contract.
+		if !strings.HasPrefix(route.Path, "/api/v2") {
 			continue
 		}
 
@@ -360,7 +320,7 @@ func collectRoutesForAPITokens(e *echo.Echo) {
 // noStoreCacheControl returns middleware that sets `Cache-Control: no-store`
 // on all responses. Without this, browsers may heuristically cache JSON
 // responses, so changes made through the API might not appear until a hard
-// refresh. Applied to both /api/v1 and /api/v2.
+// refresh. Applied to the public API contract.
 func noStoreCacheControl() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
@@ -402,24 +362,22 @@ func unauthenticatedPathSet(paths ...string) pathSet {
 	return s
 }
 
-// The v2 counterparts of v1's unauthenticated route group - credential
-// endpoints only, never the docs/info/health ones.
+// Credential endpoints only, never the docs/info/health ones.
 var v2CredentialPaths = unauthenticatedPathSet(
 	"/api/v2/user/confirm",
 	"/api/v2/login",
 	"/api/v2/auth/openid/:provider/callback",
-	"/api/v2/shares/:share/auth",
 )
 
 var v2SessionRenewalPaths = unauthenticatedPathSet(
-	auth.RefreshTokenPathV2,
+	auth.RefreshTokenPath,
 	"/api/v2/oauth/token",
 )
 
 const v2AdminPathPrefix = "/api/v2/admin"
 
-// gateV2AdminRoutes reuses v1's RequireFeature/RequireInstanceAdmin gate, both
-// of which 404 on failure.
+// gateV2AdminRoutes hides admin endpoints unless the instance is licensed and
+// the current user is an instance administrator.
 func gateV2AdminRoutes() echo.MiddlewareFunc {
 	feature := RequireFeature(license.FeatureAdminPanel)
 	admin := RequireInstanceAdmin()
@@ -437,8 +395,7 @@ func registerAPIRoutesV2(e *echo.Echo, a *echo.Group, noAuthRateLimit, refreshRa
 	a.Use(SetupTokenMiddleware())
 	a.Use(pathScoped(v2SessionRenewalPaths.has, refreshRateLimit))
 	a.Use(pathScoped(v2CredentialPaths.has, noAuthRateLimit))
-	// Match the authenticated v1 group: rate limiting and route metrics
-	// apply to v2 resource endpoints too.
+	// Rate limiting and route metrics apply to resource endpoints too.
 	setupRateLimit(a, config.RateLimitKind.GetString())
 	setupMetricsMiddleware(a)
 	// Must come after rate limiting: the gate does a per-request admin DB read,
@@ -460,528 +417,6 @@ func registerAPIRoutesV2(e *echo.Echo, a *echo.Group, noAuthRateLimit, refreshRa
 
 	// Resources self-register via init(); RegisterAll runs them all + AutoPatch.
 	apiv2.RegisterAll(api)
-}
-
-func registerAPIRoutes(a *echo.Group, noAuthRateLimit, refreshRateLimit echo.MiddlewareFunc) {
-
-	// Prevent browsers from caching API responses. Without an explicit
-	// Cache-Control header browsers may heuristically cache JSON responses, so
-	// changes made through the API might not appear until a hard refresh.
-	a.Use(noStoreCacheControl())
-
-	// This is the group with no auth
-	// It is its own group to be able to rate limit this based on different heuristics
-	n := a.Group("")
-	setupRateLimit(n, "ip")
-
-	// Docs
-	n.GET("/docs.json", apiv1.DocsJSON)
-	n.GET("/docs", apiv1.RedocUI)
-	n.GET("/docs/redoc.standalone.js", apiv1.RedocJS)
-
-	// WebSocket (auth happens after upgrade via first message)
-	n.GET("/ws", ws.UpgradeHandler, noAuthRateLimit)
-
-	// Prometheus endpoint
-	setupMetrics(n)
-
-	// Separate route for unauthenticated routes to enable rate limits for it
-	ur := a.Group("")
-	ur.Use(noAuthRateLimit)
-
-	if config.AuthLocalEnabled.GetBool() {
-		ur.POST("/user/confirm", apiv1.UserConfirmEmail)
-	}
-
-	if config.AuthLocalEnabled.GetBool() || config.AuthLdapEnabled.GetBool() {
-		ur.POST("/login", apiv1.Login)
-	}
-
-	if config.AuthOpenIDEnabled.GetBool() {
-		ur.POST("/auth/openid/:provider/callback", openid.HandleCallback)
-	}
-
-	tr := a.Group("")
-	tr.Use(refreshRateLimit)
-
-	// Refresh token endpoint — unauthenticated because it uses the refresh
-	// token cookie instead of a JWT bearer token.
-	tr.POST("/user/token/refresh", apiv1.RefreshToken)
-
-	// OAuth 2.0 token endpoint — unauthenticated because it validates
-	// credentials (authorization code or refresh token) itself.
-	tr.POST("/oauth/token", oauth2server.HandleToken)
-
-	// Info endpoint
-	n.GET("/info", apiv1.Info)
-
-	// Link share auth
-	if config.ServiceEnableLinkSharing.GetBool() {
-		ur.POST("/shares/:share/auth", apiv1.AuthenticateLinkShare)
-	}
-
-	// ===== Routes with Authentication =====
-	a.Use(SetupTokenMiddleware())
-
-	// Rate limit
-	setupRateLimit(a, config.RateLimitKind.GetString())
-
-	// Middleware to collect metrics
-	setupMetricsMiddleware(a)
-
-	a.GET("/routes", models.GetAvailableAPIRoutesForToken)
-
-	// OAuth 2.0 authorize endpoint — requires authentication.
-	a.POST("/oauth/authorize", oauth2server.HandleAuthorize)
-
-	// Avatar endpoint
-	a.GET("/avatar/:username", apiv1.GetAvatar)
-
-	// User stuff
-	u := a.Group("/user")
-
-	u.GET("", apiv1.UserShow)
-	u.GET("s", apiv1.UserList)
-	u.POST("/token", apiv1.RenewToken)
-	u.POST("/logout", apiv1.Logout)
-	u.POST("/settings/email", apiv1.UpdateUserEmail)
-	u.GET("/settings/avatar", apiv1.GetUserAvatarProvider)
-	u.POST("/settings/avatar", apiv1.ChangeUserAvatarProvider)
-	u.PUT("/settings/avatar/upload", apiv1.UploadAvatar)
-	u.POST("/settings/general", apiv1.UpdateGeneralUserSettings)
-	u.POST("/export/request", apiv1.RequestUserDataExport)
-	u.POST("/export/download", apiv1.DownloadUserDataExport)
-	u.GET("/export", apiv1.GetUserExportStatus)
-	u.GET("/timezones", apiv1.GetAvailableTimezones)
-	u.PUT("/settings/token/caldav", apiv1.GenerateCaldavToken)
-	u.GET("/settings/token/caldav", apiv1.GetCaldavTokens)
-	u.DELETE("/settings/token/caldav/:id", apiv1.DeleteCaldavToken)
-
-	sessionProvider := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.Session{}
-		},
-	}
-	u.GET("/sessions", sessionProvider.ReadAllWeb)
-	u.DELETE("/sessions/:session", sessionProvider.DeleteWeb)
-
-	// User-level webhooks
-	if config.WebhooksEnabled.GetBool() {
-		u.GET("/settings/webhooks", apiv1.GetUserWebhooks)
-		u.GET("/settings/webhooks/events", apiv1.GetUserDirectedWebhookEvents)
-		u.PUT("/settings/webhooks", apiv1.CreateUserWebhook)
-		u.POST("/settings/webhooks/:webhook", apiv1.UpdateUserWebhook)
-		u.DELETE("/settings/webhooks/:webhook", apiv1.DeleteUserWebhook)
-	}
-
-	if config.ServiceEnableTotp.GetBool() {
-		u.GET("/settings/totp", apiv1.UserTOTP)
-		u.POST("/settings/totp/enroll", apiv1.UserTOTPEnroll)
-		u.POST("/settings/totp/enable", apiv1.UserTOTPEnable)
-		u.POST("/settings/totp/disable", apiv1.UserTOTPDisable)
-		u.GET("/settings/totp/qrcode", apiv1.UserTOTPQrCode)
-	}
-
-	// User deletion
-	if config.ServiceEnableUserDeletion.GetBool() {
-		u.POST("/deletion/request", apiv1.UserRequestDeletion)
-		u.POST("/deletion/confirm", apiv1.UserConfirmDeletion)
-		u.POST("/deletion/cancel", apiv1.UserCancelDeletion)
-	}
-
-	// Bot users
-	botHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.BotUser{}
-		},
-	}
-	u.PUT("/bots", botHandler.CreateWeb)
-	u.GET("/bots", botHandler.ReadAllWeb)
-	u.GET("/bots/:bot", botHandler.ReadOneWeb)
-	u.POST("/bots/:bot", botHandler.UpdateWeb)
-	u.DELETE("/bots/:bot", botHandler.DeleteWeb)
-
-	projectHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.Project{}
-		},
-	}
-	a.GET("/projects", projectHandler.ReadAllWeb)
-	a.GET("/projects/:project", projectHandler.ReadOneWeb)
-	a.POST("/projects/:project", projectHandler.UpdateWeb)
-	a.DELETE("/projects/:project", projectHandler.DeleteWeb)
-	a.PUT("/projects", projectHandler.CreateWeb)
-	a.GET("/projects/:project/projectusers", apiv1.ListUsersForProject)
-
-	if config.ServiceEnableLinkSharing.GetBool() {
-		projectSharingHandler := &handler.WebHandler{
-			EmptyStruct: func() handler.CObject {
-				return &models.LinkSharing{}
-			},
-		}
-		a.PUT("/projects/:project/shares", projectSharingHandler.CreateWeb)
-		a.GET("/projects/:project/shares", projectSharingHandler.ReadAllWeb)
-		a.GET("/projects/:project/shares/:share", projectSharingHandler.ReadOneWeb)
-		a.DELETE("/projects/:project/shares/:share", projectSharingHandler.DeleteWeb)
-	}
-
-	taskCollectionHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TaskCollection{}
-		},
-	}
-	a.GET("/projects/:project/views/:view/tasks", taskCollectionHandler.ReadAllWeb)
-	a.GET("/projects/:project/tasks", taskCollectionHandler.ReadAllWeb)
-
-	kanbanBucketHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.Bucket{}
-		},
-	}
-	a.GET("/projects/:project/views/:view/buckets", kanbanBucketHandler.ReadAllWeb)
-	a.PUT("/projects/:project/views/:view/buckets", kanbanBucketHandler.CreateWeb)
-	a.POST("/projects/:project/views/:view/buckets/:bucket", kanbanBucketHandler.UpdateWeb)
-	a.DELETE("/projects/:project/views/:view/buckets/:bucket", kanbanBucketHandler.DeleteWeb)
-
-	projectDuplicateHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.ProjectDuplicate{}
-		},
-	}
-	a.PUT("/projects/:projectid/duplicate", projectDuplicateHandler.CreateWeb)
-
-	taskHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.Task{}
-		},
-	}
-	a.PUT("/projects/:project/tasks", taskHandler.CreateWeb)
-	a.GET("/tasks/:projecttask", taskHandler.ReadOneWeb)
-	a.GET("/projects/:project/tasks/by-index/:index", taskHandler.ReadOneWeb, ResolveProjectIdentifier())
-	a.GET("/tasks", taskCollectionHandler.ReadAllWeb)
-	a.DELETE("/tasks/:projecttask", taskHandler.DeleteWeb)
-	a.POST("/tasks/:projecttask", taskHandler.UpdateWeb)
-
-	taskDuplicateHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TaskDuplicate{}
-		},
-	}
-	a.PUT("/tasks/:projecttask/duplicate", taskDuplicateHandler.CreateWeb)
-
-	taskUnreadStatusHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TaskUnreadStatus{}
-		},
-	}
-
-	a.POST("/tasks/:projecttask/read", taskUnreadStatusHandler.UpdateWeb)
-
-	taskPositionHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TaskPosition{}
-		},
-	}
-	a.POST("/tasks/:task/position", taskPositionHandler.UpdateWeb)
-
-	bulkTaskHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.BulkTask{}
-		},
-	}
-	a.POST("/tasks/bulk", bulkTaskHandler.UpdateWeb)
-
-	assigneeTaskHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TaskAssginee{}
-		},
-	}
-	a.PUT("/tasks/:projecttask/assignees", assigneeTaskHandler.CreateWeb)
-	a.DELETE("/tasks/:projecttask/assignees/:user", assigneeTaskHandler.DeleteWeb)
-	a.GET("/tasks/:projecttask/assignees", assigneeTaskHandler.ReadAllWeb)
-
-	bulkAssigneeHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.BulkAssignees{}
-		},
-	}
-	a.POST("/tasks/:projecttask/assignees/bulk", bulkAssigneeHandler.CreateWeb)
-
-	labelTaskHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.LabelTask{}
-		},
-	}
-	a.PUT("/tasks/:projecttask/labels", labelTaskHandler.CreateWeb)
-	a.DELETE("/tasks/:projecttask/labels/:label", labelTaskHandler.DeleteWeb)
-	a.GET("/tasks/:projecttask/labels", labelTaskHandler.ReadAllWeb)
-
-	bulkLabelTaskHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.LabelTaskBulk{}
-		},
-	}
-	a.POST("/tasks/:projecttask/labels/bulk", bulkLabelTaskHandler.CreateWeb)
-
-	taskRelationHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TaskRelation{}
-		},
-	}
-	a.PUT("/tasks/:task/relations", taskRelationHandler.CreateWeb)
-	a.DELETE("/tasks/:task/relations/:relationKind/:otherTask", taskRelationHandler.DeleteWeb)
-
-	if config.ServiceEnableTaskAttachments.GetBool() {
-		taskAttachmentHandler := &handler.WebHandler{
-			EmptyStruct: func() handler.CObject {
-				return &models.TaskAttachment{}
-			},
-		}
-		a.GET("/tasks/:task/attachments", taskAttachmentHandler.ReadAllWeb)
-		a.DELETE("/tasks/:task/attachments/:attachment", taskAttachmentHandler.DeleteWeb)
-		a.PUT("/tasks/:task/attachments", apiv1.UploadTaskAttachment)
-		a.GET("/tasks/:task/attachments/:attachment", apiv1.GetTaskAttachment)
-	}
-
-	if config.ServiceEnableTaskComments.GetBool() {
-		taskCommentHandler := &handler.WebHandler{
-			EmptyStruct: func() handler.CObject {
-				return &models.TaskComment{}
-			},
-		}
-		a.GET("/tasks/:task/comments", taskCommentHandler.ReadAllWeb)
-		a.PUT("/tasks/:task/comments", taskCommentHandler.CreateWeb)
-		a.DELETE("/tasks/:task/comments/:commentid", taskCommentHandler.DeleteWeb)
-		a.POST("/tasks/:task/comments/:commentid", taskCommentHandler.UpdateWeb)
-		a.GET("/tasks/:task/comments/:commentid", taskCommentHandler.ReadOneWeb)
-	}
-
-	labelHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.Label{}
-		},
-	}
-	a.GET("/labels", labelHandler.ReadAllWeb)
-	a.GET("/labels/:label", labelHandler.ReadOneWeb)
-	a.PUT("/labels", labelHandler.CreateWeb)
-	a.DELETE("/labels/:label", labelHandler.DeleteWeb)
-	a.POST("/labels/:label", labelHandler.UpdateWeb)
-
-	projectUserHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.ProjectUser{}
-		},
-	}
-	a.GET("/projects/:project/users", projectUserHandler.ReadAllWeb)
-	a.PUT("/projects/:project/users", projectUserHandler.CreateWeb)
-	a.DELETE("/projects/:project/users/:user", projectUserHandler.DeleteWeb)
-	a.POST("/projects/:project/users/:user", projectUserHandler.UpdateWeb)
-
-	savedFiltersHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.SavedFilter{}
-		},
-	}
-	a.GET("/filters/:filter", savedFiltersHandler.ReadOneWeb)
-	a.PUT("/filters", savedFiltersHandler.CreateWeb)
-	a.DELETE("/filters/:filter", savedFiltersHandler.DeleteWeb)
-	a.POST("/filters/:filter", savedFiltersHandler.UpdateWeb)
-
-	// Subscriptions
-	subscriptionHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.Subscription{}
-		},
-	}
-	a.PUT("/subscriptions/:entity/:entityID", subscriptionHandler.CreateWeb)
-	a.DELETE("/subscriptions/:entity/:entityID", subscriptionHandler.DeleteWeb)
-
-	// Notifications
-	notificationHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.DatabaseNotifications{}
-		},
-	}
-	a.GET("/notifications", notificationHandler.ReadAllWeb)
-	a.POST("/notifications/:notificationid", notificationHandler.UpdateWeb)
-	a.POST("/notifications", apiv1.MarkAllNotificationsAsRead)
-	a.DELETE("/notifications", notificationHandler.DeleteWeb)
-
-	// Migrations
-	m := a.Group("/migration")
-	registerMigrations(m)
-
-	// Project Backgrounds
-	if config.BackgroundsEnabled.GetBool() {
-		a.GET("/projects/:project/background", backgroundHandler.GetProjectBackground)
-		a.DELETE("/projects/:project/background", backgroundHandler.RemoveProjectBackground)
-		if config.BackgroundsUploadEnabled.GetBool() {
-			uploadBackgroundProvider := &backgroundHandler.BackgroundProvider{
-				Provider: func() background.Provider {
-					return &upload.Provider{}
-				},
-			}
-			a.PUT("/projects/:project/backgrounds/upload", uploadBackgroundProvider.UploadBackground)
-		}
-		if config.BackgroundsUnsplashEnabled.GetBool() {
-			unsplashBackgroundProvider := &backgroundHandler.BackgroundProvider{
-				Provider: func() background.Provider {
-					return &unsplash.Provider{}
-				},
-			}
-			a.GET("/backgrounds/unsplash/search", unsplashBackgroundProvider.SearchBackgrounds)
-			a.POST("/projects/:project/backgrounds/unsplash", unsplashBackgroundProvider.SetBackground)
-			a.GET("/backgrounds/unsplash/images/:image/thumb", unsplash.ProxyUnsplashThumb)
-			a.GET("/backgrounds/unsplash/images/:image", unsplash.ProxyUnsplashImage)
-		}
-	}
-
-	// API Tokens
-	apiTokenProvider := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.APIToken{}
-		},
-	}
-	a.GET("/tokens", apiTokenProvider.ReadAllWeb)
-	a.PUT("/tokens", apiTokenProvider.CreateWeb)
-	a.DELETE("/tokens/:token", apiTokenProvider.DeleteWeb)
-
-	// Webhooks
-	if config.WebhooksEnabled.GetBool() {
-		webhookProvider := &handler.WebHandler{
-			EmptyStruct: func() handler.CObject {
-				return &models.Webhook{}
-			},
-		}
-		a.GET("/projects/:project/webhooks", webhookProvider.ReadAllWeb)
-		a.PUT("/projects/:project/webhooks", webhookProvider.CreateWeb)
-		a.DELETE("/projects/:project/webhooks/:webhook", webhookProvider.DeleteWeb)
-		a.POST("/projects/:project/webhooks/:webhook", webhookProvider.UpdateWeb)
-		a.GET("/webhooks/events", apiv1.GetAvailableWebhookEvents)
-	}
-
-	// Reactions
-	reactionProvider := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.Reaction{}
-		},
-	}
-	a.GET("/:entitykind/:entityid/reactions", reactionProvider.ReadAllWeb)
-	a.POST("/:entitykind/:entityid/reactions/delete", reactionProvider.DeleteWeb)
-	a.PUT("/:entitykind/:entityid/reactions", reactionProvider.CreateWeb)
-
-	// Project views
-	projectViewProvider := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.ProjectView{}
-		},
-	}
-	a.GET("/projects/:project/views", projectViewProvider.ReadAllWeb)
-	a.GET("/projects/:project/views/:view", projectViewProvider.ReadOneWeb)
-	a.PUT("/projects/:project/views", projectViewProvider.CreateWeb)
-	a.DELETE("/projects/:project/views/:view", projectViewProvider.DeleteWeb)
-	a.POST("/projects/:project/views/:view", projectViewProvider.UpdateWeb)
-
-	// Kanban Task Bucket Relation
-	taskBucketProvider := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.TaskBucket{}
-		},
-	}
-	a.POST("/projects/:project/views/:view/buckets/:bucket/tasks", taskBucketProvider.UpdateWeb)
-
-	admin := a.Group("/admin",
-		RequireFeature(license.FeatureAdminPanel),
-		RequireInstanceAdmin(),
-	)
-	adminProjectListHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &models.AdminProjectList{}
-		},
-	}
-	adminUserListHandler := &handler.WebHandler{
-		EmptyStruct: func() handler.CObject {
-			return &adminapi.UserList{}
-		},
-	}
-	admin.GET("/overview", adminapi.GetOverview)
-	admin.GET("/users", adminUserListHandler.ReadAllWeb)
-	admin.PATCH("/users/:id/admin", adminapi.PatchAdmin)
-	admin.PATCH("/users/:id/status", adminapi.PatchStatus)
-	admin.DELETE("/users/:id", adminapi.DeleteUser)
-	admin.GET("/projects", adminProjectListHandler.ReadAllWeb)
-	admin.PATCH("/projects/:id/owner", adminapi.PatchProjectOwner)
-
-	// Plugin routes
-	if config.PluginsEnabled.GetBool() {
-		// Authenticated plugin routes
-		authenticatedPluginGroup := a.Group("/plugins")
-
-		// Unauthenticated plugin routes (with basic IP rate limiting)
-		unauthenticatedPluginGroup := n.Group("/plugins")
-
-		plugins.RegisterPluginRoutes(authenticatedPluginGroup, unauthenticatedPluginGroup)
-	}
-}
-
-func registerMigrations(m *echo.Group) {
-	// Todoist
-	if config.MigrationTodoistEnable.GetBool() {
-		todoistMigrationHandler := &migrationHandler.MigrationWeb{
-			MigrationStruct: func() migration.Migrator {
-				return &todoist.Migration{}
-			},
-		}
-		todoistMigrationHandler.RegisterMigrator(m)
-	}
-
-	// Trello
-	if config.MigrationTrelloEnable.GetBool() {
-		trelloMigrationHandler := &migrationHandler.MigrationWeb{
-			MigrationStruct: func() migration.Migrator {
-				return &trello.Migration{}
-			},
-		}
-		trelloMigrationHandler.RegisterMigrator(m)
-	}
-
-	// Microsoft Todo
-	if config.MigrationMicrosoftTodoEnable.GetBool() {
-		microsoftTodoMigrationHandler := &migrationHandler.MigrationWeb{
-			MigrationStruct: func() migration.Migrator {
-				return &microsofttodo.Migration{}
-			},
-		}
-		microsoftTodoMigrationHandler.RegisterMigrator(m)
-	}
-
-	// Vikunja File Migrator
-	vikunjaFileMigrationHandler := &migrationHandler.FileMigratorWeb{
-		MigrationStruct: func() migration.FileMigrator {
-			return &vikunja_file.FileMigrator{}
-		},
-	}
-	vikunjaFileMigrationHandler.RegisterRoutes(m)
-
-	// TickTick File Migrator
-	tickTickFileMigrator := migrationHandler.FileMigratorWeb{
-		MigrationStruct: func() migration.FileMigrator {
-			return &ticktick.Migrator{}
-		},
-	}
-	tickTickFileMigrator.RegisterRoutes(m)
-
-	// WeKan File Migrator
-	wekanFileMigrator := migrationHandler.FileMigratorWeb{
-		MigrationStruct: func() migration.FileMigrator {
-			return &wekan.Migrator{}
-		},
-	}
-	wekanFileMigrator.RegisterRoutes(m)
-
-	// CSV File Migrator (always enabled - generic import)
-	csvFileMigrator := &csvmigrator.MigratorWeb{}
-	csvFileMigrator.RegisterRoutes(m)
 }
 
 func registerCalDavRoutes(c *echo.Group) {

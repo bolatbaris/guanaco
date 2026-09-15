@@ -323,7 +323,6 @@ import {
 import {calculateItemPosition} from '@/helpers/calculateItemPosition'
 
 import {isSavedFilter, useSavedFilter} from '@/services/savedFilter'
-import {useTaskDragToProject} from '@/composables/useTaskDragToProject'
 import {success} from '@/message'
 import {useProjectStore} from '@/stores/projects'
 import type {TaskFilterParams} from '@/services/taskCollection'
@@ -364,7 +363,6 @@ const projectStore = useProjectStore()
 const authStore = useAuthStore()
 
 const alwaysShowBucketTaskCount = computed(() => authStore.settings.frontendSettings.alwaysShowBucketTaskCount)
-const {handleTaskDropToProject} = useTaskDragToProject()
 const taskPositionService = ref(new TaskPositionService())
 const taskBucketService = ref(new TaskBucketService())
 
@@ -399,19 +397,19 @@ const oneTaskUpdating = ref(false)
 
 // URL-synchronized filter parameters
 const filter = useRouteQuery('filter')
-const s = useRouteQuery('s')
+const q = useRouteQuery('q')
 
 const params = ref<TaskFilterParams>({
 	sort_by: [],
 	order_by: [],
 	filter: '',
 	filter_include_nulls: false,
-	s: '',
+	q: '',
 })
 
-watch([filter, s], ([filterValue, sValue]) => {
+watch([filter, q], ([filterValue, qValue]) => {
 	params.value.filter = filterValue ?? ''
-	params.value.s = sValue ?? ''
+	params.value.q = qValue ?? ''
 }, { immediate: true })
 
 function updateFilters(newParams: TaskFilterParams) {
@@ -420,7 +418,7 @@ function updateFilters(newParams: TaskFilterParams) {
 	
 	// Sync only filter and s to URL
 	filter.value = newParams.filter || undefined
-	s.value = newParams.s || undefined
+	q.value = newParams.q || undefined
 }
 
 const getTaskDraggableTaskComponentData = computed(() => (bucket: IBucket) => {
@@ -545,15 +543,6 @@ function updateTasks(bucketId: IBucket['id'], tasks: IBucket['tasks']) {
 
 async function updateTaskPosition(e) {
 	drag.value = false
-
-	// Check if dropped on a sidebar project
-	const {moved} = await handleTaskDropToProject(e, (task) => {
-		kanbanStore.removeTaskInBucket(task)
-	})
-
-	if (moved) {
-		return
-	}
 
 	// If dropped outside kanban
 	if (!e.to.dataset.bucketIndex) {
@@ -847,14 +836,8 @@ function dragstart(bucket: IBucket) {
 }
 
 function handleTaskDragStart(e) {
-	const taskId = parseInt(e.item.dataset.taskId, 10)
 	const bucketIndex = parseInt(e.from.dataset.bucketIndex, 10)
 	const bucket = buckets.value[bucketIndex]
-	const task = bucket?.tasks.find(t => t.id === taskId)
-
-	if (task) {
-		taskStore.setDraggedTask(task)
-	}
 	dragstart(bucket)
 }
 

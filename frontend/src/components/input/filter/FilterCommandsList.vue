@@ -14,12 +14,6 @@
 						:label="(item.item as unknown as Label)"
 						class="filter-autocomplete__label"
 					/>
-					<User
-						v-else-if="item.fieldType === 'users'"
-						:user="(item.item as unknown as IUser)"
-						:avatar-size="20"
-						class="filter-autocomplete__user"
-					/>
 					<div
 						v-else
 						class="filter-autocomplete__project"
@@ -40,10 +34,8 @@
 
 <script setup lang="ts">
 import XLabel from '@/components/tasks/partials/Label.vue'
-import User from '@/components/misc/User.vue'
 import { ref, watch } from 'vue'
 import type { Label } from '@/client/generated'
-import type { IUser } from '@/modelTypes/IUser'
 import type { AutocompleteItem } from './FilterAutocomplete'
 
 interface Props {

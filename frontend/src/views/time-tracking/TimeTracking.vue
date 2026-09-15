@@ -90,21 +90,6 @@
 						</Multiselect>
 					</div>
 				</div>
-				<div class="field">
-					<label class="label">{{ $t('misc.user') }}</label>
-					<Multiselect
-						v-model="selectedUser"
-						:placeholder="$t('timeTracking.browse.userSearch')"
-						:loading="userService.loading"
-						:search-results="foundUsers"
-						label="username"
-						@search="findUsers"
-					>
-						<template #searchResult="{option}">
-							{{ option.username }}
-						</template>
-					</Multiselect>
-				</div>
 			</Card>
 		</Modal>
 	</div>
@@ -126,7 +111,6 @@ import TimeEntryList from '@/components/time-tracking/TimeEntryList.vue'
 
 import TaskService from '@/services/task'
 import TaskModel from '@/models/task'
-import UserService from '@/services/user'
 import {useTitle} from '@/composables/useTitle'
 import {useTimeTrackingStore} from '@/stores/timeTracking'
 import {useBaseStore} from '@/stores/base'
@@ -134,7 +118,6 @@ import {useProjectStore} from '@/stores/projects'
 
 import type {IProject} from '@/modelTypes/IProject'
 import type {ITask} from '@/modelTypes/ITask'
-import type {IUser} from '@/modelTypes/IUser'
 import type {ITimeEntry} from '@/modelTypes/ITimeEntry'
 
 const {t} = useI18n()
@@ -169,13 +152,11 @@ const dateRange = ref<{dateFrom: Date | string | null, dateTo: Date | string | n
 })
 const selectedProject = ref<IProject | null>(null)
 const selectedTask = ref<ITask | null>(null)
-const selectedUser = ref<IUser | null>(null)
 const filterModalOpen = ref(false)
 
 const hasFilters = computed(() =>
 	selectedProject.value !== null ||
 	selectedTask.value !== null ||
-	selectedUser.value !== null ||
 	dateRange.value.dateFrom !== 'now/d' ||
 	dateRange.value.dateTo !== 'now/d+1d',
 )
@@ -202,17 +183,7 @@ async function findTasks(query: string) {
 		foundTasks.value = []
 		return
 	}
-	foundTasks.value = await taskService.getAll({}, {s: query, sort_by: 'done'}) as ITask[]
-}
-
-const userService = shallowReactive(new UserService())
-const foundUsers = ref<IUser[]>([])
-async function findUsers(query: string) {
-	if (query === '') {
-		foundUsers.value = []
-		return
-	}
-	foundUsers.value = await userService.getAll({}, {s: query}) as IUser[]
+	foundTasks.value = await taskService.getAll({}, {q: query, sort_by: 'done'}) as ITask[]
 }
 
 // Datemath preset strings (now/M) pass through unchanged; a custom Date becomes
@@ -234,9 +205,6 @@ const filter = computed(() => {
 	}
 	if (dateRange.value.dateTo) {
 		parts.push(`start_time < ${dateValue(dateRange.value.dateTo)}`)
-	}
-	if (selectedUser.value !== null) {
-		parts.push(`user_id = ${selectedUser.value.id}`)
 	}
 	if (selectedTask.value !== null) {
 		parts.push(`task_id = ${selectedTask.value.id}`)
@@ -262,9 +230,6 @@ const filterQuery = computed(() => {
 	if (selectedTask.value !== null) {
 		q.task = String(selectedTask.value.id)
 	}
-	if (selectedUser.value !== null) {
-		q.user = selectedUser.value.username
-	}
 	return q
 })
 
@@ -278,9 +243,8 @@ async function restoreFromQuery() {
 	if (typeof q.to === 'string') {
 		dateRange.value.dateTo = q.to
 	}
-	// Resolve project/task by id and the user by username up front (the project
-	// store may not be hydrated yet on a hard reload), so the first request
-	// already carries the full filter — and the modal shows the real names.
+	// Resolve project/task by id up front (the project store may not be hydrated
+	// yet on a hard reload), so the first request already carries the full filter.
 	await Promise.all([
 		typeof q.project === 'string'
 			? projectStore.loadProject(Number(q.project))
@@ -291,13 +255,6 @@ async function restoreFromQuery() {
 			? taskService.get(new TaskModel({id: Number(q.task)}))
 				.then(t => { selectedTask.value = t as ITask })
 				.catch(() => { /* task gone — drop the filter */ })
-			: Promise.resolve(),
-		typeof q.user === 'string'
-			? userService.getAll({}, {s: q.user})
-				.then(users => {
-					selectedUser.value = (users as IUser[]).find(u => u.username === q.user) ?? null
-				})
-				.catch(() => { /* user not found — drop the filter */ })
 			: Promise.resolve(),
 	])
 }

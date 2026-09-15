@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"code.vikunja.io/api/pkg/models"
-	"code.vikunja.io/api/pkg/modules/auth"
 
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -32,66 +31,21 @@ type apiRoutesBody struct {
 	Body map[string]models.APITokenRoute
 }
 
-// renewTokenBody wraps a freshly issued link-share JWT. The token field is
-// inlined rather than embedding auth.Token because Huma derives schema names
-// from the bare Go type name, and a top-level auth.Token body would collide with
-// user.Token (the caldav-token schema, also named "Token").
-type renewTokenBody struct {
-	Body struct {
-		Token string `json:"token" readOnly:"true" doc:"The renewed JWT auth token."`
-	}
-}
-
 func init() { AddRouteRegistrar(RegisterTokenMetaRoutes) }
 
 // RegisterTokenMetaRoutes wires the token introspection helpers and the
-// link-share token renewal endpoint.
+// API-token scope discovery endpoint.
 func RegisterTokenMetaRoutes(api huma.API) {
-	tags := []string{"auth"}
-
 	Register(api, huma.Operation{
 		OperationID: "token-routes",
 		Summary:     "List API token routes",
-		Description: "Returns every API route available to scope an API token against, grouped by resource and permission. Covers both /api/v1 and /api/v2 routes.",
+		Description: "Returns every API route available to scope an API token against, grouped by resource and permission.",
 		Method:      http.MethodGet,
 		Path:        "/routes",
 		Tags:        []string{"api"},
 	}, tokenRoutes)
-
-	Register(api, huma.Operation{
-		OperationID:   "token-renew",
-		Summary:       "Renew a link-share token",
-		Description:   "Issues a fresh JWT for the current link share. Only link-share tokens can be renewed here; user sessions must use the refresh-token flow.",
-		Method:        http.MethodPost,
-		Path:          "/user/token",
-		DefaultStatus: http.StatusOK,
-		Tags:          tags,
-	}, tokenRenew)
 }
 
 func tokenRoutes(_ context.Context, _ *struct{}) (*apiRoutesBody, error) {
 	return &apiRoutesBody{Body: models.GetAPITokenRoutes()}, nil
-}
-
-func tokenRenew(ctx context.Context, _ *struct{}) (*renewTokenBody, error) {
-	a, err := authFromCtx(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Only link-share tokens are renewable here; a user JWT lands as *user.User
-	// and must use the refresh-token flow instead.
-	share, ok := a.(*models.LinkSharing)
-	if !ok {
-		return nil, huma.Error400BadRequest("User tokens cannot be renewed via this endpoint. Use the refresh-token flow instead.")
-	}
-
-	t, err := auth.NewLinkShareJWTAuthtoken(share)
-	if err != nil {
-		return nil, translateDomainError(err)
-	}
-
-	out := &renewTokenBody{}
-	out.Body.Token = t
-	return out, nil
 }

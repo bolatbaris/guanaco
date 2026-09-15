@@ -59,7 +59,7 @@ func RegisterTimeEntryRoutes(api huma.API) {
 	registerGated(api, huma.Operation{
 		OperationID: "time-entries-list",
 		Summary:     "List time entries",
-		Description: "Returns the time entries the authenticated user can see, paginated. Filterable by date range, project, task and user.",
+		Description: "Returns the time entries the authenticated user can see, paginated. Filterable by date range, project and task.",
 		Method:      http.MethodGet,
 		Path:        "/time-entries",
 		Tags:        tags,
@@ -104,7 +104,7 @@ func RegisterTimeEntryRoutes(api huma.API) {
 	registerGated(api, huma.Operation{
 		OperationID: "task-time-entries-list",
 		Summary:     "List a task's time entries",
-		Description: "Returns the time entries logged against the given task, across all users, paginated. Scoped to what you can read: an inaccessible or unknown task yields an empty list, not an error.",
+		Description: "Returns the time entries logged against the given task, paginated. Scoped to what you can read: an inaccessible or unknown task yields an empty list, not an error.",
 		Method:      http.MethodGet,
 		Path:        "/tasks/{task_id}/time-entries",
 		Tags:        tags,
@@ -161,7 +161,7 @@ func timeEntriesTimerStop(ctx context.Context, _ *struct{}) (*singleBody[models.
 
 func timeEntriesList(ctx context.Context, in *struct {
 	ListParams
-	Filter         string `query:"filter" doc:"Filter entries with the task filter syntax over user_id, task_id, project_id, start_time and end_time — e.g. \"project_id = 5 && start_time > now-7d\". Use end_time = null to match running timers."`
+	Filter         string `query:"filter" doc:"Filter entries with the task filter syntax over task_id, project_id, start_time and end_time — e.g. \"project_id = 5 && start_time > now-7d\". Use end_time = null to match running timers."`
 	FilterTimezone string `query:"filter_timezone" doc:"IANA timezone name used to resolve relative dates (now, now-7d) in the filter, e.g. Europe/Berlin."`
 }) (*timeEntryListBody, error) {
 	a, err := authFromCtx(ctx)

@@ -2,6 +2,7 @@ import {client} from '@/client/generated/client.gen'
 import type {ResolvedRequestOptions} from '@/client/generated/client/types.gen'
 import {getToken, getTokenIdentity, refreshToken} from '@/helpers/auth'
 import {getApiV2BaseUrl} from '@/helpers/fetcher'
+import {captureApiError} from '@/helpers/sentryApi'
 import {AUTH_TYPES} from '@/modelTypes/IUser'
 
 async function getProblemCode(response: Response): Promise<number | null> {
@@ -89,5 +90,10 @@ export function configureApiClient(): void {
 		headers.set('Authorization', `Bearer ${replacementToken}`)
 		const retry = new Request(retryRequest.request, {headers})
 		return (options.fetch ?? globalThis.fetch)(retry)
+	})
+
+	client.interceptors.error.use((error, response, request, options) => {
+		void captureApiError(error, response, request, options)
+		return error
 	})
 }

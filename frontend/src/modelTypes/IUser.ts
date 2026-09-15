@@ -25,5 +25,4 @@ export interface IUser extends IAbstract {
 	pendingEmail: string
 	deletionScheduledAt: string | Date | null
 	isAdmin?: boolean
-	botOwnerId?: number
 }

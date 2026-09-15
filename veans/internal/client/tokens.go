@@ -18,9 +18,8 @@ package client
 
 import "context"
 
-// CreateToken mints an API token. If t.OwnerID is non-zero, the token is
-// minted FOR that user — the caller must be the bot's owner (i.e. created
-// the bot in step 8 of init).
+// CreateToken mints an API token for the authenticated user. The caller must
+// use a session token with permission to create API tokens.
 func (c *Client) CreateToken(ctx context.Context, t *APIToken) (*APIToken, error) {
 	var out APIToken
 	if err := c.Do(ctx, "POST", "/tokens", nil, t, &out); err != nil {

@@ -28,7 +28,7 @@ import (
 )
 
 // RegisterSavedFilterRoutes wires saved filter CRUD onto the Huma API.
-// No list operation, by design — v1 has none either.
+// No list operation: saved filters are addressed by their explicit id.
 func RegisterSavedFilterRoutes(api huma.API) {
 	tags := []string{"filters"}
 

@@ -22,10 +22,6 @@ export type ApiToken = {
      */
     readonly id?: number;
     /**
-     * The user ID of the token owner. When creating a token for a bot user, set this to the bot's ID; the bot must be owned by the authenticated user. If omitted, defaults to the authenticated user.
-     */
-    owner_id?: number;
-    /**
      * The permissions this token has. Possible values are available via the /routes endpoint and consist of the keys of the list from that endpoint. For example, if the token should be able to read all tasks as well as update existing tasks, you should add {"tasks":["read_all","update"]}.
      */
     permissions?: {
@@ -84,15 +80,11 @@ export type AdminUser = {
      */
     readonly auth_provider?: string;
     /**
-     * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
-     */
-    readonly bot_owner_id?: number;
-    /**
      * A timestamp when this user was created. You cannot change this value.
      */
     readonly created?: string;
     /**
-     * The user's email address. Always empty for bot users.
+     * The user's email address.
      */
     email?: string;
     /**
@@ -124,7 +116,7 @@ export type AdminUser = {
      */
     readonly updated?: string;
     /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
+     * The username of the user. Is always unique.
      */
     username?: string;
 };
@@ -153,17 +145,6 @@ export type AttachmentUploadResult = {
      * The attachments that were created successfully.
      */
     success?: Array<TaskAttachment> | null;
-};
-
-export type AuthLinkShareRequest = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * The password for password-protected link shares. Ignored for shares without a password.
-     */
-    password?: string;
 };
 
 export type AuthInfo = {
@@ -217,88 +198,6 @@ export type AuthorizeResponse = {
     state?: string;
 };
 
-export type BotUser = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
-     */
-    readonly bot_owner_id?: number;
-    /**
-     * A timestamp when this user was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The user's email address. Always empty for bot users.
-     */
-    email?: string;
-    /**
-     * The unique, numeric id of this user.
-     */
-    readonly id?: number;
-    /**
-     * The full name of the user.
-     */
-    name?: string;
-    /**
-     * The bot's status: 0=active, 2=disabled. Set to 2 to disable the bot, 0 to re-enable it.
-     */
-    status?: number;
-    /**
-     * A timestamp when this user was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-    /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
-     */
-    username?: string;
-};
-
-export type BotUserReadBody = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
-     */
-    readonly bot_owner_id?: number;
-    /**
-     * A timestamp when this user was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The user's email address. Always empty for bot users.
-     */
-    email?: string;
-    /**
-     * The unique, numeric id of this user.
-     */
-    readonly id?: number;
-    /**
-     * The maximum permission the requesting user has on this bot user (0=read, 1=read/write, 2=admin).
-     */
-    readonly max_permission?: number;
-    /**
-     * The full name of the user.
-     */
-    name?: string;
-    /**
-     * The bot's status: 0=active, 2=disabled. Set to 2 to disable the bot, 0 to re-enable it.
-     */
-    status?: number;
-    /**
-     * A timestamp when this user was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-    /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
-     */
-    username?: string;
-};
-
 export type Bucket = {
     /**
      * A URL to the JSON Schema for this object.
@@ -328,24 +227,13 @@ export type BucketsWithTasksBodyBody = {
     total?: number;
 };
 
-export type BulkAssignees = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * The full set of users to assign to the task. This replaces the task's current assignees: users not in this list are unassigned. Pass an empty array to unassign everyone. Each user must have access to the task's project.
-     */
-    assignees?: Array<User> | null;
-};
-
 export type BulkTask = {
     /**
      * A URL to the JSON Schema for this object.
      */
     readonly $schema?: string;
     /**
-     * The names of the task fields to apply from values; only these fields are written, the rest of each task is left untouched.
+     * The names of the task fields to apply from values; only these fields are written, the rest of each task is left untouched. project_id is immutable and cannot be included.
      */
     fields?: Array<string> | null;
     /**
@@ -388,7 +276,7 @@ export type ColumnMapping = {
     /**
      * The task attribute the column maps to. Use "ignore" to drop the column.
      */
-    attribute?: 'title' | 'description' | 'due_date' | 'start_date' | 'end_date' | 'done' | 'priority' | 'labels' | 'project' | 'reminder' | 'ignore';
+    attribute?: 'title' | 'description' | 'due_date' | 'start_date' | 'end_date' | 'done' | 'labels' | 'project' | 'reminder' | 'ignore';
     /**
      * The zero-based index of the CSV column this mapping applies to.
      */
@@ -451,6 +339,29 @@ export type DatabaseNotifications = {
      * When the notification was marked read; zero value while unread. Set via the read flag, not written directly.
      */
     readonly read_at?: string;
+};
+
+export type DelegationName = {
+    /**
+     * When this delegation name was first stored.
+     */
+    readonly created?: string;
+    /**
+     * The unique numeric id of this delegation name.
+     */
+    readonly id?: number;
+    /**
+     * The first spelling stored for this delegate name.
+     */
+    readonly name?: string;
+    /**
+     * When this delegation name was last used.
+     */
+    readonly updated?: string;
+    /**
+     * The number of times this name has been used for a new delegation.
+     */
+    readonly usage_count?: number;
 };
 
 export type DetectionResult = {
@@ -741,132 +652,6 @@ export type LegalInfo = {
     privacy_policy_url?: string;
 };
 
-export type LinkShareReadBody = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A timestamp when this share was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The public hash used to access the shared project. Generated by the server; ignored on write.
-     */
-    readonly hash?: string;
-    /**
-     * The unique, numeric id of this link share.
-     */
-    readonly id?: number;
-    /**
-     * The maximum permission the requesting user has on this link share (0=read, 1=read/write, 2=admin).
-     */
-    readonly max_permission?: number;
-    /**
-     * The name of this link share. All actions someone takes while authenticated through this link will appear under this name.
-     */
-    name?: string;
-    /**
-     * The permission this project is shared with: 0 = read only, 1 = read & write, 2 = admin.
-     */
-    permission?: number;
-    /**
-     * The user who created this link share.
-     */
-    readonly shared_by?: User;
-    /**
-     * The kind of this link, derived from whether a password was set: 0 = undefined, 1 = without password, 2 = with password.
-     */
-    readonly sharing_type?: number;
-    /**
-     * A timestamp when this share was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-};
-
-export type LinkShareToken = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A timestamp when this share was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The public hash used to access the shared project. Generated by the server; ignored on write.
-     */
-    readonly hash?: string;
-    /**
-     * The unique, numeric id of this link share.
-     */
-    readonly id?: number;
-    /**
-     * The name of this link share. All actions someone takes while authenticated through this link will appear under this name.
-     */
-    name?: string;
-    /**
-     * The permission this project is shared with: 0 = read only, 1 = read & write, 2 = admin.
-     */
-    permission?: number;
-    /**
-     * The id of the project this share grants access to.
-     */
-    readonly project_id?: number;
-    /**
-     * The user who created this link share.
-     */
-    readonly shared_by?: User;
-    /**
-     * The kind of this link, derived from whether a password was set: 0 = undefined, 1 = without password, 2 = with password.
-     */
-    readonly sharing_type?: number;
-    token?: string;
-    /**
-     * A timestamp when this share was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-};
-
-export type LinkSharing = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A timestamp when this share was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The public hash used to access the shared project. Generated by the server; ignored on write.
-     */
-    readonly hash?: string;
-    /**
-     * The unique, numeric id of this link share.
-     */
-    readonly id?: number;
-    /**
-     * The name of this link share. All actions someone takes while authenticated through this link will appear under this name.
-     */
-    name?: string;
-    /**
-     * The permission this project is shared with: 0 = read only, 1 = read & write, 2 = admin.
-     */
-    permission?: number;
-    /**
-     * The user who created this link share.
-     */
-    readonly shared_by?: User;
-    /**
-     * The kind of this link, derived from whether a password was set: 0 = undefined, 1 = without password, 2 = with password.
-     */
-    readonly sharing_type?: number;
-    /**
-     * A timestamp when this share was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-};
-
 export type LocalAuthInfo = {
     enabled?: boolean;
 };
@@ -994,10 +779,6 @@ export type Overview = {
      */
     readonly projects?: number;
     /**
-     * Aggregate share counts.
-     */
-    readonly shares?: ShareCounts;
-    /**
      * Total number of tasks.
      */
     readonly tasks?: number;
@@ -1031,18 +812,6 @@ export type PaginatedAdminUser = {
     total_pages?: number;
 };
 
-export type PaginatedBotUser = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    items?: Array<BotUser> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
 export type PaginatedBucket = {
     /**
      * A URL to the JSON Schema for this object.
@@ -1067,6 +836,18 @@ export type PaginatedDatabaseNotification = {
     total_pages?: number;
 };
 
+export type PaginatedDelegationName = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    items?: Array<DelegationName> | null;
+    page?: number;
+    per_page?: number;
+    total?: number;
+    total_pages?: number;
+};
+
 export type PaginatedImage = {
     /**
      * A URL to the JSON Schema for this object.
@@ -1085,18 +866,6 @@ export type PaginatedLabelWithTaskId = {
      */
     readonly $schema?: string;
     items?: Array<LabelWithTaskId> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
-export type PaginatedLinkSharing = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    items?: Array<LinkSharing> | null;
     page?: number;
     per_page?: number;
     total?: number;
@@ -1199,30 +968,6 @@ export type PaginatedToken = {
     total_pages?: number;
 };
 
-export type PaginatedUser = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    items?: Array<User> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
-export type PaginatedUserWithPermission = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    items?: Array<UserWithPermission> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
 export type PaginatedWebhook = {
     /**
      * A URL to the JSON Schema for this object.
@@ -1256,7 +1001,6 @@ export type PreviewTask = {
     due_date?: string;
     end_date?: string;
     labels?: Array<string> | null;
-    priority?: number;
     project?: string;
     start_date?: string;
     title?: string;
@@ -1343,10 +1087,6 @@ export type ProjectDuplicate = {
      */
     readonly $schema?: string;
     /**
-     * Whether to copy the project's user and link shares to the duplicate. Defaults to false.
-     */
-    duplicate_shares?: boolean;
-    /**
      * The newly created duplicate project, populated by the server in the response.
      */
     readonly duplicated_project?: Project;
@@ -1429,33 +1169,6 @@ export type ProjectReadBody = {
      * The views configured for this project. Managed through the project view endpoints.
      */
     readonly views?: Array<ProjectView> | null;
-};
-
-export type ProjectUser = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A timestamp when this relation was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The unique, numeric id of this project <-> user relation.
-     */
-    readonly id?: number;
-    /**
-     * The permission this user has on the project. 0 = Read only, 1 = Read & Write, 2 = Admin.
-     */
-    permission?: number;
-    /**
-     * A timestamp when this relation was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-    /**
-     * The username of the user to share with. On update and delete this comes from the URL path, not the body.
-     */
-    username?: string;
 };
 
 export type ProjectView = {
@@ -1625,17 +1338,6 @@ export type Reaction = {
     value?: string;
 };
 
-export type RenewTokenBodyBody = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * The renewed JWT auth token.
-     */
-    readonly token?: string;
-};
-
 export type RouteDetail = {
     method?: string;
     path?: string;
@@ -1663,7 +1365,7 @@ export type SavedFilter = {
      */
     readonly id?: number;
     /**
-     * If true, the filter shows up in the Favorites pseudo-project alongside favorite projects.
+     * Whether this saved filter is marked as a favorite.
      */
     is_favorite?: boolean;
     /**
@@ -1702,7 +1404,7 @@ export type SavedFilterReadBody = {
      */
     readonly id?: number;
     /**
-     * If true, the filter shows up in the Favorites pseudo-project alongside favorite projects.
+     * Whether this saved filter is marked as a favorite.
      */
     is_favorite?: boolean;
     /**
@@ -1750,17 +1452,6 @@ export type Session = {
     readonly refresh_token?: string;
 };
 
-export type ShareCounts = {
-    /**
-     * Number of link shares across all projects.
-     */
-    readonly link_shares?: number;
-    /**
-     * Number of user-project shares.
-     */
-    readonly user_shares?: number;
-};
-
 export type Status = {
     /**
      * A URL to the JSON Schema for this object.
@@ -1794,9 +1485,9 @@ export type Subscription = {
      */
     readonly created?: string;
     /**
-     * The kind of entity this subscription is for. Either project or task; derived server-side from the request path.
+     * The kind of entity this subscription is for: project, derived server-side from the request path.
      */
-    readonly entity?: 'project' | 'task';
+    readonly entity?: 'project';
     /**
      * The numeric id of the subscribed entity; taken from the request path.
      */
@@ -1832,10 +1523,6 @@ export type Task = {
      */
     readonly $schema?: string;
     /**
-     * The users assigned to this task. Read-only here; use the task-assignee endpoints to change assignments.
-     */
-    readonly assignees?: Array<User> | null;
-    /**
      * The task's attachments. Read-only here; use the attachment endpoints to add or remove them.
      */
     readonly attachments?: Array<TaskAttachment> | null;
@@ -1868,6 +1555,10 @@ export type Task = {
      */
     readonly created_by?: User;
     /**
+     * The full name of the external person this task was delegated to. Set by the server; ignored on write.
+     */
+    readonly delegated_to?: string;
+    /**
      * When this task was soft-deleted. Soft-deleted tasks are kept for 30 days before they are removed permanently.
      */
     readonly deleted_at?: string;
@@ -1879,10 +1570,6 @@ export type Task = {
     readonly done_at?: string;
     due_date?: string;
     end_date?: string;
-    /**
-     * The task color as a hex string without the leading '#'.
-     */
-    hex_color?: string;
     /**
      * The unique, numeric id of this task.
      */
@@ -1896,10 +1583,6 @@ export type Task = {
      */
     readonly index?: number;
     /**
-     * Whether the requesting user has favorited this task. Per-user, so it differs between callers.
-     */
-    is_favorite?: boolean;
-    /**
      * Whether the task is unread for the requesting user. Only present when requested via the is_unread expand option.
      */
     readonly is_unread?: boolean;
@@ -1908,18 +1591,13 @@ export type Task = {
      */
     readonly labels?: Array<Label> | null;
     /**
-     * How far the task is from done, between 0 and 1.
-     */
-    percent_done?: number;
-    /**
      * The task's position, saved per view. Only non-zero when the task is fetched through a view endpoint; use the task-position endpoint to change it.
      */
     readonly position?: number;
-    priority?: number;
     /**
-     * The id of the project this task belongs to. On create it is taken from the URL; on update, setting it to a different project moves the task (requires write access to the target project).
+     * The id of the project this task belongs to. On create it is taken from the URL and it cannot be changed afterward.
      */
-    project_id?: number;
+    readonly project_id?: number;
     /**
      * Reactions on this task. Only present when requested via the reactions expand option.
      */
@@ -1943,10 +1621,6 @@ export type Task = {
     repeat_mode?: number;
     start_date?: string;
     /**
-     * The requesting user's subscription to this task. Read-only here; use the subscription endpoints to change it. Only present when reading a single task.
-     */
-    readonly subscription?: Subscription;
-    /**
      * The number of time entries on this task. Only present when requested via the time_entries_count expand option.
      */
     readonly time_entries_count?: number;
@@ -1958,21 +1632,6 @@ export type Task = {
      * When this task was last updated. Set by the server; ignored on write.
      */
     readonly updated?: string;
-};
-
-export type TaskAssginee = {
-    /**
-     * A URL to the JSON Schema for this object.
-     */
-    readonly $schema?: string;
-    /**
-     * A timestamp when this assignment was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The id of the user to assign to the task. The user must have access to the task's project.
-     */
-    user_id?: number;
 };
 
 export type TaskAttachment = {
@@ -2041,9 +1700,9 @@ export type TaskCollection = {
     /**
      * A search term to match tasks by their title.
      */
-    s?: string;
+    q?: string;
     /**
-     * The fields to sort by, for example done or priority. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
+     * The fields to sort by, for example done or due_date. The special value relevance sorts by search relevance (most relevant first, requires q; ignored when the database cannot score the query).
      */
     sort_by?: Array<string> | null;
 };
@@ -2118,6 +1777,17 @@ export type TaskCommentReadBody = {
     readonly updated?: string;
 };
 
+export type TaskDelegation = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    /**
+     * The external delegate's full name.
+     */
+    delegatee_name: string;
+};
+
 export type TaskDuplicate = {
     /**
      * A URL to the JSON Schema for this object.
@@ -2165,10 +1835,6 @@ export type TaskReadOneBody = {
      */
     readonly $schema?: string;
     /**
-     * The users assigned to this task. Read-only here; use the task-assignee endpoints to change assignments.
-     */
-    readonly assignees?: Array<User> | null;
-    /**
      * The task's attachments. Read-only here; use the attachment endpoints to add or remove them.
      */
     readonly attachments?: Array<TaskAttachment> | null;
@@ -2201,6 +1867,10 @@ export type TaskReadOneBody = {
      */
     readonly created_by?: User;
     /**
+     * The full name of the external person this task was delegated to. Set by the server; ignored on write.
+     */
+    readonly delegated_to?: string;
+    /**
      * When this task was soft-deleted. Soft-deleted tasks are kept for 30 days before they are removed permanently.
      */
     readonly deleted_at?: string;
@@ -2212,10 +1882,6 @@ export type TaskReadOneBody = {
     readonly done_at?: string;
     due_date?: string;
     end_date?: string;
-    /**
-     * The task color as a hex string without the leading '#'.
-     */
-    hex_color?: string;
     /**
      * The unique, numeric id of this task.
      */
@@ -2229,10 +1895,6 @@ export type TaskReadOneBody = {
      */
     readonly index?: number;
     /**
-     * Whether the requesting user has favorited this task. Per-user, so it differs between callers.
-     */
-    is_favorite?: boolean;
-    /**
      * Whether the task is unread for the requesting user. Only present when requested via the is_unread expand option.
      */
     readonly is_unread?: boolean;
@@ -2245,18 +1907,13 @@ export type TaskReadOneBody = {
      */
     readonly max_permission?: number;
     /**
-     * How far the task is from done, between 0 and 1.
-     */
-    percent_done?: number;
-    /**
      * The task's position, saved per view. Only non-zero when the task is fetched through a view endpoint; use the task-position endpoint to change it.
      */
     readonly position?: number;
-    priority?: number;
     /**
-     * The id of the project this task belongs to. On create it is taken from the URL; on update, setting it to a different project moves the task (requires write access to the target project).
+     * The id of the project this task belongs to. On create it is taken from the URL and it cannot be changed afterward.
      */
-    project_id?: number;
+    readonly project_id?: number;
     /**
      * Reactions on this task. Only present when requested via the reactions expand option.
      */
@@ -2279,10 +1936,6 @@ export type TaskReadOneBody = {
      */
     repeat_mode?: number;
     start_date?: string;
-    /**
-     * The requesting user's subscription to this task. Read-only here; use the subscription endpoints to change it. Only present when reading a single task.
-     */
-    readonly subscription?: Subscription;
     /**
      * The number of time entries on this task. Only present when requested via the time_entries_count expand option.
      */
@@ -2487,15 +2140,11 @@ export type TotpEnableBodyBody = {
 
 export type User = {
     /**
-     * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
-     */
-    readonly bot_owner_id?: number;
-    /**
      * A timestamp when this user was created. You cannot change this value.
      */
     readonly created?: string;
     /**
-     * The user's email address. Always empty for bot users.
+     * The user's email address.
      */
     email?: string;
     /**
@@ -2511,7 +2160,7 @@ export type User = {
      */
     readonly updated?: string;
     /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
+     * The username of the user. Is always unique.
      */
     username?: string;
 };
@@ -2676,10 +2325,6 @@ export type UserInfoBody = {
      */
     readonly auth_provider?: string;
     /**
-     * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
-     */
-    readonly bot_owner_id?: number;
-    /**
      * A timestamp when this user was created. You cannot change this value.
      */
     readonly created?: string;
@@ -2688,7 +2333,7 @@ export type UserInfoBody = {
      */
     readonly deletion_scheduled_at?: string;
     /**
-     * The user's email address. Always empty for bot users.
+     * The user's email address.
      */
     email?: string;
     /**
@@ -2720,42 +2365,7 @@ export type UserInfoBody = {
      */
     readonly updated?: string;
     /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
-     */
-    username?: string;
-};
-
-export type UserWithPermission = {
-    /**
-     * The id of the owning (human) user. Set by the server on creation; a non-zero value means this user is a bot.
-     */
-    readonly bot_owner_id?: number;
-    /**
-     * A timestamp when this user was created. You cannot change this value.
-     */
-    readonly created?: string;
-    /**
-     * The user's email address. Always empty for bot users.
-     */
-    email?: string;
-    /**
-     * The unique, numeric id of this user.
-     */
-    readonly id?: number;
-    /**
-     * The full name of the user.
-     */
-    name?: string;
-    /**
-     * The permission this user has on the project. 0 = Read only, 1 = Read & Write, 2 = Admin.
-     */
-    readonly permission?: number;
-    /**
-     * A timestamp when this user was last updated. You cannot change this value.
-     */
-    readonly updated?: string;
-    /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
+     * The username of the user. Is always unique.
      */
     username?: string;
 };
@@ -2851,10 +2461,6 @@ export type VikunjaInfos = {
      */
     legal?: LegalInfo;
     /**
-     * Whether sharing projects via public links is enabled.
-     */
-    link_sharing_enabled?: boolean;
-    /**
      * The maximum allowed upload size, as a human-readable string (e.g. 20MB).
      */
     max_file_size?: string;
@@ -2906,7 +2512,7 @@ export type Webhook = {
      */
     readonly created_by?: User;
     /**
-     * The webhook events which should fire this webhook target. Get the available events from /api/v1/webhooks/events.
+     * The webhook events which should fire this webhook target. Get the available events from /api/v2/webhooks/events.
      */
     events?: Array<string> | null;
     /**
@@ -2936,10 +2542,6 @@ export type ApiTokenWritable = {
      * The date when this key expires.
      */
     expires_at?: string;
-    /**
-     * The user ID of the token owner. When creating a token for a bot user, set this to the bot's ID; the bot must be owned by the authenticated user. If omitted, defaults to the authenticated user.
-     */
-    owner_id?: number;
     /**
      * The permissions this token has. Possible values are available via the /routes endpoint and consist of the keys of the list from that endpoint. For example, if the token should be able to read all tasks as well as update existing tasks, you should add {"tasks":["read_all","update"]}.
      */
@@ -2975,7 +2577,7 @@ export type AdminStatusPatchBodyWritable = {
 
 export type AdminUserWritable = {
     /**
-     * The user's email address. Always empty for bot users.
+     * The user's email address.
      */
     email?: string;
     /**
@@ -2983,7 +2585,7 @@ export type AdminUserWritable = {
      */
     name?: string;
     /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
+     * The username of the user. Is always unique.
      */
     username?: string;
 };
@@ -2999,13 +2601,6 @@ export type AttachmentUploadResultWritable = {
     success?: Array<TaskAttachmentWritable> | null;
 };
 
-export type AuthLinkShareRequestWritable = {
-    /**
-     * The password for password-protected link shares. Ignored for shares without a password.
-     */
-    password?: string;
-};
-
 export type AuthorizeRequestWritable = {
     client_id?: string;
     code_challenge?: string;
@@ -3019,44 +2614,6 @@ export type AuthorizeResponseWritable = {
     code?: string;
     redirect_uri?: string;
     state?: string;
-};
-
-export type BotUserWritable = {
-    /**
-     * The user's email address. Always empty for bot users.
-     */
-    email?: string;
-    /**
-     * The full name of the user.
-     */
-    name?: string;
-    /**
-     * The bot's status: 0=active, 2=disabled. Set to 2 to disable the bot, 0 to re-enable it.
-     */
-    status?: number;
-    /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
-     */
-    username?: string;
-};
-
-export type BotUserReadBodyWritable = {
-    /**
-     * The user's email address. Always empty for bot users.
-     */
-    email?: string;
-    /**
-     * The full name of the user.
-     */
-    name?: string;
-    /**
-     * The bot's status: 0=active, 2=disabled. Set to 2 to disable the bot, 0 to re-enable it.
-     */
-    status?: number;
-    /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
-     */
-    username?: string;
 };
 
 export type BucketWritable = {
@@ -3080,16 +2637,9 @@ export type BucketsWithTasksBodyBodyWritable = {
     total?: number;
 };
 
-export type BulkAssigneesWritable = {
-    /**
-     * The full set of users to assign to the task. This replaces the task's current assignees: users not in this list are unassigned. Pass an empty array to unassign everyone. Each user must have access to the task's project.
-     */
-    assignees?: Array<UserWritable> | null;
-};
-
 export type BulkTaskWritable = {
     /**
-     * The names of the task fields to apply from values; only these fields are written, the rest of each task is left untouched.
+     * The names of the task fields to apply from values; only these fields are written, the rest of each task is left untouched. project_id is immutable and cannot be included.
      */
     fields?: Array<string> | null;
     /**
@@ -3247,52 +2797,6 @@ export type LabelWithTaskIdWritable = {
     title?: string;
 };
 
-export type LinkShareReadBodyWritable = {
-    /**
-     * The name of this link share. All actions someone takes while authenticated through this link will appear under this name.
-     */
-    name?: string;
-    /**
-     * The password protecting this link share. Write-only: it can be set on create but is never returned.
-     */
-    password?: string;
-    /**
-     * The permission this project is shared with: 0 = read only, 1 = read & write, 2 = admin.
-     */
-    permission?: number;
-};
-
-export type LinkShareTokenWritable = {
-    /**
-     * The name of this link share. All actions someone takes while authenticated through this link will appear under this name.
-     */
-    name?: string;
-    /**
-     * The password protecting this link share. Write-only: it can be set on create but is never returned.
-     */
-    password?: string;
-    /**
-     * The permission this project is shared with: 0 = read only, 1 = read & write, 2 = admin.
-     */
-    permission?: number;
-    token?: string;
-};
-
-export type LinkSharingWritable = {
-    /**
-     * The name of this link share. All actions someone takes while authenticated through this link will appear under this name.
-     */
-    name?: string;
-    /**
-     * The password protecting this link share. Write-only: it can be set on create but is never returned.
-     */
-    password?: string;
-    /**
-     * The permission this project is shared with: 0 = read only, 1 = read & write, 2 = admin.
-     */
-    permission?: number;
-};
-
 export type LoginWritable = {
     long_token?: boolean;
     password?: string;
@@ -3346,14 +2850,6 @@ export type PaginatedAdminUserWritable = {
     total_pages?: number;
 };
 
-export type PaginatedBotUserWritable = {
-    items?: Array<BotUserWritable> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
 export type PaginatedBucketWritable = {
     items?: Array<BucketWritable> | null;
     page?: number;
@@ -3363,6 +2859,14 @@ export type PaginatedBucketWritable = {
 };
 
 export type PaginatedDatabaseNotificationWritable = {
+    items?: Array<unknown> | null;
+    page?: number;
+    per_page?: number;
+    total?: number;
+    total_pages?: number;
+};
+
+export type PaginatedDelegationNameWritable = {
     items?: Array<unknown> | null;
     page?: number;
     per_page?: number;
@@ -3380,14 +2884,6 @@ export type PaginatedImageWritable = {
 
 export type PaginatedLabelWithTaskIdWritable = {
     items?: Array<LabelWithTaskIdWritable> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
-export type PaginatedLinkSharingWritable = {
-    items?: Array<LinkSharingWritable> | null;
     page?: number;
     per_page?: number;
     total?: number;
@@ -3458,22 +2954,6 @@ export type PaginatedTokenWritable = {
     total_pages?: number;
 };
 
-export type PaginatedUserWritable = {
-    items?: Array<UserWritable> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
-export type PaginatedUserWithPermissionWritable = {
-    items?: Array<UserWithPermissionWritable> | null;
-    page?: number;
-    per_page?: number;
-    total?: number;
-    total_pages?: number;
-};
-
 export type PaginatedWebhookWritable = {
     items?: Array<WebhookWritable> | null;
     page?: number;
@@ -3530,10 +3010,6 @@ export type ProjectWritable = {
 
 export type ProjectDuplicateWritable = {
     /**
-     * Whether to copy the project's user and link shares to the duplicate. Defaults to false.
-     */
-    duplicate_shares?: boolean;
-    /**
      * The id of the project under which the duplicate should be created. Omit or 0 to place the copy at the top level; you need write access to the parent.
      */
     parent_project_id?: number;
@@ -3572,17 +3048,6 @@ export type ProjectReadBodyWritable = {
      * The title of the project. You'll see this in the overview.
      */
     title?: string;
-};
-
-export type ProjectUserWritable = {
-    /**
-     * The permission this user has on the project. 0 = Read only, 1 = Read & Write, 2 = Admin.
-     */
-    permission?: number;
-    /**
-     * The username of the user to share with. On update and delete this comes from the URL path, not the body.
-     */
-    username?: string;
 };
 
 export type ProjectViewWritable = {
@@ -3672,7 +3137,7 @@ export type SavedFilterWritable = {
      */
     filters?: TaskCollection;
     /**
-     * If true, the filter shows up in the Favorites pseudo-project alongside favorite projects.
+     * Whether this saved filter is marked as a favorite.
      */
     is_favorite?: boolean;
     /**
@@ -3691,7 +3156,7 @@ export type SavedFilterReadBodyWritable = {
      */
     filters?: TaskCollection;
     /**
-     * If true, the filter shows up in the Favorites pseudo-project alongside favorite projects.
+     * Whether this saved filter is marked as a favorite.
      */
     is_favorite?: boolean;
     /**
@@ -3713,23 +3178,6 @@ export type TaskWritable = {
     done?: boolean;
     due_date?: string;
     end_date?: string;
-    /**
-     * The task color as a hex string without the leading '#'.
-     */
-    hex_color?: string;
-    /**
-     * Whether the requesting user has favorited this task. Per-user, so it differs between callers.
-     */
-    is_favorite?: boolean;
-    /**
-     * How far the task is from done, between 0 and 1.
-     */
-    percent_done?: number;
-    priority?: number;
-    /**
-     * The id of the project this task belongs to. On create it is taken from the URL; on update, setting it to a different project moves the task (requires write access to the target project).
-     */
-    project_id?: number;
     reminders?: Array<TaskReminder> | null;
     /**
      * The interval in seconds this task repeats. When set, marking the task done re-opens it and bumps its reminders and due date by this amount.
@@ -3744,13 +3192,6 @@ export type TaskWritable = {
      * The task title. This is what you'll see in the project.
      */
     title?: string;
-};
-
-export type TaskAssgineeWritable = {
-    /**
-     * The id of the user to assign to the task. The user must have access to the task's project.
-     */
-    user_id?: number;
 };
 
 export type TaskAttachmentWritable = {
@@ -3786,6 +3227,13 @@ export type TaskCommentReadBodyWritable = {
     comment?: string;
 };
 
+export type TaskDelegationWritable = {
+    /**
+     * The external delegate's full name.
+     */
+    delegatee_name: string;
+};
+
 export type TaskDuplicateWritable = {
     [key: string]: never;
 };
@@ -3814,23 +3262,6 @@ export type TaskReadOneBodyWritable = {
     done?: boolean;
     due_date?: string;
     end_date?: string;
-    /**
-     * The task color as a hex string without the leading '#'.
-     */
-    hex_color?: string;
-    /**
-     * Whether the requesting user has favorited this task. Per-user, so it differs between callers.
-     */
-    is_favorite?: boolean;
-    /**
-     * How far the task is from done, between 0 and 1.
-     */
-    percent_done?: number;
-    priority?: number;
-    /**
-     * The id of the project this task belongs to. On create it is taken from the URL; on update, setting it to a different project moves the task (requires write access to the target project).
-     */
-    project_id?: number;
     reminders?: Array<TaskReminder> | null;
     /**
      * The interval in seconds this task repeats. When set, marking the task done re-opens it and bumps its reminders and due date by this amount.
@@ -3936,7 +3367,7 @@ export type TotpEnableBodyBodyWritable = {
 
 export type UserWritable = {
     /**
-     * The user's email address. Always empty for bot users.
+     * The user's email address.
      */
     email?: string;
     /**
@@ -3944,7 +3375,7 @@ export type UserWritable = {
      */
     name?: string;
     /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
+     * The username of the user. Is always unique.
      */
     username?: string;
 };
@@ -4037,7 +3468,7 @@ export type UserGeneralSettingsWritable = {
 
 export type UserInfoBodyWritable = {
     /**
-     * The user's email address. Always empty for bot users.
+     * The user's email address.
      */
     email?: string;
     /**
@@ -4045,22 +3476,7 @@ export type UserInfoBodyWritable = {
      */
     name?: string;
     /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
-     */
-    username?: string;
-};
-
-export type UserWithPermissionWritable = {
-    /**
-     * The user's email address. Always empty for bot users.
-     */
-    email?: string;
-    /**
-     * The full name of the user.
-     */
-    name?: string;
-    /**
-     * The username of the user. Is always unique. For bot users it must start with the 'bot-' prefix.
+     * The username of the user. Is always unique.
      */
     username?: string;
 };
@@ -4138,10 +3554,6 @@ export type VikunjaInfosWritable = {
      */
     legal?: LegalInfo;
     /**
-     * Whether sharing projects via public links is enabled.
-     */
-    link_sharing_enabled?: boolean;
-    /**
      * The maximum allowed upload size, as a human-readable string (e.g. 20MB).
      */
     max_file_size?: string;
@@ -4189,7 +3601,7 @@ export type WebhookWritable = {
      */
     basic_auth_user?: string;
     /**
-     * The webhook events which should fire this webhook target. Get the available events from /api/v1/webhooks/events.
+     * The webhook events which should fire this webhook target. Get the available events from /api/v2/webhooks/events.
      */
     events?: Array<string> | null;
     /**
@@ -4589,6 +4001,44 @@ export type BackgroundsUnsplashSearchResponses = {
 };
 
 export type BackgroundsUnsplashSearchResponse = BackgroundsUnsplashSearchResponses[keyof BackgroundsUnsplashSearchResponses];
+
+export type DelegationNamesListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 1-based page number.
+         */
+        page?: number;
+        /**
+         * Items per page (max 1000).
+         */
+        per_page?: number;
+        /**
+         * Search query; filters the list to items matching this string.
+         */
+        q?: string;
+    };
+    url: '/delegation-names';
+};
+
+export type DelegationNamesListErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type DelegationNamesListError = DelegationNamesListErrors[keyof DelegationNamesListErrors];
+
+export type DelegationNamesListResponses = {
+    /**
+     * OK
+     */
+    200: PaginatedDelegationName;
+};
+
+export type DelegationNamesListResponse = DelegationNamesListResponses[keyof DelegationNamesListResponses];
 
 export type FiltersCreateData = {
     body: SavedFilterWritable;
@@ -6204,147 +5654,6 @@ export type ProjectsBackgroundUploadResponses = {
 
 export type ProjectsBackgroundUploadResponse = ProjectsBackgroundUploadResponses[keyof ProjectsBackgroundUploadResponses];
 
-export type SharesListData = {
-    body?: never;
-    path: {
-        project: number;
-    };
-    query?: {
-        /**
-         * 1-based page number.
-         */
-        page?: number;
-        /**
-         * Items per page (max 1000).
-         */
-        per_page?: number;
-        /**
-         * Search query; filters the list to items matching this string.
-         */
-        q?: string;
-    };
-    url: '/projects/{project}/shares';
-};
-
-export type SharesListErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type SharesListError = SharesListErrors[keyof SharesListErrors];
-
-export type SharesListResponses = {
-    /**
-     * OK
-     */
-    200: PaginatedLinkSharing;
-};
-
-export type SharesListResponse = SharesListResponses[keyof SharesListResponses];
-
-export type SharesCreateData = {
-    body: LinkSharingWritable;
-    path: {
-        project: number;
-    };
-    query?: never;
-    url: '/projects/{project}/shares';
-};
-
-export type SharesCreateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type SharesCreateError = SharesCreateErrors[keyof SharesCreateErrors];
-
-export type SharesCreateResponses = {
-    /**
-     * Created
-     */
-    201: LinkSharing;
-};
-
-export type SharesCreateResponse = SharesCreateResponses[keyof SharesCreateResponses];
-
-export type SharesDeleteData = {
-    body?: never;
-    path: {
-        project: number;
-        share: number;
-    };
-    query?: never;
-    url: '/projects/{project}/shares/{share}';
-};
-
-export type SharesDeleteErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type SharesDeleteError = SharesDeleteErrors[keyof SharesDeleteErrors];
-
-export type SharesDeleteResponses = {
-    /**
-     * No Content
-     */
-    204: void;
-};
-
-export type SharesDeleteResponse = SharesDeleteResponses[keyof SharesDeleteResponses];
-
-export type SharesReadData = {
-    body?: never;
-    headers?: {
-        /**
-         * Succeeds if the server's resource matches one of the passed values.
-         */
-        'If-Match'?: Array<string> | null;
-        /**
-         * Succeeds if the server's resource matches none of the passed values. On writes, the special value * may be used to match any existing value.
-         */
-        'If-None-Match'?: Array<string> | null;
-        /**
-         * Succeeds if the server's resource date is more recent than the passed date.
-         */
-        'If-Modified-Since'?: string;
-        /**
-         * Succeeds if the server's resource date is older or the same as the passed date.
-         */
-        'If-Unmodified-Since'?: string;
-    };
-    path: {
-        project: number;
-        share: number;
-    };
-    query?: never;
-    url: '/projects/{project}/shares/{share}';
-};
-
-export type SharesReadErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type SharesReadError = SharesReadErrors[keyof SharesReadErrors];
-
-export type SharesReadResponses = {
-    /**
-     * OK
-     */
-    200: LinkShareReadBody;
-};
-
-export type SharesReadResponse = SharesReadResponses[keyof SharesReadResponses];
-
 export type ProjectTasksListData = {
     body?: never;
     path: {
@@ -6379,7 +5688,7 @@ export type ProjectTasksListData = {
          */
         filter_include_nulls?: boolean;
         /**
-         * Fields to sort by (e.g. done, priority). Repeatable; pair positionally with order_by. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
+         * Fields to sort by (e.g. done, due_date). Repeatable; pair positionally with order_by. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
          */
         sort_by?: Array<string> | null;
         /**
@@ -6546,161 +5855,6 @@ export type TasksReadByIndexResponses = {
 };
 
 export type TasksReadByIndexResponse = TasksReadByIndexResponses[keyof TasksReadByIndexResponses];
-
-export type ProjectUsersListData = {
-    body?: never;
-    path: {
-        project: number;
-    };
-    query?: {
-        /**
-         * 1-based page number.
-         */
-        page?: number;
-        /**
-         * Items per page (max 1000).
-         */
-        per_page?: number;
-        /**
-         * Search query; filters the list to items matching this string.
-         */
-        q?: string;
-    };
-    url: '/projects/{project}/users';
-};
-
-export type ProjectUsersListErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectUsersListError = ProjectUsersListErrors[keyof ProjectUsersListErrors];
-
-export type ProjectUsersListResponses = {
-    /**
-     * OK
-     */
-    200: PaginatedUserWithPermission;
-};
-
-export type ProjectUsersListResponse = ProjectUsersListResponses[keyof ProjectUsersListResponses];
-
-export type ProjectUsersCreateData = {
-    body: ProjectUserWritable;
-    path: {
-        project: number;
-    };
-    query?: never;
-    url: '/projects/{project}/users';
-};
-
-export type ProjectUsersCreateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectUsersCreateError = ProjectUsersCreateErrors[keyof ProjectUsersCreateErrors];
-
-export type ProjectUsersCreateResponses = {
-    /**
-     * Created
-     */
-    201: ProjectUser;
-};
-
-export type ProjectUsersCreateResponse = ProjectUsersCreateResponses[keyof ProjectUsersCreateResponses];
-
-export type ProjectsUsersSearchData = {
-    body?: never;
-    path: {
-        project: number;
-    };
-    query?: {
-        /**
-         * Search query matched against username and name.
-         */
-        q?: string;
-    };
-    url: '/projects/{project}/users/search';
-};
-
-export type ProjectsUsersSearchErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectsUsersSearchError = ProjectsUsersSearchErrors[keyof ProjectsUsersSearchErrors];
-
-export type ProjectsUsersSearchResponses = {
-    /**
-     * OK
-     */
-    200: PaginatedUser;
-};
-
-export type ProjectsUsersSearchResponse = ProjectsUsersSearchResponses[keyof ProjectsUsersSearchResponses];
-
-export type ProjectUsersDeleteData = {
-    body?: never;
-    path: {
-        project: number;
-        user: string;
-    };
-    query?: never;
-    url: '/projects/{project}/users/{user}';
-};
-
-export type ProjectUsersDeleteErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectUsersDeleteError = ProjectUsersDeleteErrors[keyof ProjectUsersDeleteErrors];
-
-export type ProjectUsersDeleteResponses = {
-    /**
-     * No Content
-     */
-    204: void;
-};
-
-export type ProjectUsersDeleteResponse = ProjectUsersDeleteResponses[keyof ProjectUsersDeleteResponses];
-
-export type ProjectUsersUpdateData = {
-    body: ProjectUserWritable;
-    path: {
-        project: number;
-        user: string;
-    };
-    query?: never;
-    url: '/projects/{project}/users/{user}';
-};
-
-export type ProjectUsersUpdateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type ProjectUsersUpdateError = ProjectUsersUpdateErrors[keyof ProjectUsersUpdateErrors];
-
-export type ProjectUsersUpdateResponses = {
-    /**
-     * OK
-     */
-    200: ProjectUser;
-};
-
-export type ProjectUsersUpdateResponse = ProjectUsersUpdateResponses[keyof ProjectUsersUpdateResponses];
 
 export type ProjectViewsListData = {
     body?: never;
@@ -7006,7 +6160,7 @@ export type ProjectViewBucketsTasksListData = {
          */
         filter_include_nulls?: boolean;
         /**
-         * Fields to sort by (e.g. done, priority). Repeatable; pair positionally with order_by. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
+         * Fields to sort by (e.g. done, due_date). Repeatable; pair positionally with order_by. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
          */
         sort_by?: Array<string> | null;
         /**
@@ -7168,7 +6322,7 @@ export type ProjectViewTasksListData = {
          */
         filter_include_nulls?: boolean;
         /**
-         * Fields to sort by (e.g. done, priority). Repeatable; pair positionally with order_by. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
+         * Fields to sort by (e.g. done, due_date). Repeatable; pair positionally with order_by. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
          */
         sort_by?: Array<string> | null;
         /**
@@ -7357,45 +6511,15 @@ export type TokenRoutesResponses = {
 
 export type TokenRoutesResponse = TokenRoutesResponses[keyof TokenRoutesResponses];
 
-export type AuthLinkShareData = {
-    body?: AuthLinkShareRequestWritable;
-    path: {
-        /**
-         * The public hash of the link share.
-         */
-        share: string;
-    };
-    query?: never;
-    url: '/shares/{share}/auth';
-};
-
-export type AuthLinkShareErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type AuthLinkShareError = AuthLinkShareErrors[keyof AuthLinkShareErrors];
-
-export type AuthLinkShareResponses = {
-    /**
-     * OK
-     */
-    200: LinkShareToken;
-};
-
-export type AuthLinkShareResponse = AuthLinkShareResponses[keyof AuthLinkShareResponses];
-
 export type SubscriptionsDeleteData = {
     body?: never;
     path: {
         /**
-         * The kind of entity to (un)subscribe from. Either project or task.
+         * The project to (un)subscribe from.
          */
-        entity: 'project' | 'task';
+        entity: 'project';
         /**
-         * The numeric id of the entity to (un)subscribe from.
+         * The numeric id of the project to (un)subscribe from.
          */
         entityID: number;
     };
@@ -7425,11 +6549,11 @@ export type SubscriptionsCreateData = {
     body?: never;
     path: {
         /**
-         * The kind of entity to (un)subscribe from. Either project or task.
+         * The project to (un)subscribe from.
          */
-        entity: 'project' | 'task';
+        entity: 'project';
         /**
-         * The numeric id of the entity to (un)subscribe from.
+         * The numeric id of the project to (un)subscribe from.
          */
         entityID: number;
     };
@@ -7484,7 +6608,7 @@ export type TasksListData = {
          */
         filter_include_nulls?: boolean;
         /**
-         * Fields to sort by (e.g. done, priority). Repeatable; pair positionally with order_by. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
+         * Fields to sort by (e.g. done, due_date). Repeatable; pair positionally with order_by. The special value relevance sorts by search relevance (most relevant first, requires s; ignored when the database cannot score the query).
          */
         sort_by?: Array<string> | null;
         /**
@@ -7694,127 +6818,65 @@ export type TasksUpdateResponses = {
 
 export type TasksUpdateResponse = TasksUpdateResponses[keyof TasksUpdateResponses];
 
-export type TaskAssigneesListData = {
+export type TasksDelegationDeleteData = {
     body?: never;
     path: {
-        projecttask: number;
-    };
-    query?: {
         /**
-         * 1-based page number.
+         * The numeric id of the task whose delegation is being changed.
          */
-        page?: number;
-        /**
-         * Items per page (max 1000).
-         */
-        per_page?: number;
-        /**
-         * Search query; filters the list to items matching this string.
-         */
-        q?: string;
-    };
-    url: '/tasks/{projecttask}/assignees';
-};
-
-export type TaskAssigneesListErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TaskAssigneesListError = TaskAssigneesListErrors[keyof TaskAssigneesListErrors];
-
-export type TaskAssigneesListResponses = {
-    /**
-     * OK
-     */
-    200: PaginatedUser;
-};
-
-export type TaskAssigneesListResponse = TaskAssigneesListResponses[keyof TaskAssigneesListResponses];
-
-export type TaskAssigneesCreateData = {
-    body: TaskAssgineeWritable;
-    path: {
         projecttask: number;
     };
     query?: never;
-    url: '/tasks/{projecttask}/assignees';
+    url: '/tasks/{projecttask}/delegation';
 };
 
-export type TaskAssigneesCreateErrors = {
+export type TasksDelegationDeleteErrors = {
     /**
      * Error
      */
     default: VikunjaErrorModel;
 };
 
-export type TaskAssigneesCreateError = TaskAssigneesCreateErrors[keyof TaskAssigneesCreateErrors];
+export type TasksDelegationDeleteError = TasksDelegationDeleteErrors[keyof TasksDelegationDeleteErrors];
 
-export type TaskAssigneesCreateResponses = {
-    /**
-     * Created
-     */
-    201: TaskAssginee;
-};
-
-export type TaskAssigneesCreateResponse = TaskAssigneesCreateResponses[keyof TaskAssigneesCreateResponses];
-
-export type TaskAssigneesBulkData = {
-    body: BulkAssigneesWritable;
-    path: {
-        projecttask: number;
-    };
-    query?: never;
-    url: '/tasks/{projecttask}/assignees/bulk';
-};
-
-export type TaskAssigneesBulkErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TaskAssigneesBulkError = TaskAssigneesBulkErrors[keyof TaskAssigneesBulkErrors];
-
-export type TaskAssigneesBulkResponses = {
-    /**
-     * OK
-     */
-    200: BulkAssignees;
-};
-
-export type TaskAssigneesBulkResponse = TaskAssigneesBulkResponses[keyof TaskAssigneesBulkResponses];
-
-export type TaskAssigneesDeleteData = {
-    body?: never;
-    path: {
-        projecttask: number;
-        user: number;
-    };
-    query?: never;
-    url: '/tasks/{projecttask}/assignees/{user}';
-};
-
-export type TaskAssigneesDeleteErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TaskAssigneesDeleteError = TaskAssigneesDeleteErrors[keyof TaskAssigneesDeleteErrors];
-
-export type TaskAssigneesDeleteResponses = {
+export type TasksDelegationDeleteResponses = {
     /**
      * No Content
      */
     204: void;
 };
 
-export type TaskAssigneesDeleteResponse = TaskAssigneesDeleteResponses[keyof TaskAssigneesDeleteResponses];
+export type TasksDelegationDeleteResponse = TasksDelegationDeleteResponses[keyof TasksDelegationDeleteResponses];
+
+export type TasksDelegationCreateData = {
+    body: TaskDelegationWritable;
+    path: {
+        /**
+         * The numeric id of the task whose delegation is being changed.
+         */
+        projecttask: number;
+    };
+    query?: never;
+    url: '/tasks/{projecttask}/delegation';
+};
+
+export type TasksDelegationCreateErrors = {
+    /**
+     * Error
+     */
+    default: VikunjaErrorModel;
+};
+
+export type TasksDelegationCreateError = TasksDelegationCreateErrors[keyof TasksDelegationCreateErrors];
+
+export type TasksDelegationCreateResponses = {
+    /**
+     * Created
+     */
+    201: Task;
+};
+
+export type TasksDelegationCreateResponse = TasksDelegationCreateResponses[keyof TasksDelegationCreateResponses];
 
 export type TasksDuplicateData = {
     body?: never;
@@ -8524,7 +7586,7 @@ export type TimeEntriesListData = {
          */
         q?: string;
         /**
-         * Filter entries with the task filter syntax over user_id, task_id, project_id, start_time and end_time — e.g. "project_id = 5 && start_time > now-7d". Use end_time = null to match running timers.
+         * Filter entries with the task filter syntax over task_id, project_id, start_time and end_time — e.g. "project_id = 5 && start_time > now-7d". Use end_time = null to match running timers.
          */
         filter?: string;
         /**
@@ -8745,10 +7807,6 @@ export type TokensListData = {
          * Search query; filters the list to items matching this string.
          */
         q?: string;
-        /**
-         * List tokens of this owner instead of the caller. Must be a bot owned by the authenticated user.
-         */
-        owner_id?: number;
     };
     url: '/tokens';
 };
@@ -8847,195 +7905,6 @@ export type UserShowResponses = {
 };
 
 export type UserShowResponse = UserShowResponses[keyof UserShowResponses];
-
-export type BotsListData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * 1-based page number.
-         */
-        page?: number;
-        /**
-         * Items per page (max 1000).
-         */
-        per_page?: number;
-        /**
-         * Search query; filters the list to items matching this string.
-         */
-        q?: string;
-    };
-    url: '/user/bots';
-};
-
-export type BotsListErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type BotsListError = BotsListErrors[keyof BotsListErrors];
-
-export type BotsListResponses = {
-    /**
-     * OK
-     */
-    200: PaginatedBotUser;
-};
-
-export type BotsListResponse = BotsListResponses[keyof BotsListResponses];
-
-export type BotsCreateData = {
-    body: BotUserWritable;
-    path?: never;
-    query?: never;
-    url: '/user/bots';
-};
-
-export type BotsCreateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type BotsCreateError = BotsCreateErrors[keyof BotsCreateErrors];
-
-export type BotsCreateResponses = {
-    /**
-     * Created
-     */
-    201: BotUser;
-};
-
-export type BotsCreateResponse = BotsCreateResponses[keyof BotsCreateResponses];
-
-export type BotsDeleteData = {
-    body?: never;
-    path: {
-        bot: number;
-    };
-    query?: never;
-    url: '/user/bots/{bot}';
-};
-
-export type BotsDeleteErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type BotsDeleteError = BotsDeleteErrors[keyof BotsDeleteErrors];
-
-export type BotsDeleteResponses = {
-    /**
-     * No Content
-     */
-    204: void;
-};
-
-export type BotsDeleteResponse = BotsDeleteResponses[keyof BotsDeleteResponses];
-
-export type BotsReadData = {
-    body?: never;
-    headers?: {
-        /**
-         * Succeeds if the server's resource matches one of the passed values.
-         */
-        'If-Match'?: Array<string> | null;
-        /**
-         * Succeeds if the server's resource matches none of the passed values. On writes, the special value * may be used to match any existing value.
-         */
-        'If-None-Match'?: Array<string> | null;
-        /**
-         * Succeeds if the server's resource date is more recent than the passed date.
-         */
-        'If-Modified-Since'?: string;
-        /**
-         * Succeeds if the server's resource date is older or the same as the passed date.
-         */
-        'If-Unmodified-Since'?: string;
-    };
-    path: {
-        bot: number;
-    };
-    query?: never;
-    url: '/user/bots/{bot}';
-};
-
-export type BotsReadErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type BotsReadError = BotsReadErrors[keyof BotsReadErrors];
-
-export type BotsReadResponses = {
-    /**
-     * OK
-     */
-    200: BotUserReadBody;
-};
-
-export type BotsReadResponse = BotsReadResponses[keyof BotsReadResponses];
-
-export type PatchBotsReadData = {
-    body: Array<JsonPatchOp> | null;
-    path: {
-        bot: number;
-    };
-    query?: never;
-    url: '/user/bots/{bot}';
-};
-
-export type PatchBotsReadErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type PatchBotsReadError = PatchBotsReadErrors[keyof PatchBotsReadErrors];
-
-export type PatchBotsReadResponses = {
-    /**
-     * OK
-     */
-    200: BotUser;
-};
-
-export type PatchBotsReadResponse = PatchBotsReadResponses[keyof PatchBotsReadResponses];
-
-export type BotsUpdateData = {
-    body: BotUserReadBodyWritable;
-    path: {
-        bot: number;
-    };
-    query?: never;
-    url: '/user/bots/{bot}';
-};
-
-export type BotsUpdateErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type BotsUpdateError = BotsUpdateErrors[keyof BotsUpdateErrors];
-
-export type BotsUpdateResponses = {
-    /**
-     * OK
-     */
-    200: BotUser;
-};
-
-export type BotsUpdateResponse = BotsUpdateResponses[keyof BotsUpdateResponses];
 
 export type AuthConfirmEmailData = {
     body: EmailConfirmWritable;
@@ -9870,31 +8739,6 @@ export type UserTimezonesResponses = {
 
 export type UserTimezonesResponse = UserTimezonesResponses[keyof UserTimezonesResponses];
 
-export type TokenRenewData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/user/token';
-};
-
-export type TokenRenewErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type TokenRenewError = TokenRenewErrors[keyof TokenRenewErrors];
-
-export type TokenRenewResponses = {
-    /**
-     * OK
-     */
-    200: RenewTokenBodyBody;
-};
-
-export type TokenRenewResponse = TokenRenewResponses[keyof TokenRenewResponses];
-
 export type AuthRefreshTokenData = {
     body?: never;
     path?: never;
@@ -9919,36 +8763,6 @@ export type AuthRefreshTokenResponses = {
 };
 
 export type AuthRefreshTokenResponse = AuthRefreshTokenResponses[keyof AuthRefreshTokenResponses];
-
-export type UsersSearchData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Search query matched against username, name or full email.
-         */
-        q?: string;
-    };
-    url: '/users';
-};
-
-export type UsersSearchErrors = {
-    /**
-     * Error
-     */
-    default: VikunjaErrorModel;
-};
-
-export type UsersSearchError = UsersSearchErrors[keyof UsersSearchErrors];
-
-export type UsersSearchResponses = {
-    /**
-     * OK
-     */
-    200: PaginatedUser;
-};
-
-export type UsersSearchResponse = UsersSearchResponses[keyof UsersSearchResponses];
 
 export type WebhooksEventsListData = {
     body?: never;

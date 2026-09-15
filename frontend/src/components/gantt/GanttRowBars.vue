@@ -96,7 +96,7 @@
 				<!-- Left diamond -->
 				<polygon
 					:points="getLeftDiamondPoints(bar)"
-					:fill="getParentDiamondFill(bar)"
+					:fill="getParentDiamondFill()"
 					:stroke="getBarFillAttr(bar)"
 					stroke-width="1"
 					:opacity="bar.meta?.isDone ? 0.5 : 1"
@@ -104,7 +104,7 @@
 				<!-- Right diamond -->
 				<polygon
 					:points="getRightDiamondPoints(bar)"
-					:fill="getParentDiamondFill(bar)"
+					:fill="getParentDiamondFill()"
 					:stroke="getBarFillAttr(bar)"
 					stroke-width="1"
 					:opacity="bar.meta?.isDone ? 0.5 : 1"
@@ -211,7 +211,7 @@ import dayjs from 'dayjs'
 import {useI18n} from 'vue-i18n'
 
 import type {GanttBarModel} from '@/composables/useGanttBar'
-import {getTextColor, LIGHT} from '@/helpers/color/getTextColor'
+import {LIGHT} from '@/helpers/color/getTextColor'
 import {MILLISECONDS_A_DAY} from '@/constants/date'
 import {roundToNaturalDayBoundary} from '@/helpers/time/roundToNaturalDayBoundary'
 
@@ -338,11 +338,7 @@ function getRightDiamondPoints(bar: GanttBarModel): string {
 	return `${x - DIAMOND_SIZE * 2},${cy} ${x - DIAMOND_SIZE},${cy - DIAMOND_SIZE} ${x},${cy} ${x - DIAMOND_SIZE},${cy + DIAMOND_SIZE}`
 }
 
-function getParentDiamondFill(bar: GanttBarModel): string {
-	// Use a darker shade for contrast on the full-height bar
-	if (bar.meta?.color) {
-		return 'var(--white)'
-	}
+function getParentDiamondFill(): string {
 	return 'var(--white)'
 }
 
@@ -355,18 +351,11 @@ function isDateless(bar: GanttBarModel) {
 }
 
 function getBarFill(bar: GanttBarModel) {
-	// Partial dates still have "actual" dates on one side — use the task color
 	if (isPartialDate(bar)) {
-		if (bar.meta?.color) {
-			return bar.meta.color
-		}
 		return 'var(--primary)'
 	}
 
 	if (bar.meta?.hasActualDates) {
-		if (bar.meta?.color) {
-			return bar.meta.color
-		}
 		return 'var(--primary)'
 	}
 
@@ -397,10 +386,6 @@ function getBarStrokeWidth(bar: GanttBarModel) {
 function getBarTextColor(bar: GanttBarModel) {
 	if (isDateless(bar)) {
 		return 'var(--grey-800)'
-	}
-
-	if (bar.meta?.color) {
-		return getTextColor(bar.meta.color)
 	}
 
 	return LIGHT

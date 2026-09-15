@@ -37,7 +37,7 @@ func RegisterTaskDuplicateRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "tasks-duplicate",
 		Summary:     "Duplicate a task",
-		Description: "Copies a task — including its labels, assignees, attachments and reminders — into the same project, and records a \"copied from\" relation back to the original. The authenticated user needs read access to the source task and write access to its project. Returns the newly created duplicate.",
+		Description: "Copies a task — including its labels, attachments and reminders — into the same project, and records a \"copied from\" relation back to the original. The authenticated user needs read access to the source task and write access to its project. Returns the newly created duplicate.",
 		Method:      http.MethodPost,
 		Path:        "/tasks/{projecttask}/duplicate",
 		Tags:        tags,

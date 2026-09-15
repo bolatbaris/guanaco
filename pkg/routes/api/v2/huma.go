@@ -75,7 +75,7 @@ func NewAPI(e *echo.Echo, g *echo.Group) huma.API {
 	// Huma's built-in docs would load from unpkg.com — we serve Scalar locally instead.
 	cfg.DocsPath = ""
 	// Real presence/format rules live in `valid:` tags, enforced by govalidator in
-	// the Register wrapper; leave the schema permissive so partial updates match v1.
+	// the Register wrapper; leave the schema permissive so partial updates remain supported.
 	cfg.FieldsOptionalByDefault = true
 	// Accept application/x-www-form-urlencoded bodies (the OAuth token endpoint)
 	// alongside JSON. Copy the default map so we don't mutate the package global.
@@ -94,18 +94,18 @@ func NewAPI(e *echo.Echo, g *echo.Group) huma.API {
 	if oapi.Components.SecuritySchemes == nil {
 		oapi.Components.SecuritySchemes = map[string]*huma.SecurityScheme{}
 	}
-	// v1 conflated JWTs and tk_-prefixed API tokens under JWTKeyAuth; v2
-	// declares them separately so SDK generators and /api/v2/docs distinguish them.
+	// Keep session JWTs and scoped API tokens distinct so SDK generators and
+	// /api/v2/docs expose the two authentication modes clearly.
 	oapi.Components.SecuritySchemes["JWTKeyAuth"] = &huma.SecurityScheme{
 		Type:         "http",
 		Scheme:       "bearer",
 		BearerFormat: "JWT",
-		Description:  "User session JWT issued via /api/v1/login.",
+		Description:  "User session JWT issued via /api/v2/login.",
 	}
 	oapi.Components.SecuritySchemes["APITokenAuth"] = &huma.SecurityScheme{
 		Type:        "http",
 		Scheme:      "bearer",
-		Description: "Vikunja API token (tk_ prefix) with scoped permissions. Created via /api/v1/tokens.",
+		Description: "Vikunja API token (tk_ prefix) with scoped permissions. Created via /api/v2/tokens.",
 	}
 	// HTTP Basic, used only by the notifications Atom feed: feed readers can't
 	// carry a bearer header, so the feed accepts the API token as the Basic
@@ -141,7 +141,7 @@ func NewAPI(e *echo.Echo, g *echo.Group) huma.API {
 // DELETE → 204. Anything else (including an explicit op.DefaultStatus) is untouched.
 //
 // It also runs govalidator before the handler — i.e. before handler.Do*'s
-// permission check — so v2 validates-then-authorizes like v1.
+// permission check — so validation always happens before authorization.
 func Register[I, O any](api huma.API, op huma.Operation, handler func(context.Context, *I) (*O, error)) {
 	if op.DefaultStatus == 0 {
 		switch op.Method {

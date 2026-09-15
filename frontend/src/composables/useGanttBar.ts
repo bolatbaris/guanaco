@@ -8,7 +8,6 @@ export interface GanttBarModel {
 	end: Date
 	meta?: {
 		label?: string
-		color?: string
 		hasActualDates?: boolean
 		dateType?: GanttBarDateType
 		isDone?: boolean

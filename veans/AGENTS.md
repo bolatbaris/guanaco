@@ -26,8 +26,7 @@ this file is veans-specific.
 ## Vikunja wire-format gotchas
 
 veans targets the Huma-backed **`/api/v2`** exclusively (`apiBasePath` in
-`internal/client/client.go`). v1 is frozen, and the kanban-bucket CRUD veans
-relies on only exists on v2. Most failures surface when crossing the JSON
+`internal/client/client.go`). Most failures surface when crossing the JSON
 boundary. The list below is what's bitten me; if a new endpoint behaves
 oddly, suspect one of these:
 
@@ -36,24 +35,24 @@ oddly, suspect one of these:
   bare array, and there is no `x-pagination-total-pages` header anymore.
   Decode with the generic `Paginated[T]` helper. **Most lists are
   server-paginated** — their model's `ReadAll` applies a 50-item page limit:
-  tasks, projects, labels, comments and bots. Page through those with
+  tasks, projects, labels and comments. Page through those with
   `doListAll` until `page >= total_pages`; returning only page 1 silently
   truncates (>50 comments on a task is realistic). **Buckets and project
   views are the exception**: their `ReadAll` takes `_ int, _ int` and returns
   every row in one page, so fetch them with a single `doList` and unwrap
   `.items` — paging those would re-fetch the full set and duplicate it.
   Single-object responses (create/update/read of one entity) stay UNWRAPPED.
-- **v2 flips the create/update verbs.** Creates are **POST** (v1 used PUT):
-  projects, labels, tokens, bot users, project shares, task create,
-  comments, relations, assignees, label-attach, bucket create. Task update
-  is **PATCH** (see below). The bucket-task move is **PUT**.
+- **Create/update verbs follow the v2 contract.** Creates are **POST**:
+  projects, labels, tokens, task create, comments, relations, label-attach,
+  and bucket create. Task update is **PATCH** (see below). The bucket-task
+  move is **PUT**.
 - **Task update is `PATCH /tasks/{id}` with `application/merge-patch+json`**
   (`client.DoMerge` → `UpdateTask(*TaskPatch)`). Only the fields present in
   the body are written; absent fields are left intact. Build the body from
   `TaskPatch` (pointer fields, omitempty) — never a whole `client.Task`,
   whose no-omitempty `done`/`title` would clobber those columns on every
   call (this was issue #2962).
-- **List search is `q`**, not v1's `s` (`ListParams.Q`). Task-list
+- **List search is `q`** (`ListParams.Q`). Task-list
   `filter`/`expand`/`page`/`per_page` keep their names.
 - **`ProjectView.view_kind` and `bucket_configuration_mode` are
   strings**, not ints. The parent enums (`ProjectViewKind`,
@@ -69,9 +68,6 @@ oddly, suspect one of these:
   **`PUT /projects/{p}/views/{v}/buckets/{b}/tasks`** with a `{"task_id":N}`
   body (project/view/bucket all come from the URL). The Update path on the
   server only auto-moves on `done` flips.
-- **Bot user creation is `POST /user/bots`**, not `/bots` — the routes
-  are registered under the `/user` subgroup. Same prefix for
-  `GET /user/bots`.
 - **`APIToken.expires_at` is required.** The struct field has
   `valid:"required"` upstream; sending it omitted or zero fails
   validation. Use `client.FarFuture` (year 9999) when you mean "no
@@ -95,31 +91,25 @@ oddly, suspect one of these:
   - `/projects/:project/views/:view/buckets/:bucket/tasks` →
     group `projects`, action `views_buckets_tasks`
   - `/tasks/:task/comments` → group `tasks_comments`, action `create`
-- v1 and v2 deliberately share `(group, permission)` keys:
-  `pkg/models/api_routes.go` normalizes the inverted verbs (v2 POST-create
-  and v1 PUT-create both → `create`; v2 PUT/PATCH-update and v1 POST-update
-  both → `update`), and `CanDoAPIRoute` consults both route tables, treating
-  PATCH as an alias for the stored PUT. So `PermissionsForBot`'s scope map
-  authorizes the v2 calls unchanged, including the PATCH task update.
+- The v2 route map uses stable `(group, permission)` keys. The client
+  discovers those keys at runtime instead of duplicating the server's route
+  registry, and requests only scopes that are currently exposed.
 - The bucket-task MOVE (`PUT …/buckets/:bucket/tasks`) and the
   buckets-with-tasks LIST (`GET …/buckets/tasks`) collide on subkey
   `views_buckets_tasks`; which one gets the bare key vs `views_buckets_tasks_put`
-  depends on unspecified route-init order, so the bot requests **both**.
-- `client.PermissionsForBot()` calls `GET /routes` at runtime and
+  depends on unspecified route-init order, so automation requests **both**.
+- `client.PermissionsForAutomation()` calls `GET /routes` at runtime and
   grants only the intersection of what we want and what the server
-  exposes. **Don't hard-code permission group names** — they drift
-  across Vikunja versions, and discovery keeps the bot's grant valid
-  across upgrades.
+  exposes. **Don't hard-code permission group names** — discovery keeps the
+  automation token valid as the route registry evolves.
 
-## Bot ownership and token minting
+## Automation token
 
-- Creating a bot via `POST /user/bots` automatically sets the bot's
-  `bot_owner_id` to the calling user. Only the owner can mint tokens
-  for the bot via `POST /tokens` with `owner_id=<bot_id>`. The init
-  flow does these as a single human-JWT-authenticated batch.
-- Bots have no password and **cannot** authenticate via `POST /login`.
-  After init, `veans login` re-authenticates as the human (not the
-  bot) and mints a fresh bot token.
+- `veans init` authenticates as the single user, discovers the available
+  permissions, and creates a scoped token via `POST /tokens` without an
+  `owner_id`. The selected project and token therefore have the same owner.
+- `veans login` re-authenticates as that user and rotates the automation
+  token in the credential store.
 
 ## OAuth flow
 
@@ -156,17 +146,13 @@ oddly, suspect one of these:
 - E2e tests override `HOME` per test and `filterEnv(..., "VEANS_")`
   strips any inherited `VEANS_TOKEN` so the developer's keyring
   stays untouched. Don't bypass the credentials package in tests —
-  leaks between tests will surface as the wrong bot token.
+  leaks between tests will surface as the wrong account token.
 
-## Project identifiers and bot usernames
+## Project identifiers
 
 - Project `Identifier` is `runelength(0|10)`, can be empty. When empty,
   `Config.FormatTaskID` renders `#NN`; otherwise `PROJ-NN`. Both are
   accepted by `runtime.resolveTaskID` along with bare integers.
-- Bot username must start with `bot-`; the server enforces it. Hyphens,
-  digits, lowercase letters allowed; no spaces, no commas, no
-  `link-share-N` pattern. `config.SuggestedBotUsername` does the
-  folding for repo names.
 - E2e tests deriving identifiers from a unique suffix should use the
   trailing chars of `strconv.FormatInt(time.Now().UnixNano(), 36)`.
   The leading chars barely change between consecutive runs and will
@@ -178,9 +164,9 @@ The CLI is agent-only at runtime; humans never use it for day-to-day
 work (they use Vikunja's web UI). Two commands serve a human running
 one-off setup:
 
-- **`init`** — bootstrap a repo: pick project + view, create bot,
-  share, mint token, write `.veans.yml`, install hooks.
-- **`login`** — rotate the bot's token.
+- **`init`** — bootstrap a repo: authenticate the user, pick project + view,
+  mint an account-owned token, write `.veans.yml`, install hooks.
+- **`login`** — rotate the account-owned automation token.
 
 Everything else (`list`, `show`, `create`, `update`, `claim`, `api`,
 `prime`, `version`) is **agent-only**:
@@ -192,7 +178,7 @@ Everything else (`list`, `show`, `create`, `update`, `claim`, `api`,
   everywhere (`{"code": "...", "error": "..."}`), regardless of which
   command ran. Stable codes in `internal/output/errors.go`:
   `NOT_FOUND`, `CONFLICT`, `VALIDATION_ERROR`, `AUTH_ERROR`,
-  `RATE_LIMITED`, `BOT_USERS_UNAVAILABLE`, `NOT_CONFIGURED`,
+  `RATE_LIMITED`, `NOT_CONFIGURED`,
   `UNKNOWN`. Don't add ad-hoc strings — wrap with `output.New` /
   `output.Wrap`.
 - **No `globals.JSON`, no dual rendering paths.** If you find yourself

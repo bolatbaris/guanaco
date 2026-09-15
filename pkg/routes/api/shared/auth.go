@@ -24,7 +24,6 @@ import (
 	"code.vikunja.io/api/pkg/events"
 	"code.vikunja.io/api/pkg/log"
 	"code.vikunja.io/api/pkg/models"
-	"code.vikunja.io/api/pkg/modules/auth"
 	"code.vikunja.io/api/pkg/modules/auth/ldap"
 	"code.vikunja.io/api/pkg/modules/auth/openid"
 	"code.vikunja.io/api/pkg/modules/keyvalue"
@@ -36,7 +35,7 @@ import (
 // AuthenticateUserCredentials verifies a login against local (and, if configured,
 // LDAP) credentials and enforces the account-status and TOTP gates, returning the
 // authenticated user on success. It is the transport-agnostic core of the login
-// flow shared by v1 and v2; the caller issues the token and sets the cookie. The
+// flow; the caller issues the token and sets the cookie. The
 // returned errors carry their own HTTP semantics (wrong credentials, disabled
 // account, missing/invalid TOTP) so both APIs surface them identically.
 func AuthenticateUserCredentials(ctx context.Context, login *user.Login) (*user.User, error) {
@@ -108,8 +107,8 @@ func resolveLoginUser(ctx context.Context, s *xorm.Session, login *user.Login) (
 	return user.CheckUserCredentials(ctx, s, login)
 }
 
-// enforceLoginTOTP runs the TOTP gate for users who have it enabled, mirroring
-// v1: a missing passcode is rejected, and a wrong one trips the failed-attempt
+// enforceLoginTOTP runs the TOTP gate for users who have it enabled: a missing
+// passcode is rejected, and a wrong one trips the failed-attempt
 // lockout via HandleFailedTOTPAuth. The session is rolled back before
 // HandleFailedTOTPAuth so its dedicated session can acquire a write lock on
 // SQLite shared-cache (the lockout write is decoupled from this transaction —
@@ -143,7 +142,7 @@ func enforceLoginTOTP(s *xorm.Session, u *user.User, passcode string) error {
 
 // DeleteSession removes the session with the given id, logging the user out
 // server-side. An empty sid is a no-op (the token carried no session, e.g. an
-// API token or a link share), matching v1. Shared by v1 and v2; the caller is
+// API token or a link share); the caller is
 // responsible for clearing the refresh cookie.
 func DeleteSession(sid string) error {
 	_, err := LogoutSession(sid)
@@ -195,8 +194,7 @@ func LogoutSession(sid string) (endSessionURL string, err error) {
 	return endSessionURL, nil
 }
 
-// ConfirmEmail confirms an account's email from the token sent to it. Shared by
-// v1 and v2.
+// ConfirmEmail confirms an account's email from the token sent to it.
 func ConfirmEmail(confirm *user.EmailConfirm) error {
 	s := db.NewSession()
 	defer s.Close()
@@ -207,57 +205,4 @@ func ConfirmEmail(confirm *user.EmailConfirm) error {
 	}
 
 	return s.Commit()
-}
-
-// LinkShareToken is the response for the link-share auth endpoint. It embeds the
-// authenticated share alongside the issued JWT and re-exposes the project id
-// (which LinkSharing hides with json:"-"). The embedded share's write-only
-// Password is blanked by AuthenticateLinkShare before this is returned.
-type LinkShareToken struct {
-	auth.Token
-	// Embedded by value: a pointer embed's method set is never empty, which
-	// breaks Huma's $schema wrapper (go#15924).
-	models.LinkSharing
-	ProjectID int64 `json:"project_id" readOnly:"true" doc:"The id of the project this share grants access to."`
-}
-
-// AuthenticateLinkShare resolves a link share by its public hash, verifies the
-// password for password-protected shares, and issues a JWT auth token for it.
-// The returned token's embedded share has its password blanked. Shared by v1
-// and v2.
-func AuthenticateLinkShare(hash, password string) (*LinkShareToken, error) {
-	s := db.NewSession()
-	defer s.Close()
-
-	share, err := models.GetLinkShareByHash(s, hash)
-	if err != nil {
-		_ = s.Rollback()
-		return nil, err
-	}
-
-	if share.SharingType == models.SharingTypeWithPassword {
-		if err := models.VerifyLinkSharePassword(share, password); err != nil {
-			_ = s.Rollback()
-			return nil, err
-		}
-	}
-
-	t, err := auth.NewLinkShareJWTAuthtoken(share)
-	if err != nil {
-		_ = s.Rollback()
-		return nil, err
-	}
-
-	if err := s.Commit(); err != nil {
-		_ = s.Rollback()
-		return nil, err
-	}
-
-	share.Password = ""
-
-	return &LinkShareToken{
-		Token:       auth.Token{Token: t},
-		LinkSharing: *share,
-		ProjectID:   share.ProjectID,
-	}, nil
 }

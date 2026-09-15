@@ -18,7 +18,7 @@ export default class TaskCommentService extends AbstractService<ITaskComment> {
 		return new TaskCommentModel(data)
 	}
 
-	autoTransformBeforePost(): boolean {
+	autoTransformBeforePut(): boolean {
 		return false
 	}
 	

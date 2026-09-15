@@ -27,9 +27,8 @@ const PREFIXED_SCSS_STYLES = `@use "sass:math";
 */
 function getSentryConfig(env: Record<string, string>): SentryVitePluginOptions {
 	return {
-		// keep these flags for easier debugging
-		disable: true,
-		debug: true, // print information about which files end up being uploaded
+		// The plugin is only created when all upload credentials are present.
+		debug: Boolean(env.SENTRY_DEBUG), // print information about uploaded artifacts
 		silent: false,
 
 		// allow compilation to continue but still emit a warning
@@ -37,21 +36,19 @@ function getSentryConfig(env: Record<string, string>): SentryVitePluginOptions {
 
 		// skipEnvironmentCheck: true,
 
-		// url: 'https://sentry.io', // TODO add env
+		url: env.SENTRY_URL,
 		authToken: env.SENTRY_AUTH_TOKEN,
 		org: env.SENTRY_ORG,
 		project: env.SENTRY_PROJECT,
 
 		telemetry: false,
 
-		// sourcemaps: {
-			// assets: [], // TODO
-			// deleteFilesAfterUpload: [], // TODO define glob
-			// rewriteSources // might need that instead of `urlPrefix`
-		// },
+		sourcemaps: {
+			filesToDeleteAfterUpload: ['dist/**/*.map'],
+		},
 
 		release: {
-			// name: VERSION, // TODO release version
+			name: `vikunja-frontend@${(env.RELEASE_VERSION || 'dev').replace('-g', '-')}`,
 			setCommits: {
 				auto: true,
 				ignoreMissing: true,
@@ -67,6 +64,11 @@ function getSentryConfig(env: Record<string, string>): SentryVitePluginOptions {
 		// 	urlPrefix: '~/assets',
 		// },
 	}
+}
+
+function hasSentrySourceMapCredentials(env: Record<string, string>): boolean {
+	return [env.SENTRY_URL, env.SENTRY_AUTH_TOKEN, env.SENTRY_ORG, env.SENTRY_PROJECT]
+		.every((value) => Boolean(value?.trim()))
 }
 
 /**
@@ -104,6 +106,10 @@ export default defineConfig(({command, mode}) => {
 function getBuildConfig(env: Record<string, string>) {
 	const workboxPkgPath = resolve(dirname(pathSrc), 'node_modules/workbox-precaching/package.json')
 	const workboxVersion = JSON.parse(readFileSync(workboxPkgPath, 'utf-8')).version
+	const uploadSentrySourceMaps = hasSentrySourceMapCredentials(env)
+	const sentryPlugin = uploadSentrySourceMaps
+		? sentryVitePlugin(getSentryConfig(env))
+		: undefined
 
 	return {
 		base: env.VIKUNJA_FRONTEND_BASE,
@@ -212,8 +218,8 @@ function getBuildConfig(env: Record<string, string>) {
 			vueDevTools({
 				launchEditor: env.VUE_DEVTOOLS_LAUNCH_EDITOR || 'code',
 			}),
-			// Put the Sentry vite plugin after all other plugins
-			sentryVitePlugin(getSentryConfig(env)),
+			// Put the Sentry vite plugin after all other plugins when source-map upload is configured.
+			...(sentryPlugin ? [sentryPlugin] : []),
 		],
 		resolve: {
 			alias: [
@@ -238,7 +244,7 @@ function getBuildConfig(env: Record<string, string>) {
 		build: {
 			target: 'esnext',
 			// required for sentry debugging: tells vite to create source maps
-			sourcemap: Boolean(env.SENTRY_AUTH_TOKEN),
+			sourcemap: uploadSentrySourceMaps,
 			rollupOptions: {
 				plugins: [
 					visualizer({
@@ -273,6 +279,7 @@ function getServeConfig(env: Record<string, string>) {
 					target: env.DEV_PROXY,
 					changeOrigin: true,
 					secure: false,
+					ws: true,
 					// Strips prefix for the backend
 					rewrite: (path: string) => path.replace(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), ''),
 				},

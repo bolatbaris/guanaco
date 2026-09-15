@@ -68,9 +68,8 @@ func (sb *Subscription) canReadEntity(s *xorm.Session, a web.Auth) (can bool, er
 	case SubscriptionEntityProject:
 		l := &Project{ID: sb.EntityID}
 		can, _, err = l.CanRead(s, a)
-	case SubscriptionEntityTask:
-		t := &Task{ID: sb.EntityID}
-		can, _, err = t.CanRead(s, a)
+	case SubscriptionEntityUnknown, SubscriptionEntityNamespace:
+		return false, &ErrUnknownSubscriptionEntityType{EntityType: sb.EntityType}
 	default:
 		return false, &ErrUnknownSubscriptionEntityType{EntityType: sb.EntityType}
 	}

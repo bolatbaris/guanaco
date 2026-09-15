@@ -22,7 +22,6 @@ import (
 
 	"code.vikunja.io/api/pkg/files"
 	"code.vikunja.io/api/pkg/log"
-	"code.vikunja.io/api/pkg/utils"
 	"code.vikunja.io/api/pkg/web"
 
 	"xorm.io/xorm"
@@ -34,9 +33,6 @@ type ProjectDuplicate struct {
 	ProjectID int64 `json:"-" param:"projectid"`
 	// The target parent project
 	ParentProjectID int64 `json:"parent_project_id,omitempty" doc:"The id of the project under which the duplicate should be created. Omit or 0 to place the copy at the top level; you need write access to the parent."`
-	// Whether to copy the project's shares to the duplicate
-	DuplicateShares bool `json:"duplicate_shares,omitempty" doc:"Whether to copy the project's user and link shares to the duplicate. Defaults to false."`
-
 	// The copied project
 	Project *Project `json:"duplicated_project,omitempty" readOnly:"true" doc:"The newly created duplicate project, populated by the server in the response."`
 
@@ -65,7 +61,7 @@ func (pd *ProjectDuplicate) CanCreate(s *xorm.Session, a web.Auth) (canCreate bo
 
 // Create duplicates a project
 // @Summary Duplicate an existing project
-// @Description Copies the project, tasks, files, kanban data, assignees, comments, attachments, labels, relations and backgrounds from one project to a new one. User permissions and link shares are only copied when duplicate_shares is set to true. The user needs read access in the project and write access in the parent of the new project.
+// @Description Copies the project, tasks, files, kanban data, comments, attachments, labels, relations and backgrounds from one project to a new one owned by the authenticated user. The user needs read access in the project and write access in the parent of the new project.
 // @tags project
 // @Accept json
 // @Produce json
@@ -118,46 +114,6 @@ func (pd *ProjectDuplicate) Create(s *xorm.Session, doer web.Auth) (err error) {
 	err = duplicateProjectBackground(s, pd, doer)
 	if err != nil {
 		return
-	}
-
-	if pd.DuplicateShares {
-		// Permissions / Shares
-		// To keep it simple(r) we will only copy permissions which are directly used with the project, not the parent
-		users := []*ProjectUser{}
-		err = s.Where("project_id = ?", pd.ProjectID).Find(&users)
-		if err != nil {
-			return
-		}
-		for _, u := range users {
-			u.ID = 0
-			u.ProjectID = pd.Project.ID
-			if _, err := s.Insert(u); err != nil {
-				return err
-			}
-		}
-
-		log.Debugf("Duplicated user shares from project %d into %d", pd.ProjectID, pd.Project.ID)
-
-		// Generate new link shares if any are available
-		linkShares := []*LinkSharing{}
-		err = s.Where("project_id = ?", pd.ProjectID).Find(&linkShares)
-		if err != nil {
-			return
-		}
-		for _, share := range linkShares {
-			share.ID = 0
-			share.ProjectID = pd.Project.ID
-			hash, err := utils.CryptoRandomString(40)
-			if err != nil {
-				return err
-			}
-			share.Hash = hash
-			if _, err := s.Insert(share); err != nil {
-				return err
-			}
-		}
-
-		log.Debugf("Duplicated all link shares from project %d into %d", pd.ProjectID, pd.Project.ID)
 	}
 
 	err = pd.Project.ReadOne(s, doer)
@@ -351,7 +307,8 @@ func duplicateTasks(s *xorm.Session, doer web.Auth, ld *ProjectDuplicate) (newTa
 		t.ID = 0
 		t.ProjectID = ld.Project.ID
 		t.UID = ""
-		err = createTask(s, t, doer, false, false)
+		t.DelegatedTo = ""
+		err = createTask(s, t, doer, false)
 		if err != nil {
 			return nil, err
 		}
@@ -424,28 +381,6 @@ func duplicateTasks(s *xorm.Session, doer web.Auth, ld *ProjectDuplicate) (newTa
 	}
 
 	log.Debugf("Duplicated all labels from project %d into %d", ld.ProjectID, ld.Project.ID)
-
-	// Assignees
-	// Only copy those assignees who have access to the task
-	assignees := []*TaskAssginee{}
-	err = s.In("task_id", oldTaskIDs).Find(&assignees)
-	if err != nil {
-		return
-	}
-	for _, a := range assignees {
-		t := &Task{
-			ID:        newTaskIDs[a.TaskID],
-			ProjectID: ld.Project.ID,
-		}
-		if err := t.addNewAssigneeByID(s, a.UserID, ld.Project, doer); err != nil {
-			if IsErrUserDoesNotHaveAccessToProject(err) {
-				continue
-			}
-			return nil, err
-		}
-	}
-
-	log.Debugf("Duplicated all assignees from project %d into %d", ld.ProjectID, ld.Project.ID)
 
 	// Comments
 	comments := []*TaskComment{}

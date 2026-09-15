@@ -42,8 +42,8 @@ type Client struct {
 }
 
 // apiBasePath is the version prefix every request is mounted under. veans
-// targets the Huma-backed /api/v2 exclusively — v1 is frozen and the bucket
-// CRUD endpoints veans needs only exist on v2.
+// targets the Huma-backed /api/v2 exclusively, which is the only API contract
+// supported by this CLI.
 const apiBasePath = "/api/v2"
 
 // contentTypeJSON / contentTypeMergePatch are the request body content types
@@ -77,15 +77,12 @@ func New(baseURL, token string) *Client {
 // vikunjaError matches the RFC 9457 problem+json body /api/v2 returns
 // (huma.ErrorModel augmented with Vikunja's numeric domain `code`). The
 // human-readable message lives in `detail`; `title` is the status text
-// fallback. `message` is v1's legacy field, kept only as a fallback so a
-// stray legacy/proxy error body still yields a readable message instead of
-// raw JSON. The HTTP status used for output.Code mapping comes from the
+// fallback. The HTTP status used for output.Code mapping comes from the
 // response status line, not this body.
 type vikunjaError struct {
-	Title   string `json:"title"`
-	Detail  string `json:"detail"`
-	Message string `json:"message"`
-	Code    int    `json:"code"`
+	Title  string `json:"title"`
+	Detail string `json:"detail"`
+	Code   int    `json:"code"`
 }
 
 // Do performs a single JSON request against /api/v2<path>. body, if non-nil,
@@ -155,9 +152,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 }
 
 // Paginated mirrors the standard /api/v2 list envelope. Every v2 list
-// operation returns this shape (v1 returned a bare array plus an
-// x-pagination-total-pages header, which is gone). Single-object responses
-// stay unwrapped.
+// operation returns this shape. Single-object responses stay unwrapped.
 type Paginated[T any] struct {
 	Items      []T   `json:"items"`
 	Total      int64 `json:"total"`
@@ -182,7 +177,7 @@ func doList[T any](ctx context.Context, c *Client, path string, query url.Values
 // page >= total_pages.
 //
 // Use it ONLY for endpoints whose model honours page/per_page — the
-// server-paginated lists (tasks, projects, labels, comments, bots). For the
+// server-paginated lists (tasks, projects, labels, comments). For the
 // endpoints whose ReadAll ignores pagination and returns every row in a single
 // page (buckets, views), call doList instead: looping those re-fetches the full
 // set on every page and duplicates it.
@@ -269,14 +264,10 @@ func mapHTTPError(method, path string, status int, body []byte, retryAfter time.
 	var ve vikunjaError
 	_ = json.Unmarshal(body, &ve)
 	// v2's problem+json carries the human-readable text in `detail`; fall back
-	// to `title`, then v1's legacy `message`, then the raw body, then the
-	// status text.
+	// to `title`, then the raw body, then the status text.
 	msg := strings.TrimSpace(ve.Detail)
 	if msg == "" {
 		msg = strings.TrimSpace(ve.Title)
-	}
-	if msg == "" {
-		msg = strings.TrimSpace(ve.Message)
 	}
 	if msg == "" {
 		msg = strings.TrimSpace(string(body))

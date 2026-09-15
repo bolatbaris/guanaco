@@ -36,11 +36,8 @@ const (
 	taskPropertyCreatedByID   string = "created_by_id"
 	taskPropertyProjectID     string = "project_id"
 	taskPropertyRepeatAfter   string = "repeat_after"
-	taskPropertyPriority      string = "priority"
 	taskPropertyStartDate     string = "start_date"
 	taskPropertyEndDate       string = "end_date"
-	taskPropertyHexColor      string = "hex_color"
-	taskPropertyPercentDone   string = "percent_done"
 	taskPropertyUID           string = "uid"
 	taskPropertyCreated       string = "created"
 	taskPropertyUpdated       string = "updated"
@@ -48,10 +45,8 @@ const (
 	taskPropertyBucketID      string = "bucket_id"
 	taskPropertyIndex         string = "index"
 	taskPropertyProjectViewID string = "project_view_id"
-	taskPropertyAssignees     string = "assignees"
 	taskPropertyLabels        string = "labels"
 	taskPropertyReminders     string = "reminders"
-	taskPropertyCreatedBy     string = "created_by"
 	// Not a task column: sorts by search relevance on ParadeDB. Valid for
 	// sorting only, silently skipped when the database or query cannot score.
 	taskPropertyRelevance string = "relevance"
@@ -107,11 +102,8 @@ func validateTaskFieldForSorting(fieldName string) error {
 		taskPropertyCreatedByID,
 		taskPropertyProjectID,
 		taskPropertyRepeatAfter,
-		taskPropertyPriority,
 		taskPropertyStartDate,
 		taskPropertyEndDate,
-		taskPropertyHexColor,
-		taskPropertyPercentDone,
 		taskPropertyUID,
 		taskPropertyCreated,
 		taskPropertyUpdated,

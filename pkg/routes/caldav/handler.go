@@ -133,7 +133,7 @@ func ProjectHandler(c *echo.Context) error {
 				return c.String(http.StatusNotFound, "Project not found")
 			}
 
-			// A pseudo collection cannot be written to as a collection, but PUT and DELETE
+			// A saved-filter collection cannot be written to as a collection, but PUT and DELETE
 			// of the tasks it aggregates go through to their real projects.
 			if !models.IsPseudoProjectID(storage.project.ID) {
 				log.Debugf("[CALDAV] OPTIONS for read-only project %d by user %s", storage.project.ID, u.Username)
@@ -287,11 +287,7 @@ func getProjectFromParam(c *echo.Context) (project *models.ProjectWithTasksAndBu
 		return nil, models.ErrProjectDoesNotExist{}
 	}
 
-	if intParam == models.FavoritesPseudoProjectID {
-		return &models.ProjectWithTasksAndBuckets{Project: models.FavoritesPseudoProject}, nil
-	}
-
-	if intParam < models.FavoritesPseudoProjectID {
+	if models.GetSavedFilterIDFromProjectID(intParam) > 0 {
 		var sf *models.SavedFilter
 		sf, err = models.GetSavedFilterSimpleByID(s, models.GetSavedFilterIDFromProjectID(intParam))
 		if err != nil {

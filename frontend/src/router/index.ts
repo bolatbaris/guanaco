@@ -5,7 +5,6 @@ import {saveLastVisited} from '@/helpers/saveLastVisited'
 import {getProjectViewId} from '@/helpers/projectView'
 import {parseDateOrString} from '@/helpers/time/parseDateOrString'
 import {getNextWeekDate} from '@/helpers/time/getNextWeekDate'
-import {LINK_SHARE_HASH_PREFIX} from '@/constants/linkShareHash'
 import {REDIRECT_HASH_PREFIX} from '@/constants/redirectHash'
 import {AUTH_ROUTE_NAMES} from '@/constants/authRouteNames'
 import {PRO_FEATURE} from '@/constants/proFeatures'
@@ -17,7 +16,6 @@ import {useBaseStore} from '@/stores/base'
 import {useConfigStore} from '@/stores/config'
 
 import Login from '@/views/user/Login.vue'
-import LinkSharingAuth from '@/views/sharing/LinkSharingAuth.vue'
 import OpenIdAuth from '@/views/user/OpenIdAuth.vue'
 import UpcomingTasks from '@/views/tasks/ShowTasks.vue'
 
@@ -32,7 +30,7 @@ const router = createRouter({
 		}
 
 		// Scroll to anchor should still work
-		if (to.hash && !to.hash.startsWith(LINK_SHARE_HASH_PREFIX) && !to.hash.startsWith(REDIRECT_HASH_PREFIX)) {
+		if (to.hash && !to.hash.startsWith(REDIRECT_HASH_PREFIX)) {
 			return {el: to.hash}
 		}
 
@@ -141,11 +139,6 @@ const router = createRouter({
 					component: () => import('@/views/user/settings/Webhooks.vue'),
 				},
 				{
-					path: '/user/settings/bots',
-					name: 'user.settings.bots',
-					component: () => import('@/views/user/settings/BotUsers.vue'),
-				},
-				{
 					path: '/user/settings/migrate',
 					name: 'migrate.start',
 					component: () => import('@/views/migrate/Migration.vue'),
@@ -170,13 +163,6 @@ const router = createRouter({
 			path: '/user/export/download',
 			name: 'user.export.download',
 			component: () => import('@/views/user/DataExportDownload.vue'),
-		},
-		{
-			path: '/share/:share/auth',
-			name: 'link-share.auth',
-			// FIXME: use dynamic imports
-			// component: () => import('@/views/sharing/LinkSharingAuth.vue'),
-			component: LinkSharingAuth,
 		},
 		{
 			path: '/tasks/:id',
@@ -251,14 +237,6 @@ const router = createRouter({
 			path: '/projects/:projectId/settings/duplicate',
 			name: 'project.settings.duplicate',
 			component: () => import('@/views/project/settings/ProjectSettingsDuplicate.vue'),
-			meta: {
-				showAsModal: true,
-			},
-		},
-		{
-			path: '/projects/:projectId/settings/share',
-			name: 'project.settings.share',
-			component: () => import('@/views/project/settings/ProjectSettingsShare.vue'),
 			meta: {
 				showAsModal: true,
 			},
@@ -452,7 +430,7 @@ export async function getAuthForRoute(to: RouteLocation, authStore) {
 		return {name: 'home'}
 	}
 
-	if (authStore.authUser || authStore.authLinkShare) {
+	if (authStore.authUser) {
 		// An already-signed-in browser that opens a copied /login#redirect=<oauth.authorize> URL
 		// must run the OAuth flow with its existing session instead of short-circuiting to home.
 		// The destination has no redirect hash, so the second guard pass just early-returns (#2654).
@@ -511,7 +489,7 @@ export async function getAuthForRoute(to: RouteLocation, authStore) {
 	}
 }
 
-router.beforeEach(async (to, from) => {
+router.beforeEach(async to => {
 	const authStore = useAuthStore()
 
 	await authStore.checkAuth()
@@ -540,20 +518,6 @@ router.beforeEach(async (to, from) => {
 		const configStore = useConfigStore()
 		if (!configStore.isProFeatureEnabled(PRO_FEATURE.TIME_TRACKING)) {
 			return {name: 'not-found'}
-		}
-	}
-
-	if(from.hash && from.hash.startsWith(LINK_SHARE_HASH_PREFIX)) {
-		to.hash = from.hash
-	}
-
-	if (to.hash.startsWith(LINK_SHARE_HASH_PREFIX) && !authStore.authLinkShare) {
-		saveLastVisited(to.name as string, to.params, to.query)
-		return {
-			name: 'link-share.auth',
-			params: {
-				share: to.hash.replace(LINK_SHARE_HASH_PREFIX, ''),
-			},
 		}
 	}
 

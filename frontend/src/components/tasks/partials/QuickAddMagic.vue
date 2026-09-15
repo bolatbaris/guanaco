@@ -42,18 +42,6 @@
 						{{ $t('task.quickAddMagic.label4', {prefix: prefixes.label}) }}
 					</p>
 
-					<h3>{{ $t('task.attributes.priority') }}</h3>
-					<p>
-						{{ $t('task.quickAddMagic.priority1', {prefix: prefixes.priority}) }}
-						{{ $t('task.quickAddMagic.priority2') }}
-					</p>
-
-					<h3>{{ $t('task.attributes.assignees') }}</h3>
-					<p>
-						{{ $t('task.quickAddMagic.assignees', {prefix: prefixes.assignee}) }}
-						{{ $t('task.quickAddMagic.multiple') }}
-					</p>
-
 					<h3>{{ $t('quickActions.projects') }}</h3>
 					<p>
 						{{ $t('task.quickAddMagic.project1', {prefix: prefixes.project}) }}

@@ -4,12 +4,8 @@
 		:class="{
 			'is-loading': loadingInternal || loading,
 			'draggable': !(loadingInternal || loading),
-			'has-light-text': !colorIsDark(color),
-			'has-custom-background-color': color ?? undefined,
 		}"
-		:style="{'background-color': color ?? undefined}"
 		:data-task-id="task.id"
-		:data-project-id="task.projectId"
 		:data-is-overdue="isOverdue || undefined"
 		@click.exact="openTaskDetail()"
 		@click.ctrl="() => toggleTaskDone(task)"
@@ -71,18 +67,8 @@
 				{{ projectTitle }}
 			</span>
 
-			<ProgressBar
-				v-if="task.percentDone > 0"
-				class="task-progress"
-				:value="task.percentDone * 100"
-			/>
 			<div class="footer">
 				<Labels :labels="task.labels" />
-				<PriorityLabel
-					:priority="task.priority"
-					:done="task.done"
-					class="is-inline-flex is-align-items-center"
-				/>
 				<span
 					v-if="task.attachments.length > 0"
 					class="icon"
@@ -107,10 +93,10 @@
 					:task="task"
 					class="project-task-icon"
 				/>
-				<AssigneeList
-					v-if="task.assignees.length > 0"
-					:assignees="task.assignees"
-					:avatar-size="24"
+				<DelegationBadge
+					v-if="task.delegatedTo"
+					:name="task.delegatedTo"
+					compact
 				/>
 				<ChecklistSummary
 					:task="task"
@@ -127,14 +113,12 @@ import {useRouter} from 'vue-router'
 
 import {useGlobalNow} from '@/composables/useGlobalNow'
 
-import PriorityLabel from '@/components/tasks/partials/PriorityLabel.vue'
-import ProgressBar from '@/components/misc/ProgressBar.vue'
 import Done from '@/components/misc/Done.vue'
 import Labels from '@/components/tasks/partials/Labels.vue'
 import ChecklistSummary from './ChecklistSummary.vue'
 import CommentCount from './CommentCount.vue'
 
-import {getHexColor, getTaskIdentifier} from '@/models/task'
+import {getTaskIdentifier} from '@/models/task'
 import type {ITask} from '@/modelTypes/ITask'
 import type {IProject} from '@/modelTypes/IProject'
 import {SUPPORTED_IMAGE_SUFFIX} from '@/models/attachment'
@@ -142,9 +126,8 @@ import {PREVIEW_SIZE} from '@/services/attachment'
 import {fetchAttachmentBlobUrl} from '@/helpers/attachments'
 
 import {formatDateLong, formatDisplayDate, formatISO} from '@/helpers/time/formatDate'
-import {colorIsDark} from '@/helpers/color/colorIsDark'
 import {useTaskStore} from '@/stores/tasks'
-import AssigneeList from '@/components/tasks/partials/AssigneeList.vue'
+import DelegationBadge from '@/components/tasks/partials/DelegationBadge.vue'
 import {playPopSound} from '@/helpers/playPop'
 import {isEditorContentEmpty} from '@/helpers/editorContentEmpty'
 import {useProjectStore} from '@/stores/projects'
@@ -165,8 +148,6 @@ const emit = defineEmits<{
 const router = useRouter()
 
 const loadingInternal = ref(false)
-
-const color = computed(() => getHexColor(props.task.hexColor))
 
 const projectStore = useProjectStore()
 
@@ -312,34 +293,10 @@ $task-background: var(--white);
 			padding-inline-start: 0;
 		}
 
-		.assignees {
-			display: flex;
-
-			.user {
-				display: inline;
-				margin: 0;
-
-				img {
-					margin: 0;
-				}
-			}
-		}
-
-		.priority-label {
-			font-size: .75rem;
-			padding: 0 .5rem 0 .25rem;
-
-			.icon {
-				block-size: 1rem;
-				padding: 0 .25rem;
-				margin-block-start: 0;
-			}
-		}
 	}
 
 	.footer .icon,
-	.due-date,
-	.priority-label {
+	.due-date {
 		background: var(--grey-100);
 		border-radius: $radius;
 		padding: 0 .5rem;
@@ -360,66 +317,10 @@ $task-background: var(--white);
 		inline-size: auto;
 	}
 
-	&.has-custom-background-color {
-		color: #000000; // pure black, not grey-800: guarantees 4.5:1 at the luminance flip point
-
-		.footer .icon,
-		.due-date,
-		.priority-label {
-			background: hsl(220, 13%, 91%);
-		}
-
-		// beat component-level color: var(--grey-500) so secondary text tracks the guaranteed main text color
-		.task-id, .project-title {
-			color: inherit;
-		}
-
-		.footer :deep(.checklist-summary) {
-			color: inherit;
-		}
-	}
-
-	&.has-light-text {
-		--white: hsla(var(--white-h), var(--white-s), var(--white-l), var(--white-a)) !important;
-		color: var(--white);
-
-		.footer .icon,
-		.due-date,
-		.priority-label {
-			background: hsl(215, 27.9%, 16.9%); // grey-800
-		}
-
-		.footer {
-			.icon svg {
-				fill: var(--white);
-			}
-		}
-
-		// beat component-level color: var(--grey-500) so secondary text tracks the guaranteed main text color
-		.task-id, .project-title {
-			color: inherit;
-		}
-
-		.footer :deep(.checklist-summary) {
-			color: inherit;
-		}
-
-		// var(--danger-text)/PriorityLabel's --danger-text fail on the dark grey-800 chip bg; brightened red keeps hue/sat, hits >= 4.5:1
-		&[data-is-overdue] .due-date,
-		.priority-label.high-priority {
-			color: hsl(var(--danger-h), var(--danger-s), 68%);
-		}
-	}
 }
 
 .kanban-card__done {
 	margin-inline-end: .25rem;
-}
-
-.task-progress {
-	margin: 8px 0 0;
-	inline-size: 100%;
-	block-size: 0.5rem;
 }
 
 :deep(.comment-count) {

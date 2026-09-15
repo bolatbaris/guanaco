@@ -76,8 +76,13 @@ jobs:
           tags: |
             vikunja/vikunja:unstable
             ghcr.io/go-vikunja/vikunja:unstable
+          secrets: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           build-args: |
             RELEASE_VERSION=${{ steps.ghd.outputs.describe }}
+            SENTRY_URL=${{ vars.SENTRY_URL }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
       - name: Build and push version
         if: ${{ github.ref_type == 'tag' }}
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -86,8 +91,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          secrets: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           build-args: |
             RELEASE_VERSION=${{ steps.ghd.outputs.describe }}
+            SENTRY_URL=${{ vars.SENTRY_URL }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
 
   binaries:
     runs-on: blacksmith-8vcpu-ubuntu-2204
@@ -500,8 +510,6 @@ jobs:
           go-version: stable
       - name: generate
         run: |
-          export PATH=$PATH:$GOPATH/bin
-          go install github.com/swaggo/swag/cmd/swag
           chmod +x ./mage-static
           ./mage-static generate:swagger-docs
           ./mage-static generate:yaegi-symbols

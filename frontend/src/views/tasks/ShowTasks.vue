@@ -256,7 +256,7 @@ async function loadPendingTasks(from: Date|string, to: Date|string, filterId: nu
 		order_by: ['asc', 'desc'],
 		filter: 'done = false',
 		filter_include_nulls: props.showNulls,
-		s: '',
+		q: '',
 		expand: ['comment_count', 'is_unread'],
 	}
 

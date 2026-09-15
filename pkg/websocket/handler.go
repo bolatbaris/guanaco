@@ -39,7 +39,7 @@ func GetHub() *Hub {
 	return globalHub
 }
 
-// UpgradeHandler is the Echo handler for WebSocket upgrades at /api/v1/ws.
+// UpgradeHandler is the Echo handler for WebSocket upgrades at /api/v2/ws.
 // The upgrade happens without authentication - auth is done via the first message.
 func UpgradeHandler(c *echo.Context) error {
 	if globalHub == nil {

@@ -100,7 +100,6 @@ export default class UserModel extends AbstractModel<IUser> implements IUser {
 	pendingEmail = ''
 	deletionScheduledAt: null
 	isAdmin?: boolean
-	botOwnerId = 0
 
 	constructor(data: Partial<IUser> = {}) {
 		super()
@@ -112,7 +111,4 @@ export default class UserModel extends AbstractModel<IUser> implements IUser {
 		this.settings = new UserSettingsModel(this.settings || {})
 	}
 
-	get isBot(): boolean {
-		return (this.botOwnerId ?? 0) > 0
-	}
 }

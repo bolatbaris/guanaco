@@ -59,9 +59,9 @@ type APIToken struct {
 	// A timestamp when this api key was created. You cannot change this value.
 	Created time.Time `xorm:"created not null" json:"created" readOnly:"true" doc:"A timestamp when this api key was created. You cannot change this value."`
 
-	// The user ID of the token owner. When creating a token for a bot user, set this
-	// to the bot's ID. If omitted, defaults to the authenticated user.
-	OwnerID int64 `xorm:"bigint not null" json:"owner_id,omitempty" query:"owner_id" doc:"The user ID of the token owner. When creating a token for a bot user, set this to the bot's ID; the bot must be owned by the authenticated user. If omitted, defaults to the authenticated user."`
+	// OwnerID is internal storage for the authenticated user's tokens. It is not
+	// part of the single-user API contract.
+	OwnerID int64 `xorm:"bigint not null" json:"-"`
 
 	web.Permissions `xorm:"-" json:"-"`
 	web.CRUDable    `xorm:"-" json:"-"`
@@ -107,17 +107,7 @@ func (t *APIToken) Create(s *xorm.Session, a web.Auth) (err error) {
 	t.Token = APITokenPrefix + hex.EncodeToString(token)
 	t.TokenSha256 = HashAPIToken(t.Token)
 
-	if t.OwnerID == 0 {
-		t.OwnerID = caller.ID
-	} else if t.OwnerID != caller.ID {
-		botUser, err := user.GetUserByID(s, t.OwnerID)
-		if err != nil {
-			return err
-		}
-		if !botUser.IsBotOwnedBy(caller) {
-			return &user.ErrBotNotOwned{UserID: t.OwnerID}
-		}
-	}
+	t.OwnerID = caller.ID
 
 	if err := PermissionsAreValid(t.APIPermissions); err != nil {
 		return err
@@ -171,19 +161,7 @@ func (t *APIToken) ReadAll(s *xorm.Session, a web.Auth, search string, page int,
 
 	tokens := []*APIToken{}
 
-	ownerID := caller.ID
-	if t.OwnerID != 0 && t.OwnerID != caller.ID {
-		botUser, lookupErr := user.GetUserByID(s, t.OwnerID)
-		if lookupErr != nil {
-			return nil, 0, 0, lookupErr
-		}
-		if !botUser.IsBotOwnedBy(caller) {
-			return nil, 0, 0, &user.ErrBotNotOwned{UserID: t.OwnerID}
-		}
-		ownerID = t.OwnerID
-	}
-
-	var where builder.Cond = builder.Eq{"owner_id": ownerID}
+	var where builder.Cond = builder.Eq{"owner_id": caller.ID}
 
 	if search != "" {
 		where = builder.And(

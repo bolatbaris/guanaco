@@ -36,9 +36,9 @@ type webhookListBody struct {
 // RegisterWebhookRoutes wires the nested project-webhook CRUD onto the Huma API.
 // Project webhooks are gated by the webhooks.enabled config flag; the check runs
 // here (not at init()) because RegisterAll fires after config is loaded. There is
-// deliberately no ReadOne — webhooks carry secrets, so v1 never exposed a
-// single-fetch route and v2 keeps that. Without a GET-one, AutoPatch synthesises
-// no PATCH for this resource, so update is PUT only.
+// deliberately no ReadOne — webhooks carry secrets, so the API does not expose
+// a single-fetch route. Without a GET-one, AutoPatch synthesises no PATCH for
+// this resource, so update is PUT only.
 func RegisterWebhookRoutes(api huma.API) {
 	if !config.WebhooksEnabled.GetBool() {
 		return

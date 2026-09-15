@@ -38,18 +38,6 @@ func (t *APIToken) CanDelete(s *xorm.Session, a web.Auth) (bool, error) {
 		return true, nil
 	}
 
-	botUser, err := user.GetUserByID(s, token.OwnerID)
-	if err != nil {
-		if user.IsErrUserDoesNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	if botUser.IsBotOwnedBy(caller) {
-		*t = *token
-		return true, nil
-	}
-
 	return false, nil
 }
 

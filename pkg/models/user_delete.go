@@ -154,9 +154,9 @@ func DeleteUser(s *xorm.Session, u *user.User) (err error) {
 		column string
 		model  any
 	}{
-		{"user_id", &TaskAssginee{}},
 		{"user_id", &Subscription{}},
 		{"owner_id", &SavedFilter{}},
+		{"owner_id", &DelegationName{}},
 		{"user_id", &Reaction{}},
 		{"user_id", &Favorite{}},
 		{"owner_id", &APIToken{}},

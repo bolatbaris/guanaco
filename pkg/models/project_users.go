@@ -60,21 +60,7 @@ type UserWithPermission struct {
 	Permission Permission `json:"permission" readOnly:"true" doc:"The permission this user has on the project. 0 = Read only, 1 = Read & Write, 2 = Admin."`
 }
 
-// Create creates a new project <-> user relation
-// @Summary Add a user to a project
-// @Description Gives a user access to a project.
-// @tags sharing
-// @Accept json
-// @Produce json
-// @Security JWTKeyAuth
-// @Param id path int true "Project ID"
-// @Param project body models.ProjectUser true "The user you want to add to the project."
-// @Success 201 {object} models.ProjectUser "The created user<->project relation."
-// @Failure 400 {object} web.HTTPError "Invalid user project object provided."
-// @Failure 404 {object} web.HTTPError "The user does not exist."
-// @Failure 403 {object} web.HTTPError "The user does not have access to the project"
-// @Failure 500 {object} models.Message "Internal error"
-// @Router /projects/{id}/users [put]
+// Create creates a new project <-> user relation.
 func (lu *ProjectUser) Create(s *xorm.Session, a web.Auth) (err error) {
 
 	// Check if the permission is valid
@@ -125,19 +111,7 @@ func (lu *ProjectUser) Create(s *xorm.Session, a web.Auth) (err error) {
 	return
 }
 
-// Delete deletes a project <-> user relation
-// @Summary Delete a user from a project
-// @Description Delets a user from a project. The user won't have access to the project anymore.
-// @tags sharing
-// @Produce json
-// @Security JWTKeyAuth
-// @Param projectID path int true "Project ID"
-// @Param userID path int true "User ID"
-// @Success 200 {object} models.Message "The user was successfully removed from the project."
-// @Failure 403 {object} web.HTTPError "The user does not have access to the project"
-// @Failure 404 {object} web.HTTPError "user or project does not exist."
-// @Failure 500 {object} models.Message "Internal error"
-// @Router /projects/{projectID}/users/{userID} [delete]
+// Delete deletes a project <-> user relation.
 func (lu *ProjectUser) Delete(s *xorm.Session, _ web.Auth) (err error) {
 
 	// Check if the user exists
@@ -169,21 +143,7 @@ func (lu *ProjectUser) Delete(s *xorm.Session, _ web.Auth) (err error) {
 	return
 }
 
-// ReadAll gets all users who have access to a project
-// @Summary Get users on a project
-// @Description Returns a project with all users which have access on a given project.
-// @tags sharing
-// @Accept json
-// @Produce json
-// @Param id path int true "Project ID"
-// @Param page query int false "The page number. Used for pagination. If not provided, the first page of results is returned."
-// @Param per_page query int false "The maximum number of items per page. Note this parameter is limited by the configured maximum of items per page."
-// @Param s query string false "Search users by its name."
-// @Security JWTKeyAuth
-// @Success 200 {array} models.UserWithPermission "The users with the permission they have."
-// @Failure 403 {object} web.HTTPError "No permission to see the project."
-// @Failure 500 {object} models.Message "Internal error"
-// @Router /projects/{id}/users [get]
+// ReadAll gets all users who have access to a project.
 func (lu *ProjectUser) ReadAll(s *xorm.Session, a web.Auth, search string, page int, perPage int) (result interface{}, resultCount int, numberOfTotalItems int64, err error) {
 	// Link shares must not see the user directory of a project
 	if _, is := a.(*LinkSharing); is {
@@ -230,21 +190,7 @@ func (lu *ProjectUser) ReadAll(s *xorm.Session, a web.Auth, search string, page 
 	return all, len(all), numberOfTotalItems, err
 }
 
-// Update updates a user <-> project relation
-// @Summary Update a user <-> project relation
-// @Description Update a user <-> project relation. Mostly used to update the permission that user has.
-// @tags sharing
-// @Accept json
-// @Produce json
-// @Param projectID path int true "Project ID"
-// @Param userID path int true "User ID"
-// @Param project body models.ProjectUser true "The user you want to update."
-// @Security JWTKeyAuth
-// @Success 200 {object} models.ProjectUser "The updated user <-> project relation."
-// @Failure 403 {object} web.HTTPError "The user does not have admin-access to the project"
-// @Failure 404 {object} web.HTTPError "User or project does not exist."
-// @Failure 500 {object} models.Message "Internal error"
-// @Router /projects/{projectID}/users/{userID} [post]
+// Update updates a user <-> project relation.
 func (lu *ProjectUser) Update(s *xorm.Session, _ web.Auth) (err error) {
 
 	// Check if the permission is valid

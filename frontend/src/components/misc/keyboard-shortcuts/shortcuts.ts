@@ -145,10 +145,6 @@ export const KEYBOARD_SHORTCUTS: ShortcutGroup[] = [
 				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.done),
 			},
 			{
-				title: 'keyboardShortcuts.task.assign',
-				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.assignees),
-			},
-			{
 				title: 'keyboardShortcuts.task.labels',
 				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.labels),
 			},
@@ -165,14 +161,6 @@ export const KEYBOARD_SHORTCUTS: ShortcutGroup[] = [
 				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.relatedTasks),
 			},
 			{
-				title: 'keyboardShortcuts.task.move',
-				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.moveProject),
-			},
-			{
-				title: 'keyboardShortcuts.task.color',
-				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.color),
-			},
-			{
 				title: 'keyboardShortcuts.task.reminder',
 				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.reminder),
 			},
@@ -181,16 +169,8 @@ export const KEYBOARD_SHORTCUTS: ShortcutGroup[] = [
 				keys: ['e'],
 			},
 			{
-				title: 'keyboardShortcuts.task.priority',
-				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.priority),
-			},
-			{
 				title: 'keyboardShortcuts.task.delete',
 				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.delete),
-			},
-			{
-				title: 'keyboardShortcuts.task.favorite',
-				...shortcutBindingToDisplay(SHORTCUTS.taskDetail.favorite),
 			},
 			{
 				title: 'keyboardShortcuts.task.openProject',

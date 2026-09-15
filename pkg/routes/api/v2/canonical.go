@@ -29,7 +29,7 @@ func NewCanonicalAPI() (huma.API, error) {
 	config.InitDefaultConfig()
 	config.AuthLocalEnabled.Set(true)
 	config.AuthOpenIDEnabled.Set(true)
-	config.ServiceEnableLinkSharing.Set(true)
+	config.ServiceEnableLinkSharing.Set(false)
 	config.ServiceEnableTotp.Set(true)
 	config.ServiceEnableTaskAttachments.Set(true)
 	config.ServiceEnableTaskComments.Set(true)

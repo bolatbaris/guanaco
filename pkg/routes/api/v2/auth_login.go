@@ -54,8 +54,8 @@ type logoutBody struct {
 func init() { AddRouteRegistrar(RegisterLoginRoutes) }
 
 // RegisterLoginRoutes wires the local/LDAP login and logout endpoints. Login is
-// gated on local or LDAP auth, mirroring v1's gate in routes.go; logout stays
-// unconditional because it terminates any session, OIDC included.
+// gated on the enabled account providers; logout stays unconditional because
+// it terminates any session, OIDC included.
 func RegisterLoginRoutes(api huma.API) {
 	tags := []string{"auth"}
 
@@ -75,7 +75,7 @@ func RegisterLoginRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID:   "auth-logout",
 		Summary:       "Logout",
-		Description:   "Destroys the current session server-side and clears the refresh-token cookie. A no-op for API tokens and link shares, which carry no session.",
+		Description:   "Destroys the current session server-side and clears the refresh-token cookie. A no-op for API tokens, which carry no session.",
 		Method:        http.MethodPost,
 		Path:          "/logout",
 		DefaultStatus: http.StatusOK,

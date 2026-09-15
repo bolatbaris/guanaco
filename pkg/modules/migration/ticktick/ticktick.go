@@ -46,26 +46,25 @@ type Migrator struct {
 }
 
 type tickTickTask struct {
-	FolderName        string           `csv:"Folder Name"`
-	ProjectName       string           `csv:"List Name"`
-	Title             string           `csv:"Title"`
-	TagsList          string           `csv:"Tags"`
-	Tags              []string         `csv:"-"`
-	Content           string           `csv:"Content"`
-	IsChecklistString string           `csv:"Is Check list"`
-	IsChecklist       bool             `csv:"-"`
-	StartDate         tickTickTime     `csv:"Start Date"`
-	DueDate           tickTickTime     `csv:"Due Date"`
-	ReminderDuration  string           `csv:"Reminder"`
-	Reminder          time.Duration    `csv:"-"`
-	Repeat            string           `csv:"Repeat"`
-	Priority          tickTickPriority `csv:"Priority"`
-	Status            string           `csv:"Status"`
-	CreatedTime       tickTickTime     `csv:"Created Time"`
-	CompletedTime     tickTickTime     `csv:"Completed Time"`
-	Order             float64          `csv:"Order"`
-	TaskID            tickTickNumber   `csv:"taskId"`
-	ParentID          tickTickNumber   `csv:"parentId"`
+	FolderName        string         `csv:"Folder Name"`
+	ProjectName       string         `csv:"List Name"`
+	Title             string         `csv:"Title"`
+	TagsList          string         `csv:"Tags"`
+	Tags              []string       `csv:"-"`
+	Content           string         `csv:"Content"`
+	IsChecklistString string         `csv:"Is Check list"`
+	IsChecklist       bool           `csv:"-"`
+	StartDate         tickTickTime   `csv:"Start Date"`
+	DueDate           tickTickTime   `csv:"Due Date"`
+	ReminderDuration  string         `csv:"Reminder"`
+	Reminder          time.Duration  `csv:"-"`
+	Repeat            string         `csv:"Repeat"`
+	Status            string         `csv:"Status"`
+	CreatedTime       tickTickTime   `csv:"Created Time"`
+	CompletedTime     tickTickTime   `csv:"Completed Time"`
+	Order             float64        `csv:"Order"`
+	TaskID            tickTickNumber `csv:"taskId"`
+	ParentID          tickTickNumber `csv:"parentId"`
 }
 
 type tickTickTime struct {
@@ -94,33 +93,6 @@ func (n *tickTickNumber) UnmarshalCSV(csv string) error {
 		return nil //nolint:nilerr
 	}
 	*n = tickTickNumber(parsed)
-	return nil
-}
-
-// tickTickPriority parses the TickTick "Priority" column. TickTick exports the
-// priority either as a plain number (0, 1, 3, 5) or, in some exports, prefixed
-// with "p" (p1, p2, p3). We accept both forms and fall back to 0 (no priority)
-// for anything we cannot parse, so a stray value never fails the whole import
-// (go-vikunja/vikunja#2822). Vikunja's task priority is a free-form sortable
-// integer, so the parsed value is carried over as-is.
-type tickTickPriority int64
-
-func (p *tickTickPriority) UnmarshalCSV(csv string) error {
-	csv = strings.TrimSpace(csv)
-	csv = strings.TrimPrefix(csv, "p")
-	csv = strings.TrimPrefix(csv, "P")
-	if csv == "" {
-		*p = 0
-		return nil
-	}
-	parsed, err := strconv.ParseInt(csv, 10, 64)
-	if err != nil {
-		// Deliberately ignore the parse error and fall back to 0 so a single
-		// malformed value does not abort the whole import.
-		*p = 0
-		return nil //nolint:nilerr
-	}
-	*p = tickTickPriority(parsed)
 	return nil
 }
 
@@ -239,7 +211,6 @@ func convertTickTickToVikunja(tasks []*tickTickTask) (result []*models.ProjectWi
 				Done:        t.Status == "1" || t.Status == "2",
 				DoneAt:      t.CompletedTime.Time,
 				Position:    t.Order,
-				Priority:    int64(t.Priority),
 				Labels:      labels,
 			},
 		}

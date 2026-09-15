@@ -1,10 +1,6 @@
-import {PRIORITIES, type Priority} from '@/constants/priorities'
-
 import type {ITask} from '@/modelTypes/ITask'
-import type {IUser} from '@/modelTypes/IUser'
 import type {IAttachment} from '@/modelTypes/IAttachment'
 import type {IProject} from '@/modelTypes/IProject'
-import type {ISubscription} from '@/modelTypes/ISubscription'
 import type {IBucket} from '@/modelTypes/IBucket'
 
 import type {IRepeatAfter} from '@/types/IRepeatAfter'
@@ -19,18 +15,9 @@ import {objectToSnakeCase} from '@/helpers/case'
 import AbstractModel from './abstractModel'
 import UserModel from './user'
 import AttachmentModel from './attachment'
-import SubscriptionModel from './subscription'
 import type {ITaskReminder} from '@/modelTypes/ITaskReminder'
 import TaskReminderModel from '@/models/taskReminder'
 import TaskCommentModel from '@/models/taskComment.ts'
-
-export function	getHexColor(hexColor: string): string | undefined {
-	if (hexColor === '' || hexColor === '#') {
-		return undefined
-	}
-
-	return hexColor
-}
 
 /**
  * Parses `repeatAfterSeconds` into a usable js object.
@@ -64,9 +51,8 @@ export default class TaskModel extends AbstractModel<ITask> implements ITask {
 	done = false
 	doneAt: Date | null = null
 	deletedAt: Date | null = null
-	priority: Priority = PRIORITIES.UNSET
 	labels: Label[] = []
-	assignees: IUser[] = []
+	delegatedTo = ''
 
 	dueDate: Date | null = 0
 	startDate: Date | null = 0
@@ -76,16 +62,11 @@ export default class TaskModel extends AbstractModel<ITask> implements ITask {
 	repeatMode: IRepeatMode = TASK_REPEAT_MODES.REPEAT_MODE_DEFAULT
 	reminders: ITaskReminder[] = []
 	parentTaskId: ITask['id'] = 0
-	hexColor = ''
-	percentDone = 0
 	relatedTasks:  Partial<Record<IRelationKind, ITask[]>> = {}
 	attachments: IAttachment[] = []
 	coverImageAttachmentId: IAttachment['id'] = null
 	identifier = ''
 	index = 0
-	isFavorite = false
-	subscription: ISubscription = null
-
 	position = 0
 	
 	reactions = {}
@@ -101,8 +82,10 @@ export default class TaskModel extends AbstractModel<ITask> implements ITask {
 
 	constructor(data: Partial<ITask> = {}) {
 		super()
-		const labels = (data.labels ?? []).map(label => objectToSnakeCase(label) as Label)
-		this.assignData(data)
+		const taskData = {...data}
+
+		const labels = (taskData.labels ?? []).map(label => objectToSnakeCase(label) as Label)
+		this.assignData(taskData)
 
 		this.id = Number(this.id)
 		this.title = this.title?.trim()
@@ -110,11 +93,6 @@ export default class TaskModel extends AbstractModel<ITask> implements ITask {
 		this.deletedAt = parseDateOrNull(this.deletedAt)
 
 		this.labels = labels.sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''))
-
-		// Parse the assignees into user models
-		this.assignees = this.assignees.map(a => {
-			return new UserModel(a)
-		})
 
 		this.dueDate = parseDateOrNull(this.dueDate)
 		this.startDate = parseDateOrNull(this.startDate)
@@ -124,10 +102,6 @@ export default class TaskModel extends AbstractModel<ITask> implements ITask {
 		this.repeatAfter = parseRepeatAfter(this.repeatAfter as number)
 
 		this.reminders = this.reminders.map(r => new TaskReminderModel(r))
-
-		if (this.hexColor !== '' && this.hexColor.substring(0, 1) !== '#') {
-			this.hexColor = '#' + this.hexColor
-		}
 
 		// Convert all subtasks to task models
 		Object.keys(this.relatedTasks).forEach(relationKind => {
@@ -142,10 +116,6 @@ export default class TaskModel extends AbstractModel<ITask> implements ITask {
 		// Set the task identifier to empty if the project does not have one
 		if (this.identifier === `-${this.index}`) {
 			this.identifier = ''
-		}
-
-		if (typeof this.subscription !== 'undefined' && this.subscription !== null) {
-			this.subscription = new SubscriptionModel(this.subscription)
 		}
 
 		this.createdBy = new UserModel(this.createdBy)
@@ -169,7 +139,4 @@ export default class TaskModel extends AbstractModel<ITask> implements ITask {
 		return getTaskIdentifier(this)
 	}
 
-	getHexColor() {
-		return getHexColor(this.hexColor)
-	}
 }

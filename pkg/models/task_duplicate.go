@@ -54,7 +54,7 @@ func (td *TaskDuplicate) CanCreate(s *xorm.Session, a web.Auth) (canCreate bool,
 
 // Create duplicates a task
 // @Summary Duplicate a task
-// @Description Copies a task with all its properties (labels, assignees, attachments, reminders) into the same project. Creates a "copied from" relation between the new and original task.
+// @Description Copies a task with all its properties (labels, attachments, reminders) into the same project. Creates a "copied from" relation between the new and original task.
 // @tags task
 // @Accept json
 // @Produce json
@@ -81,16 +81,12 @@ func (td *TaskDuplicate) Create(s *xorm.Session, doer web.Auth) (err error) {
 		ProjectID:   originalTask.ProjectID,
 		RepeatAfter: originalTask.RepeatAfter,
 		RepeatMode:  originalTask.RepeatMode,
-		Priority:    originalTask.Priority,
 		StartDate:   originalTask.StartDate,
 		EndDate:     originalTask.EndDate,
-		HexColor:    originalTask.HexColor,
-		PercentDone: originalTask.PercentDone,
-		Assignees:   originalTask.Assignees,
 		Reminders:   originalTask.Reminders,
 	}
 
-	err = createTask(s, newTask, doer, true, true)
+	err = createTask(s, newTask, doer, true)
 	if err != nil {
 		return err
 	}

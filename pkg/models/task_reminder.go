@@ -174,38 +174,21 @@ func getTaskUsersForTasks(s *xorm.Session, taskIDs []int64, cond builder.Cond) (
 		}
 	}
 
-	assigneeConds := []builder.Cond{
-		builder.In("task_assignees.task_id", taskIDs),
-	}
-	if cond != nil {
-		assigneeConds = append(assigneeConds, cond)
-	}
-
-	assignees := []*TaskAssigneeWithUser{}
-	err = s.Table("task_assignees").
-		Select("DISTINCT task_assignees.task_id, users.id, users.name, users.username, users.email, users.email_reminders_enabled, users.overdue_tasks_reminders_enabled, users.overdue_tasks_reminders_time, users.language, users.timezone, users.created, users.updated").
-		Join("INNER", "users", "task_assignees.user_id = users.id").
-		Where(builder.And(assigneeConds...)).
-		Find(&assignees)
-	if err != nil {
-		return
-	}
-
-	for i := range assignees {
-		err = appendUser(assignees[i].TaskID, &assignees[i].User)
-		if err != nil {
-			return
-		}
-	}
-
-	subscriptions, err := GetSubscriptionsForEntities(s, SubscriptionEntityTask, taskIDs)
+	// Task subscriptions were removed; project subscriptions still receive
+	// reminders for tasks in the subscribed project (or its descendants).
+	subscriptions, err := GetSubscriptionsForEntities(s, SubscriptionEntityProject, projectIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	subscriberIDs := []int64{}
+	subscriberIDs := make([]int64, 0)
+	seenSubscriberIDs := make(map[int64]struct{})
 	for _, subs := range subscriptions {
 		for _, sub := range subs {
+			if _, seen := seenSubscriberIDs[sub.UserID]; seen {
+				continue
+			}
+			seenSubscriberIDs[sub.UserID] = struct{}{}
 			subscriberIDs = append(subscriberIDs, sub.UserID)
 		}
 	}
@@ -214,9 +197,7 @@ func getTaskUsersForTasks(s *xorm.Session, taskIDs []int64, cond builder.Cond) (
 		return
 	}
 
-	subscriberCond := []builder.Cond{
-		builder.In("id", subscriberIDs),
-	}
+	subscriberCond := []builder.Cond{builder.In("id", subscriberIDs)}
 	if cond != nil {
 		subscriberCond = append(subscriberCond, cond)
 	}
@@ -226,8 +207,8 @@ func getTaskUsersForTasks(s *xorm.Session, taskIDs []int64, cond builder.Cond) (
 		return nil, err
 	}
 
-	for taskID, subs := range subscriptions {
-		for _, sub := range subs {
+	for taskID, task := range taskMap {
+		for _, sub := range subscriptions[task.ProjectID] {
 			u, has := subscribers[sub.UserID]
 			if !has {
 				continue

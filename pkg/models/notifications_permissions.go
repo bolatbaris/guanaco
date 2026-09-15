@@ -28,8 +28,6 @@ func (n *ReminderDueNotification) ProjectID() int64 { return notificationProject
 
 func (n *TaskCommentNotification) ProjectID() int64 { return notificationProjectID(n.Task, n.Project) }
 
-func (n *TaskAssignedNotification) ProjectID() int64 { return notificationProjectID(n.Task, n.Project) }
-
 func (n *TaskDeletedNotification) ProjectID() int64 { return notificationProjectID(n.Task, nil) }
 
 func (n *TaskCreatedNotification) ProjectID() int64 { return notificationProjectID(n.Task, n.Project) }

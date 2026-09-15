@@ -72,7 +72,7 @@ func FlushAllCaches(u *user.User) {
 }
 
 // GetAvatarForUsername resolves and renders the avatar for a username. It is the
-// shared core behind both the v1 and v2 avatar endpoints: it looks up the user,
+// shared core behind the avatar endpoint: it looks up the user,
 // tolerates an unknown/disabled user (returning the default placeholder rather
 // than an error, since avatars are loaded via <img> tags), picks the right
 // provider (empty for unknown users, botmarble for bots, otherwise the user's

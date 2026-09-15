@@ -144,7 +144,7 @@ func (p *Provider) Issuer() (issuerURL string, err error) {
 	return iss.Issuer, nil
 }
 
-// enforceTOTPIfRequired mirrors the TOTP gate from pkg/routes/api/v1/login.go
+// enforceTOTPIfRequired mirrors the TOTP gate from the login handler.
 // for the OIDC flow. Returns nil when the user does not have TOTP enabled.
 // See GHSA-8jvc-mcx6-r4cg.
 func enforceTOTPIfRequired(s *xorm.Session, u *user.User, totpPasscode string) error {

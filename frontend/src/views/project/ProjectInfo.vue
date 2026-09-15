@@ -28,13 +28,10 @@
 import {computed} from 'vue'
 import DOMPurify from 'dompurify'
 import {useProjectStore} from '@/stores/projects'
-import {useI18n} from 'vue-i18n'
 
 const props = defineProps<{
 	projectId: number
 }>()
-
-const {t} = useI18n()
 
 // ADD_ATTR re-permits target, which lets a link hand the opened page a live
 // window.opener back to this tab. rel must be forced here rather than allowed,
@@ -51,10 +48,6 @@ const htmlDescription = computed(() => {
 	const description = project.value?.description || ''
 	if (description === '') {
 		return ''
-	}
-
-	if (project.value.id === -1) {
-		return t('project.favoriteDescription')
 	}
 
 	return DOMPurify.sanitize(description, {ADD_ATTR: ['target']})

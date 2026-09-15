@@ -31,7 +31,7 @@ import (
 // entriesForProjectCond matches time entries belonging to a project given a
 // predicate over a project_id column: standalone entries whose own project_id
 // matches, plus task-attached entries whose task currently lives in a matching
-// project. Tasks move between projects, so the project is resolved via the task
+// project. The project is resolved via the task so task-owned entries use the
 // at query time rather than denormalized. Used for both permission scoping and
 // the project_id filter.
 func entriesForProjectCond(projectIDCond builder.Cond) builder.Cond {
@@ -45,7 +45,7 @@ func entriesForProjectCond(projectIDCond builder.Cond) builder.Cond {
 
 // timeEntryFilterCond parses a task-style filter string into a condition over
 // the time_entries table, or nil for an empty filter. Filterable fields:
-// user_id, task_id, project_id (ints / in-lists), start_time, end_time (dates,
+// task_id, project_id (ints / in-lists), start_time, end_time (dates,
 // datemath, or the literal null for running timers). comment is deliberately
 // not filterable — text matching belongs to search.
 func timeEntryFilterCond(filter, filterTimezone string) (builder.Cond, error) {
@@ -121,7 +121,7 @@ func buildTimeEntryFilterCond(groups []fexpr.ExprGroup, loc *time.Location) (bui
 
 func resolveTimeEntryFilter(field string, comparator taskFilterComparator, raw string, loc *time.Location) (builder.Cond, error) {
 	switch field {
-	case "user_id", "task_id":
+	case "task_id":
 		value, err := timeEntryIntFilterValue(raw, comparator)
 		if err != nil {
 			return nil, ErrInvalidTimeEntryFilterValue{Field: field, Value: raw}

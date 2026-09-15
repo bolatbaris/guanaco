@@ -63,15 +63,6 @@ func (c *Client) CreateProject(ctx context.Context, p *Project) (*Project, error
 	return &out, nil
 }
 
-// ShareProjectWithUser grants `username` `permission` on project `id`.
-func (c *Client) ShareProjectWithUser(ctx context.Context, projectID int64, share *ProjectUser) (*ProjectUser, error) {
-	var out ProjectUser
-	if err := c.Do(ctx, "POST", fmt.Sprintf("/projects/%d/users", projectID), nil, share, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
 // ListProjectViews returns saved views (Kanban, List, …) on a project.
 // ProjectView.ReadAll ignores page/per_page and returns every view in a single
 // page, so one GET gets them all — paging would re-fetch the same views and

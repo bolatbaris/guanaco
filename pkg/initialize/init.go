@@ -18,6 +18,7 @@ package initialize
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"code.vikunja.io/api/pkg/audit"
@@ -36,6 +37,7 @@ import (
 	"code.vikunja.io/api/pkg/modules/auth/openid"
 	"code.vikunja.io/api/pkg/modules/keyvalue"
 	migrationHandler "code.vikunja.io/api/pkg/modules/migration/handler"
+	"code.vikunja.io/api/pkg/observability"
 	"code.vikunja.io/api/pkg/plugins"
 	_ "code.vikunja.io/api/pkg/plugins/yaegi" // register yaegi plugin loader
 	"code.vikunja.io/api/pkg/red"
@@ -83,7 +85,10 @@ func InitEngines() {
 // FullInitWithoutAsync does a full init without any async handlers (cron or events)
 func FullInitWithoutAsync() {
 	LightInit()
+	fullInitWithoutAsync()
+}
 
+func fullInitWithoutAsync() {
 	// Initialize the files handler
 	err := files.InitFileHandler(context.Background())
 	if err != nil {
@@ -136,7 +141,23 @@ func FullInitWithoutAsync() {
 func FullInit() {
 
 	FullInitWithoutAsync()
+	startAsyncInit()
+}
 
+// FullInitWithObservability loads configuration, initializes observability,
+// and then completes application initialization so startup failures can be
+// reported with the configured DSN.
+func FullInitWithObservability() error {
+	LightInit()
+	if err := observability.Init(); err != nil {
+		return fmt.Errorf("initialize observability: %w", err)
+	}
+	fullInitWithoutAsync()
+	startAsyncInit()
+	return nil
+}
+
+func startAsyncInit() {
 	// Start the cron
 	cron.Init()
 	models.RegisterReminderCron()
@@ -162,6 +183,7 @@ func FullInit() {
 		ws.RegisterListeners()
 		err := events.InitEvents()
 		if err != nil {
+			reportAsyncInitFailure("event_system_init")
 			log.Fatal(err.Error())
 		}
 
@@ -169,7 +191,27 @@ func FullInit() {
 			BootedAt: time.Now(),
 		})
 		if err != nil {
+			reportAsyncInitFailure("boot_event_dispatch")
 			log.Fatal(err)
 		}
 	}()
+}
+
+type asyncInitFailure struct {
+	category string
+}
+
+func (e *asyncInitFailure) Error() string {
+	return "asynchronous initialization failed: " + e.category
+}
+
+func reportAsyncInitFailure(category string) {
+	if !observability.Enabled() {
+		return
+	}
+
+	observability.CaptureException(&asyncInitFailure{category: category})
+	// log.Fatal exits immediately, so give the asynchronous event a bounded
+	// delivery window before preserving the existing fatal startup behavior.
+	observability.Close()
 }

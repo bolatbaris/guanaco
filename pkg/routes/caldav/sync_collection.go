@@ -124,7 +124,7 @@ func handleSyncCollectionReport(c *echo.Context, body string, storage *VikunjaCa
 	log.Debugf("[CALDAV sync-collection] project=%d token=%q calendar-data=%v", projectID, rawToken, includeCalendarData)
 
 	// Deletions are looked up by project_id, which no task row ever has for a
-	// pseudo project, so a delta here would never contain tombstones. Checked
+	// saved-filter collection, so a delta here would never contain tombstones. Checked
 	// before loading the collection because clients poll this path forever.
 	if rawToken != "" && models.IsPseudoProjectID(projectID) {
 		s := db.NewSession()
@@ -139,7 +139,7 @@ func handleSyncCollectionReport(c *echo.Context, body string, storage *VikunjaCa
 			return c.String(http.StatusNotFound, "Project not found")
 		}
 
-		log.Debugf("[CALDAV sync-collection] project=%d is a pseudo project → 403 valid-sync-token to force a full resync", projectID)
+		log.Debugf("[CALDAV sync-collection] project=%d is a saved-filter collection → 403 valid-sync-token to force a full resync", projectID)
 		return writeForbiddenValidSyncToken(c)
 	}
 
@@ -157,7 +157,7 @@ func handleSyncCollectionReport(c *echo.Context, body string, storage *VikunjaCa
 	newEtagClean := strings.Trim(newEtag, `"`)
 	newToken := syncTokenPrefix + `"` + newEtagClean + `"`
 
-	// A pseudo project gets a token here that the branch above will always
+	// A saved-filter collection gets a token here that the branch above will always
 	// reject; RFC 6578 mandates a sync-token in the multistatus regardless.
 	if rawToken == "" {
 		log.Debugf("[CALDAV sync-collection] project=%d empty token → full sync (%d tasks)", projectID, len(rr.projectTasks))

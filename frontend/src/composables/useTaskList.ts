@@ -22,11 +22,9 @@ export interface SortBy {
 	index?: Order
 	done?: Order
 	title?: Order
-	priority?: Order
 	due_date?: Order
 	start_date?: Order
 	end_date?: Order
-	percent_done?: Order
 	created?: Order
 	updated?: Order
 	done_at?: Order,
@@ -34,8 +32,8 @@ export interface SortBy {
 }
 
 const VALID_SORT_FIELDS = new Set<string>(
-	['id', 'index', 'done', 'title', 'priority', 'due_date', 'start_date',
-		'end_date', 'percent_done', 'created', 'updated', 'done_at', 'position'],
+	['id', 'index', 'done', 'title', 'due_date', 'start_date',
+		'end_date', 'created', 'updated', 'done_at', 'position'],
 )
 
 function parseSortQuery(raw: string, fallback: SortBy): SortBy {
@@ -65,7 +63,7 @@ const SORT_BY_DEFAULT: SortBy = {
 interface TaskListQueryState {
 	sort: string | undefined
 	filter: string | undefined
-	s: string | undefined
+	q: string | undefined
 	page: number
 }
 
@@ -73,7 +71,7 @@ export function buildStoredQuery(state: TaskListQueryState): LocationQueryRaw {
 	const query: LocationQueryRaw = {}
 	if (state.sort) query.sort = state.sort
 	if (state.filter) query.filter = state.filter
-	if (state.s) query.s = state.s
+	if (state.q) query.q = state.q
 	if (state.page > 1) query.page = String(state.page)
 	return query
 }
@@ -120,13 +118,13 @@ export function useTaskList(
 
 	const page = useRouteQuery('page', '1', { transform: Number })
 	const filter = useRouteQuery('filter')
-	const s = useRouteQuery('s')
+	const q = useRouteQuery('q')
 
 	watch(filter, v => { params.value.filter = v ?? '' }, { immediate: true })
-	watch(s, v => { params.value.s = v ?? '' }, { immediate: true })
+	watch(q, v => { params.value.q = v ?? '' }, { immediate: true })
 
 	watch(() => params.value.filter, v => { filter.value = v || undefined })
-	watch(() => params.value.s, v => { s.value = v || undefined })
+	watch(() => params.value.q, v => { q.value = v || undefined })
 
 	const sortQuery = useRouteQuery('sort')
 
@@ -145,15 +143,15 @@ export function useTaskList(
 	// Sidebar links omit the query, and project views are reused across navigation.
 	let lastSyncedViewId: number | undefined
 	watch(
-		[projectViewId, sortQuery, filter, s, page],
-		([viewId, sortValue, filterValue, sValue, pageValue]) => {
+		[projectViewId, sortQuery, filter, q, page],
+		([viewId, sortValue, filterValue, qValue, pageValue]) => {
 			const viewIdChanged = viewId !== lastSyncedViewId
 			lastSyncedViewId = viewId
 
 			// An invalid `?page=` becomes NaN via `transform: Number`; treat it as
 			// the default so it neither blocks restoration nor wipes stored state.
 			const currentPage = Number.isInteger(pageValue) ? pageValue : 1
-			const urlIsEmpty = !sortValue && !filterValue && !sValue && currentPage === 1
+			const urlIsEmpty = !sortValue && !filterValue && !qValue && currentPage === 1
 			if (viewIdChanged && urlIsEmpty) {
 				const storedQuery = viewFiltersStore.getViewQuery(viewId)
 				if (Object.keys(storedQuery).length > 0) {
@@ -175,7 +173,7 @@ export function useTaskList(
 			const query = buildStoredQuery({
 				sort: sortValue as string | undefined,
 				filter: filterValue as string | undefined,
-				s: sValue as string | undefined,
+				q: qValue as string | undefined,
 				page: currentPage,
 			})
 			if (Object.keys(query).length > 0) {
@@ -192,7 +190,7 @@ export function useTaskList(
 
 		// Relevance ranking only engages when no sort is sent, so omit the default
 		// sort while searching and let an explicit user sort still take precedence.
-		if (loadParams.s && !sortQuery.value) {
+		if (loadParams.q && !sortQuery.value) {
 			loadParams.sort_by = []
 			loadParams.order_by = []
 			return loadParams

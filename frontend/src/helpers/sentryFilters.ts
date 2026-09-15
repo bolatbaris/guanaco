@@ -45,6 +45,7 @@ const THIRD_PARTY_URL_PATTERN = /^(?:(?:chrome|moz|safari-web|safari|ms-browser)
 
 type SentryEventLike = {
 	message?: string
+	status?: number
 	exception?: {
 		values?: {
 			type?: string
@@ -53,6 +54,15 @@ type SentryEventLike = {
 				frames?: {filename?: string}[]
 			}
 		}[]
+	}
+}
+
+type RequestErrorLike = {
+	code?: unknown
+	message?: unknown
+	status?: unknown
+	response?: {
+		status?: unknown
 	}
 }
 
@@ -65,8 +75,30 @@ function isRequestError(e: unknown): boolean {
 		return false
 	}
 
-	return typeof (e as {code?: unknown}).code !== 'undefined'
-		&& typeof (e as {message?: unknown}).message !== 'undefined'
+	const error = e as RequestErrorLike
+
+	return typeof error.code !== 'undefined'
+		&& typeof error.message !== 'undefined'
+}
+
+function getRequestStatus(e: unknown): number | undefined {
+	if (e instanceof AxiosError) {
+		return e.response?.status
+	}
+
+	if (typeof e !== 'object' || e === null) {
+		return undefined
+	}
+
+	const error = e as RequestErrorLike
+	const status = error.response?.status ?? error.status
+	return typeof status === 'number' ? status : undefined
+}
+
+// Keep expected validation/auth failures quiet, but retain route mismatches,
+// timeouts, rate limits, network failures, and all server-side failures.
+function isExpectedClientError(status: number | undefined): boolean {
+	return status !== undefined && [400, 401, 403, 409, 412, 413, 422].includes(status)
 }
 
 export function isChunkLoadError(message: unknown): boolean {
@@ -124,10 +156,17 @@ export function shouldDropEvent(originalException: unknown, event?: SentryEventL
 		return true
 	}
 
+	if (isExpectedClientError(event?.status)) {
+		return true
+	}
+
 	let current = originalException
 
 	for (let depth = 0; depth < MAX_CAUSE_DEPTH && current; depth++) {
-		if (isRequestError(current) || isNoisyMessage((current as {message?: unknown}).message)) {
+		if (
+			(isRequestError(current) && isExpectedClientError(getRequestStatus(current)))
+			|| isNoisyMessage((current as {message?: unknown}).message)
+		) {
 			return true
 		}
 

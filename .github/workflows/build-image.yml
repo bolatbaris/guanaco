@@ -38,7 +38,12 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
+          secrets: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           build-args: |
             RELEASE_VERSION=${{ github.sha }}
+            SENTRY_URL=${{ vars.SENTRY_URL }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

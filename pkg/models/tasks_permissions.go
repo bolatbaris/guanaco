@@ -69,16 +69,9 @@ func (t *Task) canDoTask(s *xorm.Session, a web.Auth) (bool, error) {
 		return false, err
 	}
 
-	// Check if we're moving the task into a different project to check if the user has sufficient permissions for that on the new project
+	// Project membership is immutable after creation.
 	if t.ProjectID != 0 && t.ProjectID != ot.ProjectID {
-		newProject := &Project{ID: t.ProjectID}
-		can, err := newProject.CanWrite(s, a)
-		if err != nil {
-			return false, err
-		}
-		if !can {
-			return false, ErrGenericForbidden{}
-		}
+		return false, ErrInvalidTaskColumn{Column: "project_id"}
 	}
 
 	// A user can do a task if it has write acces to its project

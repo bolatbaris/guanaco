@@ -108,7 +108,6 @@
 						:bottom-actions="actions[c.id]"
 						:show-save="true"
 						:enable-discard-shortcut="true"
-						:enable-mentions="true"
 						:project-id="projectId"
 						initial-mode="preview"
 						@update:modelValue="
@@ -177,7 +176,6 @@
 								}"
 								:upload-callback="attachmentUpload"
 								:placeholder="$t('task.comment.placeholder')"
-								:enable-mentions="true"
 								:project-id="projectId"
 								:storage-key="commentStorageKey"
 								@save="addComment()"
@@ -309,23 +307,8 @@ provide(commentReplyContextKey, {
 	scrollToComment: scrollAndHighlightComment,
 })
 
-// Strip <mention-user> elements from a reply quote so reposting the parent
-// body doesn't trigger fresh notifications for users mentioned in the
-// original. The inner text is kept so the quote still reads correctly.
-function stripMentionsForQuote(html: string): string {
-	if (!html) {
-		return ''
-	}
-	const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html')
-	doc.querySelectorAll('mention-user').forEach((el) => {
-		const label = (el.getAttribute('data-label') ?? el.textContent ?? '').trim()
-		el.replaceWith(label ? `@${label.replace(/^@+/, '')}` : '')
-	})
-	return doc.body.firstElementChild?.innerHTML ?? ''
-}
-
 async function startReplyTo(parent: ITaskComment) {
-	const body = stripMentionsForQuote(parent.comment ?? '')
+	const body = parent.comment ?? ''
 	const draft = `<blockquote data-comment-id="${parent.id}">${body}</blockquote><p></p>`
 	if (!editorActive.value) {
 		editorActive.value = true
@@ -393,21 +376,17 @@ async function changePage(page: number) {
 
 async function toggleSortOrder() {
 	const newOrder = commentSortOrder.value === 'asc' ? 'desc' : 'asc'
-	if (!authStore.isLinkShareAuth) {
-		await authStore.saveUserSettings({
-			settings: {
-				...authStore.settings,
-				frontendSettings: {
-					...authStore.settings.frontendSettings,
-					commentSortOrder: newOrder,
-					quickAddDefaultReminders: [...(authStore.settings.frontendSettings.quickAddDefaultReminders ?? [])],
-				},
+	await authStore.saveUserSettings({
+		settings: {
+			...authStore.settings,
+			frontendSettings: {
+				...authStore.settings.frontendSettings,
+				commentSortOrder: newOrder,
+				quickAddDefaultReminders: [...(authStore.settings.frontendSettings.quickAddDefaultReminders ?? [])],
 			},
-			showMessage: false,
-		})
-	} else {
-		localSortOrder.value = newOrder
-	}
+		},
+		showMessage: false,
+	})
 	if (taskCommentService.totalPages > 1) {
 		currentPage.value = 1
 		await loadComments(props.taskId)

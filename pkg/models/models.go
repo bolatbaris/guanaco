@@ -42,7 +42,7 @@ func GetTables() []interface{} {
 		&ProjectAncestor{},
 		&Task{},
 		&ProjectUser{},
-		&TaskAssginee{},
+		&DelegationName{},
 		&Label{},
 		&LabelTask{},
 		&TaskReminder{},

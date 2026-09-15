@@ -177,7 +177,7 @@ async function findTasks(query: string) {
 		foundTasks.value = []
 		return
 	}
-	const result = await taskService.getAll({}, {s: query, sort_by: 'done'}) as ITask[]
+	const result = await taskService.getAll({}, {q: query, sort_by: 'done'}) as ITask[]
 	foundTasks.value = selectedProject.value === null
 		? result
 		: result.filter(task => task.projectId === selectedProject.value?.id)

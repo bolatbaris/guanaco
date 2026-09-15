@@ -86,7 +86,7 @@ func RegisterTaskRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "tasks-update",
 		Summary:     "Update a task",
-		Description: "Replaces all of a task's fields; requires write access. Setting project_id to a different project moves the task and also requires write access to the target project. Use PATCH for a partial update.",
+		Description: "Replaces all editable task fields; requires write access. The project_id is assigned when the task is created and cannot be changed afterward. Use PATCH for a partial update.",
 		Method:      "PUT",
 		Path:        "/tasks/{projecttask}",
 		Tags:        tags,

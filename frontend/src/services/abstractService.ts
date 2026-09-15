@@ -90,16 +90,16 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 
 			switch (config.method) {
 				case 'post':
-					if (this.useUpdateInterceptor()) {
-						config.data = this.beforeUpdate(config.data)
+					if (this.useCreateInterceptor()) {
+						config.data = this.beforeCreate(config.data)
 						if(this.autoTransformBeforePost()) {
 							config.data = objectToSnakeCase(config.data)
 						}
 					}
 					break
 				case 'put':
-					if (this.useCreateInterceptor()) {
-						config.data = this.beforeCreate(config.data)
+					if (this.useUpdateInterceptor()) {
+						config.data = this.beforeUpdate(config.data)
 						if(this.autoTransformBeforePut()) {
 							config.data = objectToSnakeCase(config.data)
 						}
@@ -165,7 +165,6 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 	 * Returns an object with all route parameters and their values.
 	 * @example
 	 * getRouteReplacements(
-	 * 	'/tasks/{taskId}/assignees/{userId}',
 	 * 	{ taskId: 7, userId: 2 },
 	 * )
 	 * // { "{taskId}": 7, "{userId}": 2 }
@@ -325,7 +324,12 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 		try {
 			const response = await this.http.get(finalUrl, {params: prepareParams(params)})
 			const result = this.modelGetFactory(response.data)
-			result.maxPermission = Number(response.headers['x-max-permission']) as Permission
+			const maxPermission = response.data?.max_permission ??
+				response.data?.maxPermission ??
+				response.headers['x-max-permission']
+			if (typeof maxPermission !== 'undefined') {
+				result.maxPermission = Number(maxPermission) as Permission
+			}
 			return result
 		} finally {
 			cancel()
@@ -383,14 +387,17 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 
 		try {
 			const response = await this.http.get(finalUrl, {params: prepareParams(params)})
-			this.resultCount = Number(response.headers['x-pagination-result-count'])
-			this.totalPages = Number(response.headers['x-pagination-total-pages'])
+			const items = Array.isArray(response.data)
+				? response.data
+				: (response.data?.items ?? [])
+			this.resultCount = Number(
+				response.data?.total ?? response.headers['x-pagination-result-count'] ?? items.length,
+			)
+			this.totalPages = Number(
+				response.data?.total_pages ?? response.data?.totalPages ?? response.headers['x-pagination-total-pages'] ?? 0,
+			)
 
-			if (!Array.isArray(response.data)) {
-				return []
-			}
-
-			return response.data.map(entry => this.modelGetAllFactory(entry))
+			return items.map(entry => this.modelGetAllFactory(entry))
 		} finally {
 			cancel()
 		}
@@ -409,7 +416,7 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 		const finalUrl = this.getReplacedRoute(this.paths.create, model)
 
 		try {
-			const response = await this.http.put(finalUrl, model)
+			const response = await this.http.post(finalUrl, model)
 			const result = this.modelCreateFactory(response.data)
 			if (typeof model.maxPermission !== 'undefined') {
 				result.maxPermission = model.maxPermission
@@ -440,7 +447,7 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 	}
 
 	/**
-	 * Performs a post request to the update url
+	 * Performs a put request to the update url.
 	 */
 	update(model : Model) {
 		if (this.paths.update === '') {
@@ -448,7 +455,26 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 		}
 
 		const finalUrl = this.getReplacedRoute(this.paths.update, model)
-		return this.post(finalUrl, model)
+		return this.put(finalUrl, model)
+	}
+
+	/**
+	 * Sends a regular v2 update request. Custom action endpoints should use
+	 * post() instead, since POST is the create/action verb in the v2 contract.
+	 */
+	async put(url : string, model : Model) {
+		const cancel = this.setLoading()
+
+		try {
+			const response = await this.http.put(url, model)
+			const result = this.modelUpdateFactory(response.data)
+			if (typeof model.maxPermission !== 'undefined') {
+				result.maxPermission = model.maxPermission
+			}
+			return result
+		} finally {
+			cancel()
+		}
 	}
 
 	/**
@@ -476,41 +502,40 @@ export default abstract class AbstractService<Model extends IAbstract = IAbstrac
 	 * @param file {IFile}
 	 * @param fieldName The name of the field the file is uploaded to.
 	 */
-	uploadFile(url : string, file: File, fieldName : string) {
-		return this.uploadBlob(url, new Blob([file]), fieldName, file.name)
+	uploadFile(url : string, file: File, fieldName : string, method: Method = 'POST') {
+		return this.uploadBlob(url, new Blob([file]), fieldName, file.name, method)
 	}
 
 	/**
 	 * Uploads a blob to a url.
 	 */
-	uploadBlob(url : string, blob: Blob, fieldName: string, filename : string) {
+	uploadBlob(url : string, blob: Blob, fieldName: string, filename : string, method: Method = 'POST') {
 		const data = new FormData()
 		data.append(fieldName, blob, filename)
-		return this.uploadFormData(url, data)
+		return this.uploadFormData(url, data, method)
 	}
 
 	/**
 	 * Uploads a form data object.
 	 */
-	async uploadFormData(url : string, formData: FormData) {
+	async uploadFormData(url : string, formData: FormData, method: Method = 'POST') {
 		const cancel = this.setLoading()
 		try {
-			const response = await this.http.put(
+			const response = await this.http({
 				url,
-				formData,
-				{
-					headers: {
-						'Content-Type':
-							'multipart/form-data; boundary=' + formData._boundary,
-					},
-					// fix upload issue after upgrading to axios to 1.0.0
-					// see: https://github.com/axios/axios/issues/4885#issuecomment-1222419132
-					transformRequest: formData => formData,
-					onUploadProgress: ({progress}) => {
-						this.uploadProgress = progress? Math.round((progress * 100)) : 0
-					},
+				method,
+				data: formData,
+				headers: {
+					'Content-Type':
+						'multipart/form-data; boundary=' + formData._boundary,
 				},
-			)
+				// fix upload issue after upgrading to axios to 1.0.0
+				// see: https://github.com/axios/axios/issues/4885#issuecomment-1222419132
+				transformRequest: formData => formData,
+				onUploadProgress: ({progress}) => {
+					this.uploadProgress = progress? Math.round((progress * 100)) : 0
+				},
+			})
 			return this.modelCreateFactory(response.data)
 		} finally {
 			this.uploadProgress = 0

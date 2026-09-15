@@ -40,7 +40,7 @@ func RegisterSessionRoutes(api huma.API) {
 	Register(api, huma.Operation{
 		OperationID: "sessions-list",
 		Summary:     "List sessions",
-		Description: "Returns the authenticated user's own active sessions, most recently active first. Never lists other users' sessions; link share tokens are forbidden.",
+		Description: "Returns the authenticated user's own active sessions, most recently active first.",
 		Method:      http.MethodGet,
 		Path:        "/user/sessions",
 		Tags:        tags,

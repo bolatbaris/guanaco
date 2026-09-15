@@ -46,6 +46,7 @@ try it on [try.vikunja.io](https://try.vikunja.io)!
 * [Development setup](https://vikunja.io/docs/development/)
 * [Magefile](https://vikunja.io/docs/magefile/)
 * [Testing](https://vikunja.io/docs/testing/)
+* [Closed beta deployment](docs/closed-beta-deployment.md)
 
 All docs can be found on [the Vikunja home page](https://vikunja.io/docs/).
 

@@ -88,8 +88,8 @@ func RegisterUserExportRoutes(api huma.API) {
 func init() { AddRouteRegistrar(RegisterUserExportRoutes) }
 
 // confirmExportPassword resolves the full DB user and, for local accounts, verifies
-// the supplied password — mirroring v1's checkExportRequest. External-provider users
-// cannot supply a password and are passed through, as in v1.
+// the supplied password. External-provider users cannot supply a password and
+// are passed through.
 func confirmExportPassword(ctx context.Context, s *xorm.Session, password string) (*user.User, error) {
 	u, err := authUserFromCtx(ctx, s)
 	if err != nil {

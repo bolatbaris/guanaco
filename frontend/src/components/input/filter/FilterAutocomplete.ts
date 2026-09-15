@@ -6,9 +6,7 @@ import {computePosition, flip, shift, offset, autoUpdate} from '@floating-ui/dom
 
 import FilterCommandsList from './FilterCommandsList.vue'
 import {
-	ASSIGNEE_FIELDS,
 	AUTOCOMPLETE_FIELDS,
-	CREATED_BY_FIELDS,
 	FILTER_OPERATORS_REGEX,
 	isMultiValueOperator,
 	LABEL_FIELDS,
@@ -17,9 +15,6 @@ import {
 
 import {useLabels} from '@/composables/useLabels'
 import {useProjectStore} from '@/stores/projects'
-import UserService from '@/services/user'
-import ProjectUserService from '@/services/projectUsers'
-import type { IUser } from '@/modelTypes/IUser'
 import type { IProject } from '@/modelTypes/IProject'
 import type { Label } from '@/client/generated'
 
@@ -42,11 +37,9 @@ interface AutocompleteContext {
 interface SuggestionItem {
 	id: number
 	title?: string
-	username?: string
-	name?: string
 }
 
-export type AutocompleteField = 'labels' | 'users' | 'projects'
+export type AutocompleteField = 'labels' | 'projects'
 
 /**
  * Calculates the replacement range for autocomplete selection.
@@ -88,7 +81,7 @@ export function calculateReplacementRange(
 export interface AutocompleteItem {
 	id: number | string
 	title: string
-	item: Label | IUser | IProject
+	item: Label | IProject
 	fieldType: AutocompleteField
 	context: AutocompleteContext
 }
@@ -105,8 +98,6 @@ export default Extension.create<FilterAutocompleteOptions>({
 	addProseMirrorPlugins() {
 		const {filterLabelsByQuery} = useLabels()
 		const projectStore = useProjectStore()
-		const userService = new UserService()
-		const projectUserService = new ProjectUserService()
 
 		let popupElement: HTMLElement | null = null
 		let component: VueRenderer | null = null
@@ -114,7 +105,6 @@ export default Extension.create<FilterAutocompleteOptions>({
 		let cleanupFloating: (() => void) | null = null
 		let suppressNextAutocomplete = false
 		let clickOutsideHandler: ((event: MouseEvent) => void) | null = null
-		let debounceTimer: NodeJS.Timeout | null = null
 		let lastSelectionPosition = -1
 		let lastSelectionTime = 0
 
@@ -223,35 +213,6 @@ export default Extension.create<FilterAutocompleteOptions>({
 					return filterLabelsByQuery([], autocompleteContext.search) as SuggestionItem[]
 				}
 
-				if (fieldType === 'users') {
-
-					if (debounceTimer) {
-						clearTimeout(debounceTimer)
-					}
-
-					return new Promise((resolve) => {
-						debounceTimer = setTimeout(async () => {
-							let userSuggestions: SuggestionItem[]
-							try {
-								if (this.options.projectId) {
-									// @ts-expect-error - projectId is used for URL replacement but not part of IAbstract
-									userSuggestions = await projectUserService.getAll({projectId: this.options.projectId}, {s: autocompleteContext.search}) as SuggestionItem[]
-								} else {
-									userSuggestions = await userService.getAll({} as IUser, {s: autocompleteContext.search}) as SuggestionItem[]
-								}
-								// Show suggestions even with empty search, but limit if we have many
-								if (autocompleteContext.search === '' && userSuggestions.length > 10) {
-									userSuggestions = userSuggestions.slice(0, 10)
-								}
-							} catch (error) {
-								console.error('Error fetching user suggestions:', error)
-								userSuggestions = []
-							}
-							resolve(userSuggestions)
-						}, 300)
-					})
-				}
-
 				if (fieldType === 'projects' && !this.options.projectId) {
 					return projectStore.searchProject(autocompleteContext.search).filter((project): project is IProject => project !== undefined) as SuggestionItem[]
 				}
@@ -339,8 +300,6 @@ export default Extension.create<FilterAutocompleteOptions>({
 
 					if (LABEL_FIELDS.includes(field)) {
 						fieldType = 'labels'
-					} else if (ASSIGNEE_FIELDS.includes(field) || CREATED_BY_FIELDS.includes(field)) {
-						fieldType = 'users'
 					} else if (PROJECT_FIELDS.includes(field)) {
 						fieldType = 'projects'
 					}
@@ -364,8 +323,8 @@ export default Extension.create<FilterAutocompleteOptions>({
 
 			const items = suggestions.map(item => ({
 				id: item.id,
-				title: fieldType === 'users' ? item.username : item.title,
-				description: fieldType === 'users' ? `${item.name || item.username}` : item.title,
+				title: item.title,
+				description: item.title,
 				item,
 				fieldType,
 				context: autocompleteContext,
@@ -389,9 +348,7 @@ export default Extension.create<FilterAutocompleteOptions>({
 						items,
 						command: (item: AutocompleteItem) => {
 							// Handle selection
-							const newValue = item.fieldType === 'users'
-								? (item.item as IUser).username
-								: (item.item as IProject | Label).title
+							const newValue = (item.item as IProject | Label).title
 							// Use currentAutocompleteContext (outer variable) for up-to-date positions
 							// The local autocompleteContext would be stale since this callback
 							// was created on first component render
@@ -501,10 +458,6 @@ export default Extension.create<FilterAutocompleteOptions>({
 							if (clickOutsideHandler) {
 								document.removeEventListener('mousedown', clickOutsideHandler)
 								clickOutsideHandler = null
-							}
-							if (debounceTimer) {
-								clearTimeout(debounceTimer)
-								debounceTimer = null
 							}
 							if (popupElement && popupElement.parentNode) {
 								popupElement.parentNode.removeChild(popupElement)

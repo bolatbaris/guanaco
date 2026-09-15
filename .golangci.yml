@@ -128,11 +128,6 @@ linters:
         path: pkg/modules/migration
       - linters:
           - goheader
-          - gosmopolitan
-          - misspell
-        path: pkg/routes/api/v1/docs.go
-      - linters:
-          - goheader
         text: Missed string
       - linters:
           - errorlint
@@ -218,7 +213,6 @@ linters:
       - third_party$
       - builtin$
       - examples$
-      - pkg/routes/api/v1/docs.go
       - pkg/yaegi_symbols/..*
       - plugins-dev/..*
 formatters:

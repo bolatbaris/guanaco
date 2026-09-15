@@ -32,10 +32,9 @@ import (
 type SubscriptionEntityType int
 
 const (
-	SubscriptionEntityUnknown   = iota
-	SubscriptionEntityNamespace // Kept even though not used anymore since we don't want to manually change all ids
-	SubscriptionEntityProject
-	SubscriptionEntityTask
+	SubscriptionEntityUnknown   SubscriptionEntityType = 0
+	SubscriptionEntityNamespace SubscriptionEntityType = 1 // Kept for compatibility with stored ids.
+	SubscriptionEntityProject   SubscriptionEntityType = 2
 )
 
 func (st *SubscriptionEntityType) UnmarshalJSON(bytes []byte) error {
@@ -48,8 +47,6 @@ func (st *SubscriptionEntityType) UnmarshalJSON(bytes []byte) error {
 	switch value {
 	case "project":
 		*st = SubscriptionEntityProject
-	case "task":
-		*st = SubscriptionEntityTask
 	default:
 		return &ErrUnknownSubscriptionEntityType{EntityType: *st}
 	}
@@ -61,8 +58,7 @@ func (st SubscriptionEntityType) MarshalJSON() ([]byte, error) {
 	switch st {
 	case SubscriptionEntityProject:
 		return []byte(`"project"`), nil
-	case SubscriptionEntityTask:
-		return []byte(`"task"`), nil
+	case SubscriptionEntityUnknown, SubscriptionEntityNamespace:
 	}
 
 	return []byte(`null`), nil
@@ -73,24 +69,20 @@ func (st SubscriptionEntityType) MarshalJSON() ([]byte, error) {
 func (*SubscriptionEntityType) Schema(_ huma.Registry) *huma.Schema {
 	return &huma.Schema{
 		Type: "string",
-		Enum: []any{"project", "task"},
+		Enum: []any{"project"},
 	}
 }
 
 func getEntityTypeFromString(entityType string) SubscriptionEntityType {
-	switch entityType {
-	case entityProject:
+	if entityType == entityProject {
 		return SubscriptionEntityProject
-	case entityTask:
-		return SubscriptionEntityTask
 	}
 
 	return SubscriptionEntityUnknown
 }
 
 func (st SubscriptionEntityType) validate() error {
-	if st == SubscriptionEntityProject ||
-		st == SubscriptionEntityTask {
+	if st == SubscriptionEntityProject {
 		return nil
 	}
 
@@ -99,7 +91,6 @@ func (st SubscriptionEntityType) validate() error {
 
 const (
 	entityProject = `project`
-	entityTask    = `task`
 )
 
 // Subscription represents a subscription for an entity
@@ -107,7 +98,7 @@ type Subscription struct {
 	// The numeric ID of the subscription
 	ID int64 `xorm:"autoincr not null unique pk" json:"id" readOnly:"true" doc:"The numeric id of the subscription."`
 
-	EntityType SubscriptionEntityType `xorm:"index not null unique(entity_user)" json:"entity" readOnly:"true" doc:"The kind of entity this subscription is for. Either project or task; derived server-side from the request path."`
+	EntityType SubscriptionEntityType `xorm:"index not null unique(entity_user)" json:"entity" readOnly:"true" doc:"The kind of entity this subscription is for: project, derived server-side from the request path."`
 	Entity     string                 `xorm:"-" json:"-" param:"entity"`
 	// The id of the entity to subscribe to.
 	EntityID int64 `xorm:"bigint index not null unique(entity_user)" json:"entity_id" param:"entityID" readOnly:"true" doc:"The numeric id of the subscribed entity; taken from the request path."`
@@ -141,17 +132,17 @@ func (sb *Subscription) TableName() string {
 	return "subscriptions"
 }
 
-// Create subscribes the current user to an entity
-// @Summary Subscribes the current user to an entity.
-// @Description Subscribes the current user to an entity.
+// Create subscribes the current user to a project.
+// @Summary Subscribes the current user to a project.
+// @Description Subscribes the current user to a project.
 // @tags subscriptions
 // @Accept json
 // @Produce json
 // @Security JWTKeyAuth
-// @Param entity path string true "The entity the user subscribes to. Can be either `project` or `task`."
-// @Param entityID path string true "The numeric id of the entity to subscribe to."
+// @Param entity path string true "The project the user subscribes to."
+// @Param entityID path string true "The numeric id of the project to subscribe to."
 // @Success 201 {object} models.Subscription "The subscription"
-// @Failure 403 {object} web.HTTPError "The user does not have access to subscribe to this entity."
+// @Failure 403 {object} web.HTTPError "The user does not have access to subscribe to this project."
 // @Failure 412 {object} web.HTTPError "The subscription already exists."
 // @Failure 412 {object} web.HTTPError "The subscription entity is invalid."
 // @Failure 500 {object} models.Message "Internal error"
@@ -203,17 +194,17 @@ func (sb *Subscription) Create(s *xorm.Session, auth web.Auth) (err error) {
 	return
 }
 
-// Delete unsubscribes the current user to an entity
-// @Summary Unsubscribe the current user from an entity.
-// @Description Unsubscribes the current user to an entity. If the subscription is inherited from a parent project, an opt-out is stored for this entity instead.
+// Delete unsubscribes the current user from a project.
+// @Summary Unsubscribe the current user from a project.
+// @Description Unsubscribes the current user from a project. If the subscription is inherited from a parent project, an opt-out is stored for this project instead.
 // @tags subscriptions
 // @Accept json
 // @Produce json
 // @Security JWTKeyAuth
-// @Param entity path string true "The entity the user subscribed to. Can be either `project` or `task`."
-// @Param entityID path string true "The numeric id of the subscribed entity to."
+// @Param entity path string true "The project the user subscribed to."
+// @Param entityID path string true "The numeric id of the subscribed project."
 // @Success 200 {object} models.Subscription "The subscription"
-// @Failure 403 {object} web.HTTPError "The user does not have access to subscribe to this entity."
+// @Failure 403 {object} web.HTTPError "The user does not have access to unsubscribe from this project."
 // @Failure 404 {object} web.HTTPError "The subscription does not exist."
 // @Failure 500 {object} models.Message "Internal error"
 // @Router /subscriptions/{entity}/{entityID} [delete]
@@ -249,26 +240,6 @@ func (sb *Subscription) Delete(s *xorm.Session, auth web.Auth) (err error) {
 	return err
 }
 
-// subscribeUserImplicitly subscribes u only if no row exists: muted or not, an existing row is the user's own decision.
-func subscribeUserImplicitly(s *xorm.Session, entityType SubscriptionEntityType, entityID int64, u *user.User) error {
-	own, err := getOwnSubscription(s, entityType, entityID, u.ID)
-	if err != nil || own != nil {
-		return err
-	}
-
-	inherited, err := GetSubscriptionForUser(s, entityType, entityID, u)
-	if err != nil || inherited != nil {
-		return err
-	}
-
-	_, err = s.Insert(&Subscription{
-		EntityType: entityType,
-		EntityID:   entityID,
-		UserID:     u.ID,
-	})
-	return err
-}
-
 // getOwnSubscription returns the row for exactly this entity, ignoring inherited subscriptions.
 func getOwnSubscription(s *xorm.Session, entityType SubscriptionEntityType, entityID, userID int64) (subscription *Subscription, err error) {
 	subscription = &Subscription{}
@@ -298,11 +269,11 @@ func GetSubscriptionForUser(s *xorm.Session, entityType SubscriptionEntityType, 
 
 // GetSubscriptionsForEntities returns a list of subscriptions to for an entity ID
 func GetSubscriptionsForEntities(s *xorm.Session, entityType SubscriptionEntityType, entityIDs []int64) (subscriptions map[int64][]*SubscriptionWithUser, err error) {
-	return getSubscriptionsForEntitiesAndUser(s, entityType, entityIDs, nil, false, false)
+	return getSubscriptionsForEntitiesAndUser(s, entityType, entityIDs, nil, false)
 }
 
 func GetSubscriptionsForEntitiesAndUser(s *xorm.Session, entityType SubscriptionEntityType, entityIDs []int64, u *user.User) (subscriptions map[int64][]*SubscriptionWithUser, err error) {
-	return getSubscriptionsForEntitiesAndUser(s, entityType, entityIDs, u, true, false)
+	return getSubscriptionsForEntitiesAndUser(s, entityType, entityIDs, u, true)
 }
 
 func GetSubscriptionsForEntity(s *xorm.Session, entityType SubscriptionEntityType, entityID int64) (subscriptions []*SubscriptionWithUser, err error) {
@@ -314,32 +285,10 @@ func GetSubscriptionsForEntity(s *xorm.Session, entityType SubscriptionEntityTyp
 	return subs[entityID], nil
 }
 
-// GetSubscriptionsForDeletedTask returns the subscribers of an already soft-deleted task.
-// The task deleted listener runs after the deleting transaction committed, so every other
-// lookup filters the task out and finds nobody. Permissions come from the project instead,
-// since the task itself is gone.
-func GetSubscriptionsForDeletedTask(s *xorm.Session, task *Task) (subscriptions []*SubscriptionWithUser, err error) {
-	subs, err := getSubscriptionsForEntitiesAndUser(s, SubscriptionEntityTask, []int64{task.ID}, nil, false, true)
-	if err != nil {
-		return nil, err
-	}
-
-	filtered, err := filterSubscriptionsByProjectPermission(s, subs, map[int64]int64{task.ID: task.ProjectID})
-	if err != nil {
-		if IsErrProjectDoesNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return filtered[task.ID], nil
-}
-
 // This function returns a matching subscription for an entity and user.
-// It will return the next parent of a subscription. That means for tasks, it will first look for a subscription for
-// that task, if there is none it will look for a subscription on the project the task belongs to.
+// It resolves direct and inherited project subscriptions.
 // It will return a map where the key is the entity id and the value is a slice with all subscriptions for that entity.
-func getSubscriptionsForEntitiesAndUser(s *xorm.Session, entityType SubscriptionEntityType, entityIDs []int64, u *user.User, userOnly, includeDeletedTasks bool) (subscriptions map[int64][]*SubscriptionWithUser, err error) {
+func getSubscriptionsForEntitiesAndUser(s *xorm.Session, entityType SubscriptionEntityType, entityIDs []int64, u *user.User, userOnly bool) (subscriptions map[int64][]*SubscriptionWithUser, err error) {
 	if err := entityType.validate(); err != nil {
 		return nil, err
 	}
@@ -362,11 +311,6 @@ func getSubscriptionsForEntitiesAndUser(s *xorm.Session, entityType Subscription
 		}
 		sUserCond = " AND s.user_id = ?"
 		sUserArgs = []any{u.ID}
-	}
-
-	tNotDeletedCond := " AND t.deleted_at IS NULL"
-	if includeDeletedTasks {
-		tNotDeletedCond = ""
 	}
 
 	switch entityType {
@@ -439,98 +383,10 @@ FROM projects p
 ) sh ON p.id = sh.original_project_id AND sh.rn = 1
     LEFT JOIN users ON sh.user_id = users.id
 WHERE p.id IN (`+idList+`)
-ORDER BY p.id, sh.user_id`, args...).
+		ORDER BY p.id, sh.user_id`, args...).
 			Find(&rawSubscriptions)
-	case SubscriptionEntityTask:
-		add(idArgs...)
-		add(SubscriptionEntityTask)
-		add(idArgs...)
-		add(sUserArgs...)
-		add(SubscriptionEntityProject)
-		add(sUserArgs...)
-		add(SubscriptionEntityTask, SubscriptionEntityProject)
-		add(idArgs...)
-		err = s.SQL(`
-WITH RECURSIVE project_hierarchy AS (
-    -- Base case: Start with the projects associated with the tasks
-    SELECT
-        p.id,
-        p.parent_project_id,
-        0 AS level,
-        t.id AS task_id
-    FROM tasks t
-             JOIN projects p ON t.project_id = p.id
-    WHERE t.id IN (`+idList+`)`+tNotDeletedCond+`
-
-    UNION ALL
-
-    -- Recursive case: Get parent projects
-    SELECT
-        p.id,
-        p.parent_project_id,
-        ph.level + 1,
-        ph.task_id
-    FROM projects p
-             INNER JOIN project_hierarchy ph ON p.id = ph.parent_project_id
-),
-
-subscription_hierarchy AS (
-    -- Check for task subscriptions
-    SELECT
-        s.id,
-        s.entity_type,
-        s.entity_id,
-        s.created,
-        s.user_id,
-        s.muted,
-        1 AS priority,
-        t.id AS task_id
-    FROM subscriptions s
-             JOIN tasks t ON s.entity_id = t.id
-    WHERE s.entity_type = ? AND t.id IN (`+idList+`)`+tNotDeletedCond+sUserCond+`
-
-    UNION ALL
-
-    -- Check for project subscriptions (including parent projects)
-    SELECT
-        s.id,
-        s.entity_type,
-        s.entity_id,
-        s.created,
-        s.user_id,
-        s.muted,
-        ph.level + 2 AS priority,
-        ph.task_id
-    FROM subscriptions s
-             INNER JOIN project_hierarchy ph ON s.entity_id = ph.id
-    WHERE s.entity_type = ?`+sUserCond+`
-)
-
-SELECT
-    t.id AS original_entity_id,
-    sh.id AS subscription_id,
-    sh.entity_type,
-    sh.entity_id,
-    sh.created,
-    sh.user_id,
-    sh.muted,
-    CASE
-        WHEN sh.entity_type = ? THEN 'Task'
-        WHEN sh.priority = ? THEN 'Direct Project'
-        ELSE 'Parent Project'
-    END
-    AS subscription_level,
-	users.*
-FROM tasks t
-    LEFT JOIN (
-    SELECT *,
-           ROW_NUMBER() OVER (PARTITION BY task_id, user_id ORDER BY priority) AS rn
-    FROM subscription_hierarchy
-) sh ON t.id = sh.task_id AND sh.rn = 1
-    LEFT JOIN users ON sh.user_id = users.id
-WHERE t.id IN (`+idList+`)`+tNotDeletedCond+`
-ORDER BY t.id, sh.user_id`, args...).
-			Find(&rawSubscriptions)
+	case SubscriptionEntityUnknown, SubscriptionEntityNamespace:
+		return nil, &ErrUnknownSubscriptionEntityType{EntityType: entityType}
 	}
 	if err != nil {
 		return nil, err
@@ -561,23 +417,16 @@ ORDER BY t.id, sh.user_id`, args...).
 		subscriptions[sub.OriginalEntityID] = append(subscriptions[sub.OriginalEntityID], &sub.SubscriptionWithUser)
 	}
 
-	// A soft-deleted task cannot be resolved back to its project here, so that
-	// caller filters with the project id it already holds.
-	if userOnly || includeDeletedTasks {
+	if userOnly {
 		return subscriptions, nil
 	}
 
-	return filterSubscriptionsByReadPermission(s, entityType, subscriptions)
-}
-
-type subscribedEntityProject struct {
-	ID        int64
-	ProjectID int64
+	return filterSubscriptionsByReadPermission(s, subscriptions)
 }
 
 // Subscription rows outlive access, so subscribers who lost read access to the entity's project are
 // filtered out here rather than deleted: a subscription is user intent and resumes once access returns.
-func filterSubscriptionsByReadPermission(s *xorm.Session, entityType SubscriptionEntityType, subscriptions map[int64][]*SubscriptionWithUser) (map[int64][]*SubscriptionWithUser, error) {
+func filterSubscriptionsByReadPermission(s *xorm.Session, subscriptions map[int64][]*SubscriptionWithUser) (map[int64][]*SubscriptionWithUser, error) {
 	if len(subscriptions) == 0 {
 		return subscriptions, nil
 	}
@@ -588,23 +437,8 @@ func filterSubscriptionsByReadPermission(s *xorm.Session, entityType Subscriptio
 	}
 
 	projectIDForEntity := make(map[int64]int64, len(subscriptions))
-	switch entityType {
-	case SubscriptionEntityProject:
-		for _, entityID := range entityIDs {
-			projectIDForEntity[entityID] = entityID
-		}
-	case SubscriptionEntityTask:
-		tasks := []*subscribedEntityProject{}
-		err := s.Table("tasks").
-			In("id", entityIDs).
-			Cols("id", "project_id").
-			Find(&tasks)
-		if err != nil {
-			return nil, err
-		}
-		for _, t := range tasks {
-			projectIDForEntity[t.ID] = t.ProjectID
-		}
+	for _, entityID := range entityIDs {
+		projectIDForEntity[entityID] = entityID
 	}
 
 	return filterSubscriptionsByProjectPermission(s, subscriptions, projectIDForEntity)

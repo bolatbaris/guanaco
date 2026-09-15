@@ -6,7 +6,6 @@ import TaskCommentModel from '@/models/taskComment'
 import ProjectModel from '@/models/project'
 
 import {NOTIFICATION_NAMES, type INotification} from '@/modelTypes/INotification'
-import type { IUser } from '@/modelTypes/IUser'
 
 export default class NotificationModel extends AbstractModel<INotification> implements INotification {
 	id = 0
@@ -27,13 +26,6 @@ export default class NotificationModel extends AbstractModel<INotification> impl
 					doer: new UserModel(this.notification.doer),
 					task: new TaskModel(this.notification.task),
 					comment: new TaskCommentModel(this.notification.comment),
-				}
-				break
-			case NOTIFICATION_NAMES.TASK_ASSIGNED:
-				this.notification = {
-					doer: new UserModel(this.notification.doer),
-					task: new TaskModel(this.notification.task),
-					assignee: new UserModel(this.notification.assignee),
 				}
 				break
 			case NOTIFICATION_NAMES.TASK_DELETED:
@@ -73,20 +65,10 @@ export default class NotificationModel extends AbstractModel<INotification> impl
 		this.readAt = parseDateOrNull(this.readAt)
 	}
 
-	toText(user: IUser | null = null) {
-		let who: string
-
+	toText() {
 		switch (this.name) {
 			case NOTIFICATION_NAMES.TASK_COMMENT:
 				return `commented on ${this.notification.task.getTextIdentifier()}`
-			case NOTIFICATION_NAMES.TASK_ASSIGNED:
-				who = `${getDisplayName(this.notification.assignee)}`
-
-				if (user !== null && user.id === this.notification.assignee.id) {
-					who = 'you'
-				}
-
-				return `assigned ${who} to ${this.notification.task.getTextIdentifier()}`
 			case NOTIFICATION_NAMES.TASK_DELETED:
 				return `deleted ${this.notification.task.getTextIdentifier()}`
 			case NOTIFICATION_NAMES.TASK_CREATED:

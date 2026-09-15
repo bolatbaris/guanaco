@@ -188,18 +188,14 @@ import {eventToShortcutString} from '@/helpers/shortcut'
 
 import EditorToolbar from './EditorToolbar.vue'
 
-import {Extension, isTextSelection, mergeAttributes, type SetContentOptions} from '@tiptap/core'
-import {EditorContent, type Extensions, useEditor, VueNodeViewRenderer} from '@tiptap/vue-3'
+import {Extension, isTextSelection, type SetContentOptions} from '@tiptap/core'
+import {EditorContent, type Extensions, useEditor} from '@tiptap/vue-3'
 import type {EditorState} from '@tiptap/pm/state'
 import type {EditorView} from '@tiptap/pm/view'
 import {BubbleMenu} from '@tiptap/vue-3/menus'
 
-import Mention from '@tiptap/extension-mention'
-
 import {taskLinkCurrentProjectIdKey} from './taskLinkContext'
 import {createEditorExtensions} from './editorExtensions'
-import mentionSuggestionSetup from './mention/mentionSuggestion'
-import MentionUser from './mention/MentionUser.vue'
 import ImageLightbox from '@/components/misc/ImageLightbox.vue'
 
 import type {BottomAction, UploadCallback} from './types'
@@ -220,7 +216,6 @@ const props = withDefaults(defineProps<{
 	placeholder?: string,
 	editShortcut?: string,
 	enableDiscardShortcut?: boolean,
-	enableMentions?: boolean,
 	projectId?: number,
 	storageKey?: string,
 }>(), {
@@ -231,7 +226,6 @@ const props = withDefaults(defineProps<{
 	placeholder: '',
 	editShortcut: '',
 	enableDiscardShortcut: false,
-	enableMentions: false,
 	projectId: 0,
 	storageKey: '',
 })
@@ -294,35 +288,6 @@ const extensions: Extensions = createEditorExtensions({
 	uploadCallback: () => props.uploadCallback,
 	uploadAndInsertFiles,
 })
-
-// Add mention extension if enabled
-if (props.enableMentions && props.projectId > 0) {
-	extensions.push(
-		Mention.configure({
-			HTMLAttributes: {
-				class: 'mention',
-			},
-			suggestion: mentionSuggestionSetup(props.projectId),
-		}).extend({
-
-			parseHTML() {
-				return [
-					{
-						tag: 'mention-user',
-					},
-				]
-			},
-
-			renderHTML({ HTMLAttributes }) {
-				return ['mention-user', mergeAttributes(HTMLAttributes)]
-			},
-
-			addNodeView() {
-				return VueNodeViewRenderer(MentionUser)
-			},
-		}),
-	)
-}
 
 // Add a custom extension for the Escape key
 if (props.enableDiscardShortcut) {

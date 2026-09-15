@@ -6,7 +6,6 @@ import type { IProject } from './IProject'
 
 export const NOTIFICATION_NAMES = {
 	'TASK_COMMENT': 'task.comment',
-	'TASK_ASSIGNED': 'task.assigned',
 	'TASK_DELETED': 'task.deleted',
 	'TASK_CREATED': 'task.created',
 	'TASK_REMINDER': 'task.reminder',
@@ -27,11 +26,6 @@ interface NotificationTask extends Notification {
 	task: ITask
 }
 
-interface NotificationAssigned extends Notification {
-	task: ITask
-	assignee: IUser
-}
-
 interface NotificationCreated extends Notification {
 	task: ITask
 	project: IProject
@@ -45,7 +39,7 @@ interface NotificationTaskReminder extends Notification {
 export interface INotification extends IAbstract {
 	id: number
 	name: string
-	notification: NotificationTaskComment | NotificationTask | NotificationAssigned | NotificationCreated | NotificationTaskReminder
+	notification: NotificationTaskComment | NotificationTask | NotificationCreated | NotificationTaskReminder
 	read: boolean
 	readAt: Date | null
 

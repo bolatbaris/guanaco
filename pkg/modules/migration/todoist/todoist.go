@@ -84,7 +84,6 @@ type item struct {
 	ProjectID      string      `json:"project_id"`
 	Content        string      `json:"content"`
 	Description    string      `json:"description"`
-	Priority       int64       `json:"priority"`
 	Due            *dueDate    `json:"due"`
 	ParentID       string      `json:"parent_id"`
 	ChildOrder     int64       `json:"child_order"`
@@ -423,11 +422,6 @@ func convertTodoistToVikunja(sync *sync, doneItems map[string]*doneItem) (fullVi
 		if has {
 			task.Done = true
 			task.DoneAt = done.CompletedDate.In(config.GetTimeZone())
-		}
-
-		// Todoist priorities only range from 1 (lowest) and max 4 (highest), so we need to make slight adjustments
-		if i.Priority > 1 {
-			task.Priority = i.Priority
 		}
 
 		// Put the due date together

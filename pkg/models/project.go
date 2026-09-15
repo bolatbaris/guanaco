@@ -66,7 +66,7 @@ type Project struct {
 	// Contains a very small version of the project background to use as a blurry preview until the actual background is loaded. Check out https://blurha.sh/ to learn how it works.
 	BackgroundBlurHash string `xorm:"varchar(50) null" json:"background_blur_hash" readOnly:"true" doc:"A small BlurHash preview of the project background, shown until the real background loads. See https://blurha.sh/."`
 
-	// True if a project is a favorite. Favorite projects show up in a separate parent project. This value depends on the user making the call to the api.
+	// True if a project is a favorite. This value depends on the user making the call to the API.
 	IsFavorite bool `xorm:"-" json:"is_favorite" doc:"Whether the project is a favorite of the requesting user. This value is per-user and depends on who makes the call."`
 
 	// The subscription status for the user reading this project. You can only read this property, use the subscription endpoints to modify it.
@@ -151,49 +151,9 @@ type ProjectBackgroundType struct {
 // ProjectBackgroundUpload represents the project upload background type
 const ProjectBackgroundUpload string = "upload"
 
-const FavoritesPseudoProjectID = -1
-
-// Pseudo project ids are negative: -1 is favorites, <= -2 encode saved filters.
+// Saved-filter project ids are negative; regular projects keep their database id.
 func IsPseudoProjectID(projectID int64) bool {
-	return projectID == FavoritesPseudoProjectID || GetSavedFilterIDFromProjectID(projectID) > 0
-}
-
-// FavoritesPseudoProject holds all tasks marked as favorites
-var FavoritesPseudoProject = Project{
-	ID:              FavoritesPseudoProjectID,
-	Title:           "Favorites",
-	Description:     "This project has all tasks marked as favorites.",
-	IsFavorite:      true,
-	Position:        -1,
-	ParentProjectID: noParentProjectID(),
-
-	Views: []*ProjectView{
-		{
-			ID:        -1,
-			ProjectID: FavoritesPseudoProjectID,
-			Title:     "List",
-			ViewKind:  ProjectViewKindList,
-			Position:  100,
-			Filter:    &TaskCollection{Filter: "done = false"},
-		},
-		{
-			ID:        -2,
-			ProjectID: FavoritesPseudoProjectID,
-			Title:     "Gantt",
-			ViewKind:  ProjectViewKindGantt,
-			Position:  200,
-		},
-		{
-			ID:        -3,
-			ProjectID: FavoritesPseudoProjectID,
-			Title:     "Table",
-			ViewKind:  ProjectViewKindTable,
-			Position:  300,
-		},
-	},
-
-	Created: time.Now(),
-	Updated: time.Now(),
+	return GetSavedFilterIDFromProjectID(projectID) > 0
 }
 
 // ReadAll gets all projects a user has access to
@@ -373,13 +333,6 @@ func getRawProjectsUnscoped(s *xorm.Session, search string, page, perPage int, i
 // @Failure 500 {object} models.Message "Internal error"
 // @Router /projects/{id} [get]
 func (p *Project) ReadOne(s *xorm.Session, a web.Auth) (err error) {
-
-	if p.ID == FavoritesPseudoProject.ID {
-		p.Views = FavoritesPseudoProject.Views
-		// Already "built" the project in CanRead
-		return nil
-	}
-
 	// Check for saved filters
 	filterID := GetSavedFilterIDFromProjectID(p.ID)
 	isFilter := filterID > 0
@@ -645,22 +598,6 @@ func getRawProjectsForUser(s *xorm.Session, opts *projectOptions) (projects []*P
 		return
 	}
 
-	favoriteCount, err := s.
-		Where(builder.And(
-			builder.Eq{"user_id": opts.user.ID},
-			builder.Eq{"kind": FavoriteKindTask},
-		)).
-		Count(&Favorite{})
-	if err != nil {
-		return
-	}
-
-	if favoriteCount > 0 {
-		favoritesProject := &Project{}
-		*favoritesProject = FavoritesPseudoProject
-		allProjects = append(allProjects, favoritesProject)
-	}
-
 	if len(allProjects) == 0 {
 		return nil, 0, totalItems, nil
 	}
@@ -671,7 +608,7 @@ func getRawProjectsForUser(s *xorm.Session, opts *projectOptions) (projects []*P
 func CreateDefaultSavedFiltersForUser(s *xorm.Session, u *user.User) error {
 	sf := &SavedFilter{
 		Title:   "My Open Tasks",
-		Filters: &TaskCollection{Filter: fmt.Sprintf("done = false && assignees = %s", u.Username)},
+		Filters: &TaskCollection{Filter: "done = false"},
 	}
 
 	return sf.Create(s, u)
@@ -811,11 +748,6 @@ func addProjectDetails(s *xorm.Session, projects []*Project, a web.Auth) (err er
 func addMaxPermissionToProjects(s *xorm.Session, projects []*Project, u *user.User) (err error) {
 	projectIDs := make([]int64, 0, len(projects))
 	for _, project := range projects {
-		// No row to look up; must agree with checkReadPermissionsForProjects.
-		if project.ID == FavoritesPseudoProjectID {
-			project.MaxPermission = Ptr(PermissionRead)
-			continue
-		}
 		if GetSavedFilterIDFromProjectID(project.ID) > 0 {
 			project.MaxPermission = Ptr(PermissionAdmin)
 			continue

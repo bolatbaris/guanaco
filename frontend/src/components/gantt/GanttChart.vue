@@ -94,7 +94,6 @@ import {useRouter} from 'vue-router'
 import dayjs from 'dayjs'
 import {useDayjsLanguageSync} from '@/i18n/useDayjsLanguageSync'
 
-import {getHexColor} from '@/models/task'
 import {buildGanttTaskTree, type GanttTaskTreeNode} from '@/helpers/ganttTaskTree'
 import {buildRelationArrows, type GanttBarPosition, type GanttArrow} from '@/helpers/ganttRelationArrows'
 
@@ -279,8 +278,6 @@ function transformTaskToGanttBar(node: GanttTaskTreeNode): GanttBarModel {
 		dateType = 'both'
 	}
 
-	const taskColor = getHexColor(t.hexColor)
-
 	return {
 		id: String(t.id),
 		start: startDate,
@@ -288,7 +285,6 @@ function transformTaskToGanttBar(node: GanttTaskTreeNode): GanttBarModel {
 		meta: {
 			label: t.title,
 			task: t,
-			color: taskColor,
 			hasActualDates: Boolean(t.startDate && (t.endDate || t.dueDate)),
 			dateType,
 			isDone: t.done,

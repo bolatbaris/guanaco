@@ -56,9 +56,7 @@ type Todo struct {
 	Done        bool
 	Completed   time.Time
 	Organizer   *user.User
-	Priority    int64 // 0-9, 1 is highest
 	Relations   []Relation
-	Color       string
 	Categories  []string
 	Start       time.Time
 	End         time.Time
@@ -92,9 +90,7 @@ type Config struct {
 	Color  string
 }
 
-// getCaldavColor sanitizes color at the output boundary (non-hex chars
-// dropped) so upstream HexColor validation gaps cannot lead to iCal
-// property injection via CR/LF in a crafted color string.
+// getCaldavColor sanitizes the project calendar color at the output boundary.
 func getCaldavColor(color string) (caldavcolor string) {
 	color = strings.TrimPrefix(color, "#")
 
@@ -169,7 +165,7 @@ PRODID:-//` + config.ProdID + `//EN` + getCaldavColor(config.Color)
 BEGIN:VTODO
 UID:` + escapeICalText(t.UID) + `
 DTSTAMP:` + makeCalDavTimeFromTimeStamp(t.Timestamp) + `
-SUMMARY:` + escapeICalText(t.Summary) + getCaldavColor(t.Color)
+SUMMARY:` + escapeICalText(t.Summary)
 
 		if t.Start.Unix() > 0 {
 			caldavtodos += `
@@ -223,11 +219,6 @@ DUE:` + makeCalDavTimeFromTimeStamp(t.DueDate)
 		if t.Created.Unix() > 0 {
 			caldavtodos += `
 CREATED:` + makeCalDavTimeFromTimeStamp(t.Created)
-		}
-
-		if t.Priority != 0 {
-			caldavtodos += `
-PRIORITY:` + strconv.Itoa(mapPriorityToCaldav(t.Priority))
 		}
 
 		if t.RepeatAfter > 0 || t.RepeatMode == models.TaskRepeatModeMonth {

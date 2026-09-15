@@ -1,25 +1,27 @@
 import axios from 'axios'
 import type {AxiosRequestConfig} from 'axios'
 import {getToken, getTokenType, refreshToken} from '@/helpers/auth'
+import {captureAxiosApiError} from '@/helpers/sentryApi'
 import {AUTH_TYPES} from '@/modelTypes/IUser'
 
 /**
  * Returns the API base URL with a guaranteed trailing slash.
  */
 export function getApiBaseUrl(): string {
-	const url = window.API_URL
+	const url = normalizeApiUrl(window.API_URL)
 	return url?.endsWith('/') ? url : url + '/'
 }
 
-export function getApiV2BaseUrl(): string {
-	return getApiBaseUrl().replace(/\/api\/v1\/$/, '/api/v2/')
+/** Canonicalize persisted URLs from the removed v1 API. */
+export function normalizeApiUrl(url: string): string {
+	return url.replace(/\/api\/v1\/?(?=[?#]|$)/, '/api/v2')
 }
 
-/**
- * Returns an absolute URL for an /api/v2 path. The shared axios instances pin
- * baseURL to /api/v1; v2 callers hand axios absolute URLs to bypass that —
- * to be folded into the service layer once the frontend moves fully onto v2.
- */
+export function getApiV2BaseUrl(): string {
+	return getApiBaseUrl()
+}
+
+/** Returns an absolute URL for an API path. */
 export function apiV2Url(path: string): string {
 	return new URL(getApiV2BaseUrl() + path, window.location.origin).toString()
 }
@@ -93,6 +95,7 @@ export function AuthenticatedHTTPFactory() {
 
 	// Response interceptor: on expired JWT 401, attempt a refresh and retry once.
 	instance.interceptors.response.use(undefined, async (error) => {
+		void captureAxiosApiError(error)
 		const originalRequest: AxiosRequestConfig & { _retried?: boolean } = error.config
 
 		// Only intercept 401s, and don't retry a request that already retried.
@@ -109,7 +112,6 @@ export function AuthenticatedHTTPFactory() {
 		}
 
 		// Don't try to refresh if we don't have a token at all (not logged in),
-		// or if the token is a link share JWT (they don't use cookie-based refresh).
 		const currentToken = getToken()
 		if (!currentToken || getTokenType(currentToken) !== AUTH_TYPES.USER) {
 			return Promise.reject(error)

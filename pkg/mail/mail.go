@@ -19,10 +19,12 @@ package mail
 import (
 	"context"
 	"crypto/tls"
+	"sync"
 	"time"
 
 	"code.vikunja.io/api/pkg/config"
 	"code.vikunja.io/api/pkg/log"
+	"code.vikunja.io/api/pkg/observability"
 
 	"github.com/wneessen/go-mail"
 )
@@ -32,6 +34,43 @@ var Queue chan *mail.Msg
 
 // daemonDone is closed by the daemon goroutine once it has drained the queue and returned.
 var daemonDone chan struct{}
+
+const mailFailureReportInterval = time.Minute
+
+var mailFailureReports = struct {
+	sync.Mutex
+	last map[string]time.Time
+}{
+	last: make(map[string]time.Time),
+}
+
+type mailOperationFailure struct {
+	operation string
+}
+
+func (e *mailOperationFailure) Error() string {
+	return "mail operation failed: " + e.operation
+}
+
+func reportMailFailure(operation string) {
+	if !observability.Enabled() {
+		return
+	}
+
+	now := time.Now()
+	mailFailureReports.Lock()
+	last, reported := mailFailureReports.last[operation]
+	if reported && now.Sub(last) < mailFailureReportInterval {
+		mailFailureReports.Unlock()
+		return
+	}
+	mailFailureReports.last[operation] = now
+	mailFailureReports.Unlock()
+
+	// Keep issue grouping stable and never pass SMTP/client errors, message
+	// contents, recipients or credentials to the observability backend.
+	observability.CaptureException(&mailOperationFailure{operation: operation})
+}
 
 func getClient() (*mail.Client, error) {
 
@@ -102,6 +141,7 @@ func StartMailDaemon() {
 	c, err := getClient()
 	if err != nil {
 		log.Errorf("Could not create mail client: %v", err)
+		reportMailFailure("client_creation")
 		return
 	}
 
@@ -121,6 +161,7 @@ func StartMailDaemon() {
 					if open {
 						if err := c.Close(); err != nil {
 							log.Errorf("Error closing the mail server connection: %s", err)
+							reportMailFailure("smtp_close")
 						}
 					}
 					return
@@ -129,6 +170,7 @@ func StartMailDaemon() {
 					err = c.DialWithContext(context.Background())
 					if err != nil {
 						log.Errorf("Error during connect to smtp server: %s", err)
+						reportMailFailure("smtp_connect")
 						break
 					}
 					open = true
@@ -136,6 +178,7 @@ func StartMailDaemon() {
 				err = c.Send(m)
 				if err != nil {
 					log.Errorf("Error when sending mail: %s", err)
+					reportMailFailure("smtp_send")
 					break
 				}
 				// Close the connection to the SMTP server if no email was sent in
@@ -146,6 +189,7 @@ func StartMailDaemon() {
 					err = c.Close()
 					if err != nil {
 						log.Errorf("Error closing the mail server connection: %s\n", err)
+						reportMailFailure("smtp_close")
 						break
 					}
 					log.Info("Closed connection to mail server")
@@ -181,5 +225,6 @@ func StopMailDaemon() {
 	case <-done:
 	case <-time.After(timeout):
 		log.Errorf("Timed out after %s waiting for the mail queue to be sent, some queued mails were not delivered", timeout)
+		reportMailFailure("queue_drain_timeout")
 	}
 }

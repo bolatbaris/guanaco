@@ -21,14 +21,6 @@ export const DATE_FIELDS = [
 	'updated',
 ]
 
-export const ASSIGNEE_FIELDS = [
-	'assignees',
-]
-
-export const CREATED_BY_FIELDS = [
-	'createdBy',
-]
-
 export const LABEL_FIELDS = [
 	'labels',
 ]
@@ -39,20 +31,14 @@ export const PROJECT_FIELDS = [
 
 export const AUTOCOMPLETE_FIELDS = [
 	...LABEL_FIELDS,
-	...ASSIGNEE_FIELDS,
-	...CREATED_BY_FIELDS,
 	...PROJECT_FIELDS,
 ]
 
 export const AVAILABLE_FILTER_FIELDS = [
 	...DATE_FIELDS,
-	...ASSIGNEE_FIELDS,
-	...CREATED_BY_FIELDS,
 	...LABEL_FIELDS,
 	...PROJECT_FIELDS,
 	'done',
-	'priority',
-	'percentDone',
 ]
 
 export const FILTER_OPERATORS = [

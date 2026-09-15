@@ -12,12 +12,6 @@
 				:alt="showUsername ? '' : t('misc.avatarOfUser', {user: displayName})"
 				class="avatar"
 			/>
-			<span
-				v-if="isBot"
-				v-tooltip="t('user.settings.bots.badge')"
-				class="bot-badge"
-				aria-label="Bot"
-			>B</span>
 		</span>
 		<span
 			v-if="showUsername"
@@ -48,7 +42,6 @@ const props = withDefaults(defineProps<{
 const {t} = useI18n({useScope: 'global'})
 
 const displayName = computed(() => getDisplayName(props.user))
-const isBot = computed(() => ((props.user as IUser & {botOwnerId?: number}).botOwnerId ?? 0) > 0)
 </script>
 
 <style lang="scss" scoped>
@@ -75,27 +68,4 @@ const isBot = computed(() => ((props.user as IUser & {botOwnerId?: number}).botO
 	vertical-align: middle;
 }
 
-.bot-badge {
-	position: absolute;
-	inset-block-end: 0;
-	inset-inline-start: 0;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	inline-size: 40%;
-	block-size: 40%;
-	min-inline-size: 14px;
-	min-block-size: 14px;
-	max-inline-size: 22px;
-	max-block-size: 22px;
-	font-size: .65rem;
-	font-weight: 700;
-	line-height: 1;
-	color: var(--white);
-	background: var(--primary);
-	border: 2px solid var(--white);
-	border-radius: 100%;
-	text-transform: uppercase;
-	pointer-events: auto;
-}
 </style>

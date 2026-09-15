@@ -39,7 +39,7 @@ jobs:
           path: ./build/build-mage-static
 
   docker:
-    runs-on: namespace-profile-default
+    runs-on: [self-hosted, glitchtip-runner]
     steps:
       - name: Git describe
         id: ghd
